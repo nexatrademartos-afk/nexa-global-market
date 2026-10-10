@@ -31,7 +31,7 @@ export function WorkspaceSwitcher() {
               <li key={w.key}>
                 <Link
                   to={w.key === "customer" ? "/account" : "/workspace/$role"}
-                  params={w.key === "customer" ? undefined : { role: w.key }}
+                  params={{ role: w.key }}
                   onClick={() => setOpen(false)}
                   className="flex min-h-11 items-center gap-3 rounded-lg px-2 hover:bg-secondary"
                 >

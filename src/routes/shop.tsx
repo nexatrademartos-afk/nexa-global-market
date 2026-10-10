@@ -3,13 +3,13 @@ import { CATEGORIES, PREVIEW_PRODUCTS, paginate } from "@/lib/preview-data";
 import { ProductCard } from "@/components/ProductCard";
 import { EmptyState, PreviewNotice } from "@/components/states";
 
-type Search = { category?: string; q?: string; page: number };
+type Search = { category?: string | undefined; q?: string | undefined; page?: number | undefined };
 
 export const Route = createFileRoute("/shop")({
   validateSearch: (s: Record<string, unknown>): Search => ({
-    category: typeof s.category === "string" ? s.category : undefined,
-    q: typeof s.q === "string" ? s.q : undefined,
-    page: Number(s.page) > 0 ? Number(s.page) : 1,
+    category: typeof s["category"] === "string" ? s["category"] : undefined,
+    q: typeof s["q"] === "string" ? s["q"] : undefined,
+    page: Number(s["page"]) > 0 ? Number(s["page"]) : 1,
   }),
   head: () => ({
     meta: [

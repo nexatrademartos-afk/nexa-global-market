@@ -23,9 +23,9 @@ const ORIGINS = ["Ghana", "Kenya", "Nigeria", "South Africa", "Senegal", "Global
 export const PREVIEW_PRODUCTS: PreviewProduct[] = NAMES.map((name, i) => ({
   id: `preview-${i + 1}`,
   name,
-  category: CATS[i % CATS.length],
+  category: CATS[i % CATS.length]!,
   priceLabel: "Price TBC",
-  origin: ORIGINS[i % ORIGINS.length],
+  origin: ORIGINS[i % ORIGINS.length]!,
 }));
 
 export const CATEGORIES = CATS;
