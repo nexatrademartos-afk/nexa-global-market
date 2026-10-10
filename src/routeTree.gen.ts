@@ -17,7 +17,19 @@ import { Route as ShopRouteImport } from './routes/shop'
 import { Route as SignInRouteImport } from './routes/sign-in'
 import { Route as SignUpRouteImport } from './routes/sign-up'
 import { Route as WishlistRouteImport } from './routes/wishlist'
+import { Route as AccountIndexRouteImport } from './routes/account.index'
+import { Route as AccountAddressesRouteImport } from './routes/account.addresses'
+import { Route as AccountApplicationsRouteImport } from './routes/account.applications'
+import { Route as AccountCartRouteImport } from './routes/account.cart'
+import { Route as AccountNotificationsRouteImport } from './routes/account.notifications'
+import { Route as AccountOrdersRouteImport } from './routes/account.orders'
+import { Route as AccountProfileRouteImport } from './routes/account.profile'
+import { Route as AccountReturnsRouteImport } from './routes/account.returns'
+import { Route as AccountRewardsRouteImport } from './routes/account.rewards'
+import { Route as AccountSettingsRouteImport } from './routes/account.settings'
+import { Route as AccountWishlistRouteImport } from './routes/account.wishlist'
 import { Route as ProductIdRouteImport } from './routes/product.$id'
+import { Route as WorkspaceRoleRouteImport } from './routes/workspace.$role'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -59,45 +71,140 @@ const WishlistRoute = WishlistRouteImport.update({
   path: '/wishlist',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AccountIndexRoute = AccountIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AccountRoute,
+} as any)
+const AccountAddressesRoute = AccountAddressesRouteImport.update({
+  id: '/addresses',
+  path: '/addresses',
+  getParentRoute: () => AccountRoute,
+} as any)
+const AccountApplicationsRoute = AccountApplicationsRouteImport.update({
+  id: '/applications',
+  path: '/applications',
+  getParentRoute: () => AccountRoute,
+} as any)
+const AccountCartRoute = AccountCartRouteImport.update({
+  id: '/cart',
+  path: '/cart',
+  getParentRoute: () => AccountRoute,
+} as any)
+const AccountNotificationsRoute = AccountNotificationsRouteImport.update({
+  id: '/notifications',
+  path: '/notifications',
+  getParentRoute: () => AccountRoute,
+} as any)
+const AccountOrdersRoute = AccountOrdersRouteImport.update({
+  id: '/orders',
+  path: '/orders',
+  getParentRoute: () => AccountRoute,
+} as any)
+const AccountProfileRoute = AccountProfileRouteImport.update({
+  id: '/profile',
+  path: '/profile',
+  getParentRoute: () => AccountRoute,
+} as any)
+const AccountReturnsRoute = AccountReturnsRouteImport.update({
+  id: '/returns',
+  path: '/returns',
+  getParentRoute: () => AccountRoute,
+} as any)
+const AccountRewardsRoute = AccountRewardsRouteImport.update({
+  id: '/rewards',
+  path: '/rewards',
+  getParentRoute: () => AccountRoute,
+} as any)
+const AccountSettingsRoute = AccountSettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
+  getParentRoute: () => AccountRoute,
+} as any)
+const AccountWishlistRoute = AccountWishlistRouteImport.update({
+  id: '/wishlist',
+  path: '/wishlist',
+  getParentRoute: () => AccountRoute,
+} as any)
 const ProductIdRoute = ProductIdRouteImport.update({
   id: '/product/$id',
   path: '/product/$id',
   getParentRoute: () => rootRouteImport,
 } as any)
+const WorkspaceRoleRoute = WorkspaceRoleRouteImport.update({
+  id: '/workspace/$role',
+  path: '/workspace/$role',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/account': typeof AccountRoute
+  '/account': typeof AccountRouteWithChildren
   '/cart': typeof CartRoute
   '/sell': typeof SellRoute
   '/shop': typeof ShopRoute
   '/sign-in': typeof SignInRoute
   '/sign-up': typeof SignUpRoute
   '/wishlist': typeof WishlistRoute
+  '/account/addresses': typeof AccountAddressesRoute
+  '/account/applications': typeof AccountApplicationsRoute
+  '/account/cart': typeof AccountCartRoute
+  '/account/notifications': typeof AccountNotificationsRoute
+  '/account/orders': typeof AccountOrdersRoute
+  '/account/profile': typeof AccountProfileRoute
+  '/account/returns': typeof AccountReturnsRoute
+  '/account/rewards': typeof AccountRewardsRoute
+  '/account/settings': typeof AccountSettingsRoute
+  '/account/wishlist': typeof AccountWishlistRoute
   '/product/$id': typeof ProductIdRoute
+  '/workspace/$role': typeof WorkspaceRoleRoute
+  '/account/': typeof AccountIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/account': typeof AccountRoute
   '/cart': typeof CartRoute
   '/sell': typeof SellRoute
   '/shop': typeof ShopRoute
   '/sign-in': typeof SignInRoute
   '/sign-up': typeof SignUpRoute
   '/wishlist': typeof WishlistRoute
+  '/account/addresses': typeof AccountAddressesRoute
+  '/account/applications': typeof AccountApplicationsRoute
+  '/account/cart': typeof AccountCartRoute
+  '/account/notifications': typeof AccountNotificationsRoute
+  '/account/orders': typeof AccountOrdersRoute
+  '/account/profile': typeof AccountProfileRoute
+  '/account/returns': typeof AccountReturnsRoute
+  '/account/rewards': typeof AccountRewardsRoute
+  '/account/settings': typeof AccountSettingsRoute
+  '/account/wishlist': typeof AccountWishlistRoute
   '/product/$id': typeof ProductIdRoute
+  '/workspace/$role': typeof WorkspaceRoleRoute
+  '/account': typeof AccountIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
-  '/account': typeof AccountRoute
+  '/account': typeof AccountRouteWithChildren
   '/cart': typeof CartRoute
   '/sell': typeof SellRoute
   '/shop': typeof ShopRoute
   '/sign-in': typeof SignInRoute
   '/sign-up': typeof SignUpRoute
   '/wishlist': typeof WishlistRoute
+  '/account/addresses': typeof AccountAddressesRoute
+  '/account/applications': typeof AccountApplicationsRoute
+  '/account/cart': typeof AccountCartRoute
+  '/account/notifications': typeof AccountNotificationsRoute
+  '/account/orders': typeof AccountOrdersRoute
+  '/account/profile': typeof AccountProfileRoute
+  '/account/returns': typeof AccountReturnsRoute
+  '/account/rewards': typeof AccountRewardsRoute
+  '/account/settings': typeof AccountSettingsRoute
+  '/account/wishlist': typeof AccountWishlistRoute
   '/product/$id': typeof ProductIdRoute
+  '/workspace/$role': typeof WorkspaceRoleRoute
+  '/account/': typeof AccountIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -110,18 +217,41 @@ export interface FileRouteTypes {
     | '/sign-in'
     | '/sign-up'
     | '/wishlist'
+    | '/account/addresses'
+    | '/account/applications'
+    | '/account/cart'
+    | '/account/notifications'
+    | '/account/orders'
+    | '/account/profile'
+    | '/account/returns'
+    | '/account/rewards'
+    | '/account/settings'
+    | '/account/wishlist'
     | '/product/$id'
+    | '/workspace/$role'
+    | '/account/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
-    | '/account'
     | '/cart'
     | '/sell'
     | '/shop'
     | '/sign-in'
     | '/sign-up'
     | '/wishlist'
+    | '/account/addresses'
+    | '/account/applications'
+    | '/account/cart'
+    | '/account/notifications'
+    | '/account/orders'
+    | '/account/profile'
+    | '/account/returns'
+    | '/account/rewards'
+    | '/account/settings'
+    | '/account/wishlist'
     | '/product/$id'
+    | '/workspace/$role'
+    | '/account'
   id:
     | '__root__'
     | '/'
@@ -132,12 +262,24 @@ export interface FileRouteTypes {
     | '/sign-in'
     | '/sign-up'
     | '/wishlist'
+    | '/account/addresses'
+    | '/account/applications'
+    | '/account/cart'
+    | '/account/notifications'
+    | '/account/orders'
+    | '/account/profile'
+    | '/account/returns'
+    | '/account/rewards'
+    | '/account/settings'
+    | '/account/wishlist'
     | '/product/$id'
+    | '/workspace/$role'
+    | '/account/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
-  AccountRoute: typeof AccountRoute
+  AccountRoute: typeof AccountRouteWithChildren
   CartRoute: typeof CartRoute
   SellRoute: typeof SellRoute
   ShopRoute: typeof ShopRoute
@@ -145,6 +287,7 @@ export interface RootRouteChildren {
   SignUpRoute: typeof SignUpRoute
   WishlistRoute: typeof WishlistRoute
   ProductIdRoute: typeof ProductIdRoute
+  WorkspaceRoleRoute: typeof WorkspaceRoleRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -205,6 +348,83 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof WishlistRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/account/': {
+      id: '/account/'
+      path: '/'
+      fullPath: '/account/'
+      preLoaderRoute: typeof AccountIndexRouteImport
+      parentRoute: typeof AccountRoute
+    }
+    '/account/addresses': {
+      id: '/account/addresses'
+      path: '/addresses'
+      fullPath: '/account/addresses'
+      preLoaderRoute: typeof AccountAddressesRouteImport
+      parentRoute: typeof AccountRoute
+    }
+    '/account/applications': {
+      id: '/account/applications'
+      path: '/applications'
+      fullPath: '/account/applications'
+      preLoaderRoute: typeof AccountApplicationsRouteImport
+      parentRoute: typeof AccountRoute
+    }
+    '/account/cart': {
+      id: '/account/cart'
+      path: '/cart'
+      fullPath: '/account/cart'
+      preLoaderRoute: typeof AccountCartRouteImport
+      parentRoute: typeof AccountRoute
+    }
+    '/account/notifications': {
+      id: '/account/notifications'
+      path: '/notifications'
+      fullPath: '/account/notifications'
+      preLoaderRoute: typeof AccountNotificationsRouteImport
+      parentRoute: typeof AccountRoute
+    }
+    '/account/orders': {
+      id: '/account/orders'
+      path: '/orders'
+      fullPath: '/account/orders'
+      preLoaderRoute: typeof AccountOrdersRouteImport
+      parentRoute: typeof AccountRoute
+    }
+    '/account/profile': {
+      id: '/account/profile'
+      path: '/profile'
+      fullPath: '/account/profile'
+      preLoaderRoute: typeof AccountProfileRouteImport
+      parentRoute: typeof AccountRoute
+    }
+    '/account/returns': {
+      id: '/account/returns'
+      path: '/returns'
+      fullPath: '/account/returns'
+      preLoaderRoute: typeof AccountReturnsRouteImport
+      parentRoute: typeof AccountRoute
+    }
+    '/account/rewards': {
+      id: '/account/rewards'
+      path: '/rewards'
+      fullPath: '/account/rewards'
+      preLoaderRoute: typeof AccountRewardsRouteImport
+      parentRoute: typeof AccountRoute
+    }
+    '/account/settings': {
+      id: '/account/settings'
+      path: '/settings'
+      fullPath: '/account/settings'
+      preLoaderRoute: typeof AccountSettingsRouteImport
+      parentRoute: typeof AccountRoute
+    }
+    '/account/wishlist': {
+      id: '/account/wishlist'
+      path: '/wishlist'
+      fullPath: '/account/wishlist'
+      preLoaderRoute: typeof AccountWishlistRouteImport
+      parentRoute: typeof AccountRoute
+    }
     '/product/$id': {
       id: '/product/$id'
       path: '/product/$id'
@@ -212,12 +432,50 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ProductIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/workspace/$role': {
+      id: '/workspace/$role'
+      path: '/workspace/$role'
+      fullPath: '/workspace/$role'
+      preLoaderRoute: typeof WorkspaceRoleRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
+interface AccountRouteChildren {
+  AccountAddressesRoute: typeof AccountAddressesRoute
+  AccountApplicationsRoute: typeof AccountApplicationsRoute
+  AccountCartRoute: typeof AccountCartRoute
+  AccountNotificationsRoute: typeof AccountNotificationsRoute
+  AccountOrdersRoute: typeof AccountOrdersRoute
+  AccountProfileRoute: typeof AccountProfileRoute
+  AccountReturnsRoute: typeof AccountReturnsRoute
+  AccountRewardsRoute: typeof AccountRewardsRoute
+  AccountSettingsRoute: typeof AccountSettingsRoute
+  AccountWishlistRoute: typeof AccountWishlistRoute
+  AccountIndexRoute: typeof AccountIndexRoute
+}
+
+const AccountRouteChildren: AccountRouteChildren = {
+  AccountAddressesRoute: AccountAddressesRoute,
+  AccountApplicationsRoute: AccountApplicationsRoute,
+  AccountCartRoute: AccountCartRoute,
+  AccountNotificationsRoute: AccountNotificationsRoute,
+  AccountOrdersRoute: AccountOrdersRoute,
+  AccountProfileRoute: AccountProfileRoute,
+  AccountReturnsRoute: AccountReturnsRoute,
+  AccountRewardsRoute: AccountRewardsRoute,
+  AccountSettingsRoute: AccountSettingsRoute,
+  AccountWishlistRoute: AccountWishlistRoute,
+  AccountIndexRoute: AccountIndexRoute,
+}
+
+const AccountRouteWithChildren =
+  AccountRoute._addFileChildren(AccountRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
-  AccountRoute: AccountRoute,
+  AccountRoute: AccountRouteWithChildren,
   CartRoute: CartRoute,
   SellRoute: SellRoute,
   ShopRoute: ShopRoute,
@@ -225,6 +483,7 @@ const rootRouteChildren: RootRouteChildren = {
   SignUpRoute: SignUpRoute,
   WishlistRoute: WishlistRoute,
   ProductIdRoute: ProductIdRoute,
+  WorkspaceRoleRoute: WorkspaceRoleRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
