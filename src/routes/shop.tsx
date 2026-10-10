@@ -27,7 +27,7 @@ function Shop() {
   const filtered = PREVIEW_PRODUCTS.filter(
     (p) => (!category || p.category === category) && (!q || p.name.toLowerCase().includes(q.toLowerCase())),
   );
-  const pg = paginate(filtered, page);
+  const pg = paginate(filtered, page ?? 1);
   return (
     <div className="mx-auto max-w-6xl space-y-4 px-4 py-6">
       <h1 className="text-3xl font-bold">Shop</h1>
