@@ -1,4 +1,4 @@
-
+import { NexaIdentityAnnouncement } from "@/components/NexaIdentityAnnouncement";
 import { useEffect, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
@@ -155,6 +155,7 @@ function CustomerDashboard() {
       <section className="rounded-2xl border border-gold/50 bg-gold-soft p-5 md:p-6">
         <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
           Your customer identification
+         <NexaIdentityAnnouncement /> 
         </p>
 
         <h2 className="mt-2 text-xl font-bold">Your NEXA ID</h2>
