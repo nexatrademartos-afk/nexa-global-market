@@ -1,13 +1,141 @@
-import { NexaIdentityAnnouncement } from "@/components/NexaIdentityAnnouncement";
+
 import { useEffect, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
+import {
+  ArrowRight,
+  Bell,
+  CircleHelp,
+  ClipboardList,
+  Gift,
+  Heart,
+  MapPin,
+  MessageCircle,
+  Package,
+  Search,
+  Settings,
+  ShieldCheck,
+  ShoppingBag,
+  Sparkles,
+  TicketPercent,
+  UserRound,
+  Wallet,
+} from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { ACCOUNT_NAV } from "./account";
+import { NexaIdentityAnnouncement } from "@/components/NexaIdentityAnnouncement";
+import { PlannedBadge } from "@/components/states";
 
 type CustomerProfile = {
   full_name: string | null;
   customer_code: string | null;
 };
+
+const SERVICES = [
+  {
+    title: "Shop products",
+    description: "Explore clothing, electronics, beauty and more.",
+    to: "/shop",
+    icon: ShoppingBag,
+    status: "available",
+  },
+  {
+    title: "Orders & delivery",
+    description: "Order history, delivery progress and tracking.",
+    to: "/account/orders",
+    icon: Package,
+    status: "soon",
+  },
+  {
+    title: "My wishlist",
+    description: "Find products you have saved.",
+    to: "/account/wishlist",
+    icon: Heart,
+    status: "available",
+  },
+  {
+    title: "My cart",
+    description: "Review items saved in this browser.",
+    to: "/account/cart",
+    icon: ShoppingBag,
+    status: "available",
+  },
+  {
+    title: "My profile",
+    description: "Your name and contact details.",
+    to: "/account/profile",
+    icon: UserRound,
+    status: "soon",
+  },
+  {
+    title: "Delivery addresses",
+    description: "Manage your saved delivery locations.",
+    to: "/account/addresses",
+    icon: MapPin,
+    status: "soon",
+  },
+  {
+    title: "Q Points & rewards",
+    description: "Points balance, history and rewards.",
+    to: "/account/rewards",
+    icon: Gift,
+    status: "soon",
+  },
+  {
+    title: "Coupons & offers",
+    description: "Discounts and special promotions.",
+    to: "/account/rewards",
+    icon: TicketPercent,
+    status: "soon",
+  },
+  {
+    title: "Referrals",
+    description: "Invite friends and follow referral rewards.",
+    to: "/account/rewards",
+    icon: Sparkles,
+    status: "soon",
+  },
+  {
+    title: "Notifications",
+    description: "Updates from NEXA about your account.",
+    to: "/account/notifications",
+    icon: Bell,
+    status: "soon",
+  },
+  {
+    title: "Help & support",
+    description: "Find help with orders and your account.",
+    to: "/account/returns",
+    icon: CircleHelp,
+    status: "soon",
+  },
+  {
+    title: "NEXA AI assistant",
+    description: "Your future 24/7 shopping assistant.",
+    to: "/account/returns",
+    icon: MessageCircle,
+    status: "soon",
+  },
+  {
+    title: "NEXA Pay & wallet",
+    description: "Future payment and wallet services.",
+    to: "/account/settings",
+    icon: Wallet,
+    status: "soon",
+  },
+  {
+    title: "Account security",
+    description: "Privacy and security settings.",
+    to: "/account/settings",
+    icon: ShieldCheck,
+    status: "soon",
+  },
+  {
+    title: "My activity",
+    description: "A summary of your customer activity.",
+    to: "/account/orders",
+    icon: ClipboardList,
+    status: "soon",
+  },
+] as const;
 
 export const Route = createFileRoute("/account/")({
   head: () => ({
@@ -23,59 +151,49 @@ export const Route = createFileRoute("/account/")({
 });
 
 function CustomerDashboard() {
-  const [loading, setLoading] = useState(true);
-  const [email, setEmail] = useState("");
   const [fullName, setFullName] = useState("");
+  const [email, setEmail] = useState("");
   const [customerCode, setCustomerCode] = useState("");
-  const [signedIn, setSignedIn] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [search, setSearch] = useState("");
 
   useEffect(() => {
     let active = true;
 
-    async function loadCustomer() {
-      setLoading(true);
-      setError("");
-
+    async function loadProfile() {
       try {
-        const { data: userData, error: userError } =
+        const { data: authData, error: authError } =
           await supabase.auth.getUser();
 
-        if (userError) throw userError;
+        if (authError) throw authError;
 
-        const user = userData.user;
-
-        if (!user) {
-          if (active) {
-            setSignedIn(false);
-            setLoading(false);
-          }
-          return;
-        }
+        const user = authData.user;
+        if (!user) return;
 
         const metadataName =
           typeof user.user_metadata?.full_name === "string"
             ? user.user_metadata.full_name
             : "";
 
-        const { data: profile, error: profileError } = await supabase
+        const { data, error: profileError } = await supabase
           .from("profiles")
           .select("full_name, customer_code")
           .eq("id", user.id)
           .maybeSingle();
 
         if (profileError) throw profileError;
-
         if (!active) return;
 
-        setSignedIn(true);
+        const profile = data as CustomerProfile | null;
+
         setEmail(user.email ?? "");
         setFullName(profile?.full_name?.trim() || metadataName.trim());
         setCustomerCode(profile?.customer_code?.trim() || "");
       } catch {
         if (active) {
           setError(
-            "We couldn't load your account details. Please refresh the page and try again."
+            "Your account is signed in, but some profile details could not be loaded. Please refresh and try again."
           );
         }
       } finally {
@@ -83,121 +201,197 @@ function CustomerDashboard() {
       }
     }
 
-    void loadCustomer();
-
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange(() => {
-      void loadCustomer();
-    });
+    void loadProfile();
 
     return () => {
       active = false;
-      subscription.unsubscribe();
     };
   }, []);
 
   const firstName = fullName.trim().split(/\s+/)[0] || "there";
 
-  if (loading) {
+  const visibleServices = SERVICES.filter((service) => {
+    const term = search.trim().toLowerCase();
     return (
-      <div className="mx-auto max-w-6xl px-4 py-10">
-        <p role="status" className="text-sm text-muted-foreground">
-          Loading your NEXA dashboard...
-        </p>
-      </div>
+      !term ||
+      service.title.toLowerCase().includes(term) ||
+      service.description.toLowerCase().includes(term)
     );
-  }
-
-  if (!signedIn) {
-    return (
-      <div className="mx-auto max-w-3xl px-4 py-12">
-        <div className="surface p-6 md:p-8">
-          <h1 className="text-2xl font-bold">Your NEXA account</h1>
-          <p className="mt-3 text-sm leading-6 text-muted-foreground">
-            Please sign in to view your customer dashboard, profile and NEXA ID.
-          </p>
-          {error && (
-            <p role="alert" className="mt-3 text-sm text-red-600">
-              {error}
-            </p>
-          )}
-          <Link to="/sign-in" className="btn btn-primary mt-5 inline-flex">
-            Sign in to your account
-          </Link>
-        </div>
-      </div>
-    );
-  }
+  });
 
   return (
-    <div className="mx-auto max-w-6xl space-y-6 px-4 py-8">
-      <section className="surface p-5 md:p-8">
-        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">
-          NEXA Customer Dashboard
-        </p>
-
-        <h1 className="mt-3 text-2xl font-bold md:text-3xl">
-          Welcome back, {firstName}!
-        </h1>
-
-        <p className="mt-2 text-sm text-muted-foreground md:text-base">
-          What would you like to order today?
-        </p>
-
-        {email && (
-          <p className="mt-3 break-all text-sm">
-            Signed in as <span className="font-medium">{email}</span>
+    <div className="space-y-5 md:space-y-6">
+      <section className="overflow-hidden rounded-2xl border border-gold/50 bg-ink text-ink-foreground">
+        <div className="p-5 md:p-7">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.25em] text-gold sm:text-xs">
+            Your personal NEXA space
           </p>
-        )}
-      </section>
 
-      <section className="rounded-2xl border border-gold/50 bg-gold-soft p-5 md:p-6">
-        <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-          Your customer identification
-         <NexaIdentityAnnouncement /> 
-        </p>
+          <h1 className="mt-3 font-display text-2xl font-bold md:text-4xl">
+            {loading ? "Welcome to NEXA" : `Welcome back, ${firstName}!`}
+          </h1>
 
-        <h2 className="mt-2 text-xl font-bold">Your NEXA ID</h2>
-
-        {customerCode ? (
-          <>
-            <p className="mt-3 break-all font-mono text-2xl font-bold tracking-wide">
-              {customerCode}
-            </p>
-            <p className="mt-2 text-sm text-muted-foreground">
-              Keep this ID for customer support and account enquiries.
-            </p>
-          </>
-        ) : (
-          <p className="mt-3 text-sm">
-            Your customer ID is not available yet. Please contact NEXA support
-            if it continues to be missing.
+          <p className="mt-2 text-sm leading-6 text-ink-foreground/70">
+            Your shopping and customer services, organised in one place.
           </p>
-        )}
-      </section>
 
-      <section>
-        <h2 className="mb-3 text-lg font-bold">Your account</h2>
+          {email && (
+            <p className="mt-3 break-all text-xs text-ink-foreground/70">
+              Signed in as {email}
+            </p>
+          )}
+        </div>
 
-        <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
-          {ACCOUNT_NAV.slice(1).map((item) => (
-            <Link
-              key={item.to}
-              to={item.to}
-              className="surface flex min-h-20 items-end p-4 font-semibold hover:border-gold"
-            >
-              {item.label}
-            </Link>
-          ))}
+        <div className="border-t border-white/10 bg-white/[0.04] p-5 md:px-7">
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            <div className="min-w-0">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-gold sm:text-xs">
+                Customer identification
+              </p>
+              <p className="mt-2 text-xs text-ink-foreground/70">
+                Your NEXA customer ID
+              </p>
+              <p className="mt-1 break-all font-mono text-xl font-bold tracking-wide sm:text-2xl">
+                {loading ? "Loading ID..." : customerCode || "ID unavailable"}
+              </p>
+            </div>
+
+            <span className="inline-flex items-center gap-2 rounded-full border border-gold/50 px-3 py-2 text-xs font-semibold text-gold">
+              <ShieldCheck className="h-4 w-4" />
+              Signed in
+            </span>
+          </div>
+          <p className="mt-3 text-xs leading-5 text-ink-foreground/60">
+            Use this ID when contacting NEXA support. It is not your password
+            or a payment credential.
+          </p>
         </div>
       </section>
 
+      <NexaIdentityAnnouncement />
+
       {error && (
-        <p role="alert" className="text-sm text-red-600">
+        <p role="alert" className="rounded-xl border p-3 text-sm">
           {error}
         </p>
       )}
+
+      <section className="space-y-3">
+        <div>
+          <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-muted-foreground sm:text-xs">
+            Your account
+          </p>
+          <h2 className="mt-1 text-xl font-bold md:text-2xl">
+            Customer services
+          </h2>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Choose a service. Features that are still being built are marked
+            Coming Soon.
+          </p>
+        </div>
+
+        <label className="relative block">
+          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <input
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+            className="field pl-10"
+            placeholder="Search your customer services..."
+            aria-label="Search customer services"
+          />
+        </label>
+
+        <div className="grid grid-cols-2 gap-3 lg:grid-cols-3">
+          {visibleServices.map((service) => {
+            const Icon = service.icon;
+            const available = service.status === "available";
+
+            return (
+              <Link
+                key={service.title}
+                to={service.to}
+                className={`group flex min-h-40 flex-col rounded-2xl border p-3 transition hover:-translate-y-0.5 hover:border-gold hover:shadow-sm sm:min-h-44 sm:p-4 ${
+                  service.title === "Shop products"
+                    ? "border-gold/60 bg-gold-soft"
+                    : "surface"
+                }`}
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <span className="grid h-9 w-9 place-items-center rounded-xl border border-gold/40 sm:h-10 sm:w-10">
+                    <Icon className="h-4 w-4 text-gold sm:h-5 sm:w-5" />
+                  </span>
+                  {available ? (
+                    <span className="rounded-full border px-2 py-1 text-[9px] font-bold uppercase tracking-wide sm:text-[10px]">
+                      Available
+                    </span>
+                  ) : (
+                    <PlannedBadge label="Coming soon" />
+                  )}
+                </div>
+
+                <span className="mt-3 text-sm font-bold leading-5 sm:text-base">
+                  {service.title}
+                </span>
+                <span className="mt-1 text-xs leading-5 text-muted-foreground">
+                  {service.description}
+                </span>
+
+                <span className="mt-auto flex items-center gap-1 pt-3 text-xs font-semibold">
+                  {available ? "Open service" : "View section"}
+                  <ArrowRight className="h-3.5 w-3.5 transition group-hover:translate-x-0.5" />
+                </span>
+              </Link>
+            );
+          })}
+        </div>
+
+        {visibleServices.length === 0 && (
+          <div className="surface rounded-2xl p-6 text-center">
+            <p className="font-semibold">No services found</p>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Try a different search.
+            </p>
+          </div>
+        )}
+      </section>
+
+      <section className="grid gap-3 sm:grid-cols-2">
+        <Link
+          to="/account/returns"
+          className="surface flex items-center gap-3 rounded-2xl border p-4 transition hover:border-gold"
+        >
+          <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-gold/40">
+            <CircleHelp className="h-5 w-5 text-gold" />
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="block text-sm font-bold">Customer support</span>
+            <span className="mt-1 block text-xs text-muted-foreground">
+              Find help and support options.
+            </span>
+          </span>
+          <ArrowRight className="h-4 w-4" />
+        </Link>
+
+        <Link
+          to="/shop"
+          className="surface flex items-center gap-3 rounded-2xl border p-4 transition hover:border-gold"
+        >
+          <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-gold/40">
+            <ShoppingBag className="h-5 w-5 text-gold" />
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="block text-sm font-bold">Continue shopping</span>
+            <span className="mt-1 block text-xs text-muted-foreground">
+              Browse the NEXA marketplace.
+            </span>
+          </span>
+          <ArrowRight className="h-4 w-4" />
+        </Link>
+      </section>
+
+      <p className="pb-2 text-center text-xs text-muted-foreground">
+        NEXA TRADE MART · Shop More. Save More. Get Rewarded.
+      </p>
     </div>
   );
 }
