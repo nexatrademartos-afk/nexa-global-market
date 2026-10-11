@@ -1,4 +1,4 @@
-
+import { startNexaLoginEvent } from "@/components/NexaIdentityAnnouncement";
 import { useState, type FormEvent, type ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -76,8 +76,9 @@ export function AuthForm({
         if (signUpError) throw signUpError;
 
         if (data.session) {
-          window.location.assign("/account");
-          return;
+  startNexaLoginEvent();
+  window.location.assign("/account");
+  return;
         }
 
         setConfirmationEmail(normalizedEmail);
@@ -87,14 +88,15 @@ export function AuthForm({
       }
 
       const { error: signInError } =
-        await supabase.auth.signInWithPassword({
-          email: normalizedEmail,
-          password,
-        });
+  await supabase.auth.signInWithPassword({
+    email: normalizedEmail,
+    password,
+  });
 
-      if (signInError) throw signInError;
+if (signInError) throw signInError;
 
-      window.location.assign("/account");
+startNexaLoginEvent();
+window.location.assign("/account");
     } catch (err) {
       setMessage("");
       setError(
