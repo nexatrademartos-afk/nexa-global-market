@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 import { createFileRoute, Link, Outlet } from "@tanstack/react-router";
 import {
@@ -89,7 +88,9 @@ function AccountLayout() {
           <p className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">
             NEXA · Secure customer access
           </p>
-          <p className="mt-3 font-semibold">Checking your account session...</p>
+          <p className="mt-3 font-semibold">
+            Checking your account session...
+          </p>
         </div>
       </main>
     );
@@ -103,9 +104,11 @@ function AccountLayout() {
             <p className="text-xs font-semibold uppercase tracking-[0.25em] text-gold">
               NEXA · Customer access
             </p>
+
             <h1 className="mt-4 font-display text-3xl font-bold md:text-5xl">
               Your NEXA. Your account.
             </h1>
+
             <p className="mt-4 max-w-2xl text-sm leading-6 text-ink-foreground/75 md:text-base">
               Sign in to enter your personal customer dashboard. Manage your
               profile, saved items and customer services in one secure place.
@@ -120,12 +123,14 @@ function AccountLayout() {
             >
               Sign in to my account
             </Link>
+
             <Link
               to="/sign-up"
               className="flex min-h-14 items-center justify-center rounded-xl border border-gold/60 px-5 py-3 text-center font-semibold transition hover:bg-gold-soft"
             >
               Create a customer account
             </Link>
+
             <Link
               to="/shop"
               className="flex min-h-12 items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-semibold underline underline-offset-4 sm:col-span-2"
@@ -133,23 +138,6 @@ function AccountLayout() {
               <ShoppingBag className="h-4 w-4" />
               Continue browsing as a guest
             </Link>
-          
-
-          
-            {[
-              { label: "Personal dashboard", icon: UserRound },
-              { label: "Orders & delivery", icon: Package },
-              { label: "Rewards", icon: Gift },
-              { label: "Customer support", icon: CircleHelp },
-            ].map(({ label, icon: Icon }) => (
-              <div
-                key={label}
-                className="flex min-h-24 flex-col items-center justify-center gap-2 bg-background p-4 text-center"
-              >
-                <Icon className="h-5 w-5 text-gold" />
-                <span className="text-xs font-medium">{label}</span>
-              </div>
-            ))}
           </div>
         </section>
       </main>
@@ -164,9 +152,11 @@ function AccountLayout() {
             <p className="text-[10px] font-semibold uppercase tracking-[0.25em] text-gold sm:text-xs">
               NEXA · Private customer area
             </p>
+
             <p className="mt-1 text-lg font-bold sm:text-xl">
               Customer Dashboard
             </p>
+
             <p className="mt-1 text-xs text-ink-foreground/70">
               Your account services, together in one place.
             </p>
@@ -202,7 +192,9 @@ function AccountLayout() {
                   <Link
                     key={to}
                     to={to}
-                    activeOptions={{ exact: "exact" in options && options.exact }}
+                    activeOptions={{
+                      exact: "exact" in options && options.exact,
+                    }}
                     activeProps={{
                       className:
                         "border-gold/50 bg-gold-soft font-semibold text-foreground",
@@ -224,6 +216,7 @@ function AccountLayout() {
                   <ArrowLeft className="h-4 w-4" />
                   Back to marketplace
                 </Link>
+
                 <button
                   type="button"
                   onClick={handleSignOut}
@@ -232,6 +225,7 @@ function AccountLayout() {
                   <ShieldCheck className="h-4 w-4" />
                   Sign out
                 </button>
+
                 {signOutError && (
                   <p role="alert" className="px-3 pt-2 text-xs text-red-600">
                     {signOutError}
@@ -244,11 +238,13 @@ function AccountLayout() {
               <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
                 Coming soon
               </p>
+
               <div className="mt-3 space-y-3 text-sm">
                 <p className="flex items-center gap-2">
                   <TicketPercent className="h-4 w-4 text-gold" />
                   Coupons & special offers
                 </p>
+
                 <p className="flex items-center gap-2">
                   <Wallet className="h-4 w-4 text-gold" />
                   NEXA Pay
