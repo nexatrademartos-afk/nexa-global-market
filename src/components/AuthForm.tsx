@@ -1,3 +1,4 @@
+import { Link } from "@tanstack/react-router";
 import { startNexaLoginEvent } from "@/components/NexaIdentityAnnouncement";
 import { useState, type FormEvent, type ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
@@ -274,6 +275,16 @@ window.location.assign("/account");
           )}
         </div>
 
+                {!withName && (
+          <p className="text-right text-sm">
+            <Link
+              to="/forgot-password"
+              className="font-semibold text-gold underline underline-offset-4"
+            >
+              Forgot password?
+            </Link>
+          </p>
+        )}
         {withName && (
           <div>
             <label
