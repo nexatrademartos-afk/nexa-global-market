@@ -133,9 +133,9 @@ function AccountLayout() {
               <ShoppingBag className="h-4 w-4" />
               Continue browsing as a guest
             </Link>
-          </div>
+          
 
-          <div className="grid grid-cols-2 gap-px border-t bg-border md:grid-cols-4">
+          
             {[
               { label: "Personal dashboard", icon: UserRound },
               { label: "Orders & delivery", icon: Package },
