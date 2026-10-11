@@ -57,15 +57,35 @@ export function MobileTabBar() {
   );
 }
 
+
 export function SiteFooter() {
   return (
     <footer className="mt-16 bg-ink pb-24 text-ink-foreground md:pb-0">
       <div className="mx-auto max-w-6xl px-4 py-10">
-        <p className="font-display text-xl font-bold">NEXA <span className="text-gold">TRADE MART</span></p>
-        <p className="mt-1 text-sm opacity-70">Shop More. Save More. Get Rewarded.</p>
+        <p className="font-display text-xl font-bold">
+          NEXA <span className="text-gold">TRADE MART</span>
+        </p>
+
+        <p className="mt-1 text-sm opacity-70">
+          Shop More. Save More. Get Rewarded.
+        </p>
+
         <div className="gold-rule my-6" />
-        <p className="text-xs opacity-60">Preview build · storefront UI only. Payments, orders and accounts are not live yet.</p>
+
+        <p className="text-sm font-semibold tracking-wide">
+          Powered by <span className="text-gold">TJC-OS</span>
+        </p>
+
+        <p className="mt-2 text-xs opacity-60">
+          Intelligent commerce. Built for global opportunity.
+        </p>
+
+        <p className="mt-5 text-xs opacity-50">
+          © {new Date().getFullYear()} NEXA TRADE MART. All rights reserved.
+        </p>
       </div>
     </footer>
   );
+}
+
 }
