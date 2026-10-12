@@ -301,7 +301,8 @@ function CustomerDashboard() {
             aria-label="Search customer services"
           />
         </label>
-                <div className="grid grid-cols-2 gap-3">
+        
+       <div className="grid grid-cols-2 gap-3">
           {visibleServices.map((service) => {
             const Icon = service.icon;
             const available = service.status === "available";
