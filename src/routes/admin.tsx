@@ -48,6 +48,7 @@ function makeSlug(value: string) {
 }
 
 function AdminDashboard() {
+  const [adminFirstName, setAdminFirstName] = useState("Admin");
   const [checking, setChecking] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
   const [products, setProducts] = useState<Product[]>([]);
@@ -113,7 +114,26 @@ function AdminDashboard() {
 
       if (!active) return;
 
-      setIsAdmin(!roleError && Boolean(role));
+     const approvedAdmin = !roleError && Boolean(role);
+setIsAdmin(approvedAdmin);
+
+if (approvedAdmin) {
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("full_name")
+    .eq("id", userResult.user.id)
+    .maybeSingle();
+
+  const registeredName =
+    profile?.full_name?.trim() ||
+    userResult.user.user_metadata?.full_name ||
+    "";
+
+  setAdminFirstName(
+    registeredName.split(/\s+/).filter(Boolean)[0] ||
+      "Admin",
+  );
+} 
       setChecking(false);
     }
 
@@ -305,8 +325,12 @@ function AdminDashboard() {
             NEXA · Administration
           </p>
           <h1 className="mt-3 text-3xl font-bold md:text-4xl">
-            Product Management
-          </h1>
+  Welcome back, {adminFirstName}
+</h1>
+
+<h2 className="mt-3 text-xl font-semibold text-gold">
+  Product Management
+</h2>
           <p className="mt-3 max-w-2xl text-sm leading-6 text-ink-foreground/75">
             Add products, maintain your catalogue and control which products
             are published to customers. Changes are saved to the NEXA database.
