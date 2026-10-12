@@ -10,7 +10,7 @@ export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "14.5"
+    PostgrestVersion: "14.15"
   }
   public: {
     Tables: {
@@ -163,6 +163,173 @@ export type Database = {
           recipient?: string
           street?: string
           updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      nexa_accounts: {
+        Row: {
+          account_code: string
+          account_number: number
+          created_at: string
+          user_id: string
+        }
+        Insert: {
+          account_code: string
+          account_number: number
+          created_at?: string
+          user_id: string
+        }
+        Update: {
+          account_code?: string
+          account_number?: number
+          created_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      nexa_id_sequences: {
+        Row: {
+          identity_type: string
+          last_value: number
+          updated_at: string
+        }
+        Insert: {
+          identity_type: string
+          last_value?: number
+          updated_at?: string
+        }
+        Update: {
+          identity_type?: string
+          last_value?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      nexa_identities: {
+        Row: {
+          country_iso2: string | null
+          id: string
+          identity_code: string
+          identity_type: string
+          issued_at: string
+          metadata: Json
+          retired_at: string | null
+          sequence_number: number | null
+          status: string
+          user_id: string
+        }
+        Insert: {
+          country_iso2?: string | null
+          id?: string
+          identity_code: string
+          identity_type: string
+          issued_at?: string
+          metadata?: Json
+          retired_at?: string | null
+          sequence_number?: number | null
+          status?: string
+          user_id: string
+        }
+        Update: {
+          country_iso2?: string | null
+          id?: string
+          identity_code?: string
+          identity_type?: string
+          issued_at?: string
+          metadata?: Json
+          retired_at?: string | null
+          sequence_number?: number | null
+          status?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      nexa_identity_aliases: {
+        Row: {
+          alias_code: string
+          alias_source: string
+          created_at: string
+          id: string
+          identity_id: string
+        }
+        Insert: {
+          alias_code: string
+          alias_source?: string
+          created_at?: string
+          id?: string
+          identity_id: string
+        }
+        Update: {
+          alias_code?: string
+          alias_source?: string
+          created_at?: string
+          id?: string
+          identity_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "nexa_identity_aliases_identity_id_fkey"
+            columns: ["identity_id"]
+            isOneToOne: false
+            referencedRelation: "nexa_identities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      nexa_identity_announcement_events: {
+        Row: {
+          banner_shown: boolean
+          created_at: string
+          display_number: number
+          id: string
+          login_event_id: string
+          user_id: string
+        }
+        Insert: {
+          banner_shown: boolean
+          created_at?: string
+          display_number: number
+          id?: string
+          login_event_id: string
+          user_id: string
+        }
+        Update: {
+          banner_shown?: boolean
+          created_at?: string
+          display_number?: number
+          id?: string
+          login_event_id?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      nexa_identity_announcements: {
+        Row: {
+          completed_at: string | null
+          created_at: string
+          display_count: number
+          max_displays: number
+          new_identity_code: string
+          old_identity_code: string | null
+          user_id: string
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string
+          display_count?: number
+          max_displays?: number
+          new_identity_code: string
+          old_identity_code?: string | null
+          user_id: string
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string
+          display_count?: number
+          max_displays?: number
+          new_identity_code?: string
+          old_identity_code?: string | null
           user_id?: string
         }
         Relationships: []
@@ -461,6 +628,45 @@ export type Database = {
           },
         ]
       }
+      role_applications: {
+        Row: {
+          applicant_id: string
+          application_message: string | null
+          created_at: string
+          id: string
+          requested_role: Database["public"]["Enums"]["app_role"]
+          review_notes: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          applicant_id: string
+          application_message?: string | null
+          created_at?: string
+          id?: string
+          requested_role: Database["public"]["Enums"]["app_role"]
+          review_notes?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          applicant_id?: string
+          application_message?: string | null
+          created_at?: string
+          id?: string
+          requested_role?: Database["public"]["Enums"]["app_role"]
+          review_notes?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       social_links: {
         Row: {
           created_at: string
@@ -563,6 +769,23 @@ export type Database = {
           _user_id: string
         }
         Returns: boolean
+      }
+      record_nexa_identity_announcement_login: {
+        Args: { p_login_event_id: string }
+        Returns: {
+          display_number: number
+          displays_remaining: number
+          new_identity_code: string
+          show_banner: boolean
+        }[]
+      }
+      review_role_application: {
+        Args: {
+          p_application_id: string
+          p_decision: string
+          p_review_notes?: string
+        }
+        Returns: string
       }
     }
     Enums: {
