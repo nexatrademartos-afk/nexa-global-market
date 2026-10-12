@@ -21,7 +21,8 @@ function useFirstName() {
         .select("full_name")
         .eq("id", user.id)
         .maybeSingle();
-      const full = (profile?.full_name || (user.user_metadata?.full_name as string) || "").trim();
+      const meta = user.user_metadata?.["full_name"] as string | undefined;
+      const full = (profile?.full_name || meta || "").trim();
       const name = full.split(/\s+/)[0];
       if (active && name) setFirst(name);
     })();
