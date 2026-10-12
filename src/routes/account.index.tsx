@@ -1,154 +1,201 @@
 import { useEffect, useState } from "react";
-import { createFileRoute, Link } from "@tanstack/react-router";
-import { AccountPage, accountHead } from "@/components/AccountPage";
-import { PlannedBadge } from "@/components/states";
 import { supabase } from "@/integrations/supabase/client";
-import { ACCOUNT_NAV } from "./account";
 
-// Only services that already have working pages are clickable.
-const AVAILABLE = new Set<string>(["/account/cart", "/account/wishlist"]);
+type AnnouncementResult = {
+  show_banner: boolean;
+  new_identity_code: string | null;
+  display_number: number;
+  displays_remaining: number;
+};
 
-function getRegisteredFirstName(fullName: string | null | undefined) {
-  return fullName?.trim().split(/\s+/)[0] || null;
+function getLoginEventId(): string {
+  const storageKey = "nexa_login_event_id";
+
+  try {
+    const existing = sessionStorage.getItem(storageKey);
+    if (existing) return existing;
+
+    const eventId = crypto.randomUUID();
+    sessionStorage.setItem(storageKey, eventId);
+    return eventId;
+  } catch {
+    return crypto.randomUUID();
+  }
 }
 
-function useFirstName() {
-  const [firstName, setFirstName] = useState<string | null>(null);
+export function startNexaLoginEvent(): void {
+  try {
+    sessionStorage.setItem("nexa_login_event_id", crypto.randomUUID());
+  } catch {
+    // The dashboard will create an event ID if session storage is unavailable.
+  }
+}
+
+export function NexaIdentityAnnouncement() {
+  const [loading, setLoading] = useState(true);
+  const [newIdentityCode, setNewIdentityCode] = useState("");
+  const [showBanner, setShowBanner] = useState(false);
+  const [displayNumber, setDisplayNumber] = useState(0);
+  const [displaysRemaining, setDisplaysRemaining] = useState(0);
+  const [noticeOpen, setNoticeOpen] = useState(false);
+  const [error, setError] = useState("");
 
   useEffect(() => {
     let active = true;
 
-    async function loadFirstName() {
+    async function loadAnnouncement() {
       try {
-        const { data, error } = await supabase.auth.getUser();
+        const { data: userData, error: userError } =
+          await supabase.auth.getUser();
 
-        if (error || !data.user) {
-          if (active) setFirstName(null);
+        if (userError) throw userError;
+        if (!userData.user) {
+          if (active) setLoading(false);
           return;
         }
 
-        const user = data.user;
-        const metadata = user.user_metadata ?? {};
+        const rpc = supabase.rpc.bind(supabase) as unknown as (
+          functionName: string,
+          args: { p_login_event_id: string }
+        ) => Promise<{
+          data: AnnouncementResult[] | null;
+          error: { message: string } | null;
+        }>;
 
-        // Prefer the name saved in the customer's profile.
-        const { data: profile } = await supabase
-          .from("profiles")
-          .select("full_name")
-          .eq("id", user.id)
-          .maybeSingle();
-
-        // Use registration metadata if no profile name is available.
-        const registeredName =
-          profile?.full_name ||
-          metadata["full_name"] ||
-          metadata["first_name"] ||
-          metadata["name"] ||
-          "";
-
-        const name = getRegisteredFirstName(
-          typeof registeredName === "string" ? registeredName : null,
+        const { data, error: rpcError } = await rpc(
+          "record_nexa_identity_announcement_login",
+          { p_login_event_id: getLoginEventId() }
         );
 
-        if (active) setFirstName(name);
-      } catch (error) {
-        console.error("Unable to load the customer's greeting name:", error);
-        if (active) setFirstName(null);
+        if (rpcError) throw rpcError;
+
+        const announcement = data?.[0];
+
+        if (active && announcement?.new_identity_code) {
+          setNewIdentityCode(announcement.new_identity_code);
+          setShowBanner(announcement.show_banner);
+          setDisplayNumber(announcement.display_number);
+          setDisplaysRemaining(announcement.displays_remaining);
+
+          // Show the notice automatically when this is one of the
+          // first three recorded displays.
+          setNoticeOpen(announcement.show_banner);
+        }
+      } catch {
+        if (active) {
+          setError(
+            "Your NEXA ID is still available in your dashboard. We couldn't load the ID-change notice right now."
+          );
+        }
+      } finally {
+        if (active) setLoading(false);
       }
     }
 
-    void loadFirstName();
+    void loadAnnouncement();
 
     return () => {
       active = false;
     };
   }, []);
 
-  return firstName;
-}
-
-function Overview() {
-  const firstName = useFirstName();
+  if (loading || !newIdentityCode) {
+    return error ? (
+      <p role="status" className="text-sm text-muted-foreground">
+        {error}
+      </p>
+    ) : null;
+  }
 
   return (
-    <AccountPage
-      title={`Welcome back${firstName ? ` ${firstName}` : ""}`}
-      intro="Your NEXA account, shopping and services — all in one place."
+    <section
+      aria-labelledby="nexa-identity-notice-heading"
+      className="space-y-3"
     >
-      <section
-        aria-label="Customer account services"
-        className="rounded-2xl border border-[#C6A45B]/40 bg-[#080808] p-3 text-[#D5D5D5] shadow-xl sm:p-4"
-      >
-        <div className="mb-4">
-          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#D4AF63]">
-            Your dashboard
+      {showBanner && (
+        <div
+          role="status"
+          className="rounded-2xl border border-gold/60 bg-gold-soft p-4 md:p-5"
+        >
+          <p className="text-xs font-semibold uppercase tracking-widest">
+            Important account update
           </p>
-          <p className="mt-1 text-sm text-[#AFAFAF]">
-            Choose a service to continue.
+
+          <h2
+            id="nexa-identity-notice-heading"
+            className="mt-2 text-lg font-bold"
+          >
+            Your permanent NEXA ID is here
+          </h2>
+
+          <p className="mt-2 text-sm leading-6">
+            Your customer ID has been updated to your permanent NEXA identity.
+            Your account, orders, referrals and rewards remain linked to the
+            same account.
           </p>
+
+          <p className="mt-3 font-mono text-xl font-bold">
+            {newIdentityCode}
+          </p>
+
+          <p className="mt-2 text-sm">
+            Keep this ID for support and future NEXA services. It is an
+            identification number, not your password or a payment credential.
+          </p>
+
+          <p className="mt-3 text-xs text-muted-foreground">
+            Notice {displayNumber} of 3 for this account.
+          </p>
+
+          <button
+            type="button"
+            onClick={() => setNoticeOpen(false)}
+            className="mt-3 rounded-lg border px-4 py-2 text-sm font-semibold"
+          >
+            Dismiss for now
+          </button>
         </div>
+      )}
 
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-          {ACCOUNT_NAV.slice(1).map((item) => {
-            const available = AVAILABLE.has(item.to);
+      {!noticeOpen && (
+        <button
+          type="button"
+          onClick={() => setNoticeOpen(true)}
+          className="rounded-lg border border-gold/60 px-4 py-2 text-sm font-semibold hover:bg-gold-soft"
+        >
+          Read your NEXA ID update
+          {displaysRemaining > 0
+            ? ` (${displaysRemaining} notice ${
+                displaysRemaining === 1 ? "display" : "displays"
+              } remaining)`
+            : ""}
+        </button>
+      )}
 
-            const cardClassName =
-              "relative flex aspect-square flex-col justify-between rounded-xl border p-3 transition-colors sm:p-4 " +
-              (available
-                ? "border-[#C6A45B]/50 bg-[#101010] text-[#D5D5D5] hover:border-[#E0BD70] hover:bg-[#17130B] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#E0BD70]"
-                : "border-[#444444] bg-[#101010] text-[#858585]");
-
-            if (available) {
-              return (
-                <Link
-                  key={item.to}
-                  to={item.to}
-                  aria-label={item.label}
-                  className={cardClassName}
-                >
-                  <span
-                    aria-hidden="true"
-                    className="flex h-9 w-9 items-center justify-center rounded-lg border border-[#C6A45B]/40 bg-[#17130B] text-lg text-[#D4AF63]"
-                  >
-                    {item.to === "/account/cart" ? "◇" : "☆"}
-                  </span>
-
-                  <span className="text-sm font-semibold leading-snug sm:text-base">
-                    {item.label}
-                  </span>
-
-                  <span className="text-xs text-[#D4AF63]">
-                    Open service →
-                  </span>
-                </Link>
-              );
-            }
-
-            return (
-              <div
-                key={item.to}
-                aria-disabled="true"
-                className={cardClassName}
-              >
-                <PlannedBadge label="Coming soon" />
-
-                <span className="text-sm font-semibold leading-snug sm:text-base">
-                  {item.label}
-                </span>
-
-                <span className="text-xs text-[#858585]">
-                  Not available yet
-                </span>
-              </div>
-            );
-          })}
+      {noticeOpen && !showBanner && (
+        <div className="rounded-2xl border border-gold/50 bg-gold-soft p-4">
+          <h2 className="font-bold">Your permanent NEXA identity</h2>
+          <p className="mt-2 text-sm leading-6">
+            Your customer ID has changed to {newIdentityCode}. Your account,
+            orders, referrals and rewards remain linked to the same account.
+            Use this ID for NEXA support and identification. It is not your
+            password or a payment credential.
+          </p>
+          <button
+            type="button"
+            onClick={() => setNoticeOpen(false)}
+            className="mt-3 rounded-lg border px-4 py-2 text-sm font-semibold"
+          >
+            Close notice
+          </button>
         </div>
-      </section>
-    </AccountPage>
+      )}
+
+      {error && (
+        <p role="status" className="text-sm text-muted-foreground">
+          {error}
+        </p>
+      )}
+    </section>
   );
-}
-
-export const Route = createFileRoute("/account/")({
-  head: accountHead("Overview", "Your NEXA customer dashboard."),
-  component: Overview,
-});
-      
+      }
