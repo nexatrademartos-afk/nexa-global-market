@@ -24,8 +24,8 @@ const ROLE_LABELS: Record<WorkspaceKey, string> = {
   customer: "Customer",
   partner: "Business Partner",
   delivery: "Delivery",
-  commission: "Commission Partner",
-  admin: "Administration",
+  commission: "Commission",
+  admin: "Admin",
   ceo: "CEO",
   finance: "Finance",
   security: "Security",
@@ -309,7 +309,7 @@ function WorkspacePage() {
             </p>
 
             <h1 className="mt-3 text-3xl font-bold md:text-4xl">
-              Welcome back, {ROLE_LABELS[workspace.key]} — TJC-OS
+              Welcome back, {ROLE_LABELS[workspace.key]} {access.name}
             </h1>
 
             <p className="mt-3 text-sm leading-6 text-ink-foreground/75">
