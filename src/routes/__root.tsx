@@ -131,4 +131,4 @@ function RootComponent() {
       <MobileTabBar />
     </QueryClientProvider>
   );
-}
+} 
