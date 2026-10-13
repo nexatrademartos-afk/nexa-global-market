@@ -309,8 +309,8 @@ function WorkspacePage() {
             </p>
 
             <h1 className="mt-3 text-3xl font-bold md:text-4xl">
-              Welcome back, {ROLE_LABELS[workspace.key]} {access.name}
-            </h1>
+  Welcome back, {access.name.trim().split(/\s+/)[0]}
+</h1>
 
             <p className="mt-3 text-sm leading-6 text-ink-foreground/75">
               Hello, {access.name}. You are in your authorised{" "}
@@ -428,4 +428,4 @@ function WorkspacePage() {
       )}
     </main>
   );
-                 }
+          }
