@@ -642,4 +642,246 @@ function AdminDashboard() {
 
               <label className="grid gap-2 text-sm font-medium">
                 Product image URL
-      
+                      <span className="flex items-center gap-2 text-xs font-normal text-[#A6A6A6]">
+                  <ImagePlus className="h-4 w-4" />
+                  Use a direct, publicly accessible image URL for now.
+                </span>
+                <input
+                  type="url"
+                  value={form.image_url}
+                  onChange={(event) =>
+                    updateForm("image_url", event.target.value)
+                  }
+                  placeholder="https://example.com/product-image.jpg"
+                  className="field w-full"
+                />
+              </label>
+
+              {form.image_url && (
+                <div className="max-w-xs overflow-hidden rounded-xl border border-[#C9A227]/40 p-2">
+                  <img
+                    src={form.image_url}
+                    alt="Product image preview"
+                    className="aspect-square w-full rounded-lg object-contain"
+                    onError={(event) => {
+                      event.currentTarget.style.display = "none";
+                    }}
+                  />
+                </div>
+              )}
+
+              <label className="grid gap-2 text-sm font-medium">
+                Description
+                <textarea
+                  rows={4}
+                  value={form.description}
+                  onChange={(event) =>
+                    updateForm("description", event.target.value)
+                  }
+                  placeholder="Describe the product, its features and key details."
+                  className="field w-full"
+                />
+              </label>
+
+              <div className="grid gap-3 sm:grid-cols-2">
+                <label className="flex items-start gap-3 rounded-xl border border-[#C9A227]/40 p-4">
+                  <input
+                    type="checkbox"
+                    checked={form.is_active}
+                    onChange={(event) =>
+                      updateForm("is_active", event.target.checked)
+                    }
+                    className="mt-1"
+                  />
+                  <span>
+                    <span className="block text-sm font-semibold">
+                      Publish product
+                    </span>
+                    <span className="mt-1 block text-xs text-[#A6A6A6]">
+                      Published products can be shown to customers.
+                    </span>
+                  </span>
+                </label>
+
+                <label className="flex items-start gap-3 rounded-xl border border-[#C9A227]/40 p-4">
+                  <input
+                    type="checkbox"
+                    checked={form.is_featured}
+                    onChange={(event) =>
+                      updateForm("is_featured", event.target.checked)
+                    }
+                    className="mt-1"
+                  />
+                  <span>
+                    <span className="block text-sm font-semibold">
+                      Featured product
+                    </span>
+                    <span className="mt-1 block text-xs text-[#A6A6A6]">
+                      Mark this item for future featured catalogue sections.
+                    </span>
+                  </span>
+                </label>
+              </div>
+
+              <div className="flex flex-wrap gap-3">
+                <button
+                  type="submit"
+                  disabled={saving}
+                  className="btn btn-primary"
+                >
+                  {saving
+                    ? "Saving..."
+                    : editingId
+                      ? "Save product changes"
+                      : "Save product"}
+                </button>
+
+                {editingId && (
+                  <button
+                    type="button"
+                    onClick={resetForm}
+                    className="btn btn-outline"
+                  >
+                    Cancel editing
+                  </button>
+                )}
+              </div>
+            </form>
+          </section>
+                    <section className="rounded-2xl border border-[#C9A227]/70 bg-[#090909] p-5 shadow-[0_0_12px_rgba(201,162,39,0.12)] md:p-7">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <h2 className="text-xl font-bold text-white">
+                  Product catalogue
+                </h2>
+                <p className="mt-1 text-sm text-[#A6A6A6]">
+                  Existing database products. No records are deleted here.
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => void loadProducts()}
+                disabled={loadingProducts}
+                className="btn btn-outline"
+              >
+                <RefreshCw className="mr-2 inline h-4 w-4" />
+                Refresh
+              </button>
+            </div>
+
+            {loadingProducts ? (
+              <p className="py-8 text-sm text-[#A6A6A6]">
+                Loading products...
+              </p>
+            ) : products.length === 0 ? (
+              <p className="py-8 text-sm text-[#A6A6A6]">
+                No products found. Add your first product using the form above.
+              </p>
+            ) : (
+              <div className="mt-5 space-y-3">
+                {products.map((product) => {
+                  const category = categories.find(
+                    (item) => item.id === product.category_id,
+                  );
+
+                  return (
+                    <article
+                      key={product.id}
+                      className="flex flex-col gap-4 rounded-xl border border-[#C9A227]/50 bg-[#080808] p-4 shadow-[0_0_8px_rgba(201,162,39,0.10)] sm:flex-row sm:items-center"
+                    >
+                      {product.image_url ? (
+                        <img
+                          src={product.image_url}
+                          alt={product.name}
+                          className="h-20 w-20 shrink-0 rounded-lg border border-[#C9A227]/40 bg-white object-contain"
+                          onError={(event) => {
+                            event.currentTarget.style.display = "none";
+                          }}
+                        />
+                      ) : (
+                        <div className="grid h-20 w-20 shrink-0 place-items-center rounded-lg border border-[#C9A227]/50 bg-[#15120A] text-[#E4C15A]">
+                          <Package className="h-7 w-7" />
+                        </div>
+                      )}
+
+                      <div className="min-w-0 flex-1">
+                        <h3 className="font-semibold text-white">
+                          {product.name}
+                        </h3>
+
+                        <p className="mt-1 break-all text-xs text-[#A6A6A6]">
+                          {product.slug}
+                        </p>
+
+                        <p className="mt-1 text-sm text-[#D0D0D0]">
+                          R{Number(product.price).toFixed(2)} · Stock:{" "}
+                          {product.stock}
+                          {category ? ` · ${category.name}` : ""}
+                        </p>
+
+                        <div className="mt-2 flex flex-wrap gap-2 text-xs">
+                          <span
+                            className={`rounded-full border px-2 py-1 ${
+                              product.is_active
+                                ? "border-[#C9A227] text-[#E4C15A]"
+                                : "border-[#555555] text-[#A6A6A6]"
+                            }`}
+                          >
+                            {product.is_active ? "Published" : "Unpublished"}
+                          </span>
+
+                          {product.is_featured && (
+                            <span className="rounded-full border border-[#C9A227]/60 px-2 py-1 text-[#E4C15A]">
+                              Featured
+                            </span>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="flex flex-wrap gap-2 sm:justify-end">
+                        <button
+                          type="button"
+                          onClick={() => startEditing(product)}
+                          className="btn btn-outline"
+                        >
+                          Edit
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() =>
+                            void toggleProduct(product, "is_active")
+                          }
+                          className="btn btn-outline"
+                        >
+                          {product.is_active ? "Unpublish" : "Publish"}
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() =>
+                            void toggleProduct(product, "is_featured")
+                          }
+                          aria-label={
+                            product.is_featured
+                              ? `Remove ${product.name} from featured products`
+                              : `Feature ${product.name}`
+                          }
+                          className="btn btn-outline"
+                        >
+                          <CheckCircle2 className="mr-1 inline h-4 w-4" />
+                          {product.is_featured ? "Unfeature" : "Feature"}
+                        </button>
+                      </div>
+                    </article>
+                  );
+                })}
+              </div>
+            )}
+          </section>
+        </div>
+      </div>
+    </main>
+  );
+                    }
