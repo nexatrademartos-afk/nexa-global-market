@@ -31,6 +31,11 @@ export function AuthForm({
   const [error, setError] = useState("");
   const [confirmationRequired, setConfirmationRequired] = useState(false);
   const [confirmationEmail, setConfirmationEmail] = useState("");
+  const [policyEvidence, setPolicyEvidence] = useState<
+  PolicyAcceptanceEvidence[] | null
+>(null);
+  
+  
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -39,6 +44,13 @@ export function AuthForm({
 
     setError("");
     setMessage("");
+
+    
+if (withName && (!policyEvidence || policyEvidence.length === 0)) {
+  setError("Please review and agree to the required policies before creating your account.");
+  return;
+}
+    
 
     const normalizedEmail = email.trim().toLowerCase();
 
@@ -69,14 +81,16 @@ export function AuthForm({
         const { data, error: signUpError } =
           await supabase.auth.signUp({
             email: normalizedEmail,
-            password,
-            options: {
-              data: {
-                full_name: fullName.trim(),
-              },
-            },
-          });
-
+            data: {
+  full_name: fullName.trim(),
+  policy_acceptance: {
+    schema_version: 1,
+    accepted: true,
+    evidence: policyEvidence,
+  },
+},
+            
+            
         if (signUpError) throw signUpError;
 
         if (data.session) {
@@ -342,10 +356,23 @@ window.location.assign("/account");
           </p>
         )}
 
+{withName && (
+  <PolicyConsent
+    context="customer-registration"
+    onAccept={(evidence) => {
+      setPolicyEvidence(evidence);
+      setError("");
+    }}
+    disabled={loading}
+    continueLabel="Agree to policies"
+  />
+)}
+    
         <button
           type="submit"
-          disabled={loading}
-          className="btn btn-primary w-full"
+          disabled={loading || (Boolean(withName) && !policyEvidence)}
+          
+          
         >
           {loading ? "Please wait..." : cta}
         </button>
