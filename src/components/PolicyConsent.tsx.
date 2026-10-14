@@ -1,0 +1,138 @@
+
+import { useState } from "react";
+import {
+  createPolicyAcceptanceEvidence,
+  getPoliciesForContext,
+  getPolicyHref,
+  POLICY_REGISTRY,
+  type PolicyContext,
+  type PolicyId,
+  type PolicyAcceptanceEvidence,
+} from "@/lib/policies";
+import { Link } from "@tanstack/react-router";
+
+interface PolicyConsentProps {
+  context: PolicyContext;
+  onAccept: (evidence: PolicyAcceptanceEvidence[]) => void;
+  continueLabel?: string;
+  disabled?: boolean;
+}
+
+export function PolicyConsent({
+  context,
+  onAccept,
+  continueLabel = "Agree & continue",
+  disabled = false,
+}: PolicyConsentProps) {
+  const policies = getPoliciesForContext(context);
+  const [checked, setChecked] = useState<Partial<Record<PolicyId, boolean>>>(
+    {},
+  );
+
+  const allAccepted = policies.every((policy) => checked[policy.id] === true);
+
+  function handleContinue() {
+    if (!allAccepted || disabled) return;
+
+    onAccept(createPolicyAcceptanceEvidence(context));
+  }
+
+  return (
+    <section
+      aria-labelledby="policy-consent-heading"
+      className="space-y-4 rounded-xl border p-4"
+    >
+      <div>
+        <h2 id="policy-consent-heading" className="font-semibold">
+          Review and accept the applicable policies
+        </h2>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Open and read each policy before selecting its checkbox. You can
+          leave this step without agreeing.
+        </p>
+      </div>
+
+      <ul className="space-y-3">
+        {policies.map((policy) => {
+          const isPrivacy = policy.id === "privacy";
+          const label = isPrivacy
+            ? "I acknowledge that I have read the Privacy Policy."
+            : `I have read and agree to the ${policy.title}.`;
+
+          return (
+            <li key={policy.id} className="rounded-lg bg-muted/40 p-3">
+              <div className="flex items-start gap-3">
+                <input
+                  id={`policy-${context}-${policy.id}`}
+                  type="checkbox"
+                  className="mt-1 h-4 w-4 shrink-0 accent-current"
+                  checked={checked[policy.id] === true}
+                  onChange={(event) =>
+                    setChecked((current) => ({
+                      ...current,
+                      [policy.id]: event.target.checked,
+                    }))
+                  }
+                  disabled={disabled}
+                  required
+                />
+
+                <div className="min-w-0 flex-1">
+                  <label
+                    htmlFor={`policy-${context}-${policy.id}`}
+                    className="cursor-pointer text-sm font-medium"
+                  >
+                    {label}
+                  </label>
+
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    Version {policy.version} ·{" "}
+                    {policy.status === "review-required"
+                      ? "Draft — legal/business review required"
+                      : "Draft"}
+                  </p>
+
+                  <Link
+                    to={getPolicyHref(policy.id) as "/policies"}
+                    hash={policy.id}
+                    className="mt-1 inline-block text-sm font-semibold text-gold underline underline-offset-4"
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    Read {policy.title}
+                  </Link>
+                </div>
+              </div>
+            </li>
+          );
+        })}
+      </ul>
+
+      <p className="text-xs leading-5 text-muted-foreground">
+        Optional marketing messages are not covered by these choices. These
+        draft policies need review before launch. Acceptance shown here is
+        submitted with registration metadata; it is not an independent,
+        tamper-resistant audit record.
+      </p>
+
+      <button
+        type="button"
+        onClick={handleContinue}
+        disabled={!allAccepted || disabled}
+        className="btn btn-primary w-full"
+      >
+        {continueLabel}
+      </button>
+
+      <p className="text-xs text-muted-foreground">
+        Applicable policies:{" "}
+        {policies.map((policy, index) => (
+          <span key={policy.id}>
+            {index > 0 ? ", " : ""}
+            {policy.title}
+          </span>
+        ))}
+      </p>
+    </section>
+  );
+              }
