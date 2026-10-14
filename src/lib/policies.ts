@@ -1,4 +1,4 @@
-            
+
 export type PolicyId =
   | "terms"
   | "privacy"
@@ -290,3 +290,58 @@ export const POLICY_REGISTRY: Record<PolicyId, PolicyDocument> = {
   },
 };
 
+export function getPoliciesForContext(
+  context: PolicyContext,
+): PolicyDocument[] {
+  const policyIds: Record<PolicyContext, PolicyId[]> = {
+    "customer-registration": ["terms", "privacy"],
+    "seller-application": [
+      "terms",
+      "privacy",
+      "seller",
+      "acceptable-use",
+    ],
+    "delivery-application": [
+      "terms",
+      "privacy",
+      "delivery-partner",
+    ],
+    checkout: [
+      "terms",
+      "privacy",
+      "buyer-returns",
+      "delivery",
+      "digital-products",
+    ],
+  };
+
+  return policyIds[context].map((id) => POLICY_REGISTRY[id]);
+}
+
+export function getPolicyHref(policyId: PolicyId): string {
+  return `/policies#${policyId}`;
+}
+
+export interface PolicyAcceptanceEvidence {
+  policy_id: PolicyId;
+  policy_version: string;
+  accepted_at: string;
+  action: "agree_and_continue" | "acknowledge_privacy";
+  source: PolicyContext;
+}
+
+export function createPolicyAcceptanceEvidence(
+  context: PolicyContext,
+  acceptedAt: string = new Date().toISOString(),
+): PolicyAcceptanceEvidence[] {
+  return getPoliciesForContext(context).map((policy) => ({
+    policy_id: policy.id,
+    policy_version: policy.version,
+    accepted_at: acceptedAt,
+    action:
+      policy.id === "privacy"
+        ? "acknowledge_privacy"
+        : "agree_and_continue",
+    source: context,
+  }));
+}
