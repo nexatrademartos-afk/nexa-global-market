@@ -1,3 +1,6 @@
+
+import { PolicyConsent } from "@/components/PolicyConsent";
+import type { PolicyAcceptanceEvidence } from "@/lib/policies";
 import { Link } from "@tanstack/react-router";
 import { startNexaLoginEvent } from "@/components/NexaIdentityAnnouncement";
 import { useState, type FormEvent, type ReactNode } from "react";
