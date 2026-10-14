@@ -1,0 +1,44 @@
+name: Repair and Validate Bun Lockfile
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  repair-lockfile:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Install Bun 1.2.15
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.2.15
+
+      - name: Regenerate lockfile from package.json
+        run: bun install --lockfile-only
+
+      - name: Validate lockfile consistency
+        run: bun install --frozen-lockfile
+
+      - name: Create pull request for the lockfile
+        uses: peter-evans/create-pull-request@v7
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          branch: repair/bun-lock-bun-1-2-15
+          add-paths: bun.lock
+          commit-message: "Fix Bun lockfile consistency"
+          title: "Fix Bun lockfile consistency"
+          body: |
+            Regenerate bun.lock from the current package.json
+            using Bun 1.2.15.
+
+            Validate the result with a frozen-lockfile install.
+            This pull request changes bun.lock only.
