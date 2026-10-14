@@ -24,6 +24,8 @@ export function AuthForm({
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [policyEvidence, setPolicyEvidence] =
+    useState<PolicyAcceptanceEvidence[] | null>(null);
   const [loading, setLoading] = useState(false);
   const [resending, setResending] = useState(false);
   const [message, setMessage] = useState("");
@@ -56,32 +58,39 @@ export function AuthForm({
       return;
     }
 
+    if (withName && (!policyEvidence || policyEvidence.length === 0)) {
+      setError(
+        "Please review and acknowledge all required policies before creating your account.",
+      );
+      return;
+    }
+
     setLoading(true);
     setMessage(
       withName
         ? "Creating your account. Please keep this page open..."
-        : "Signing you in. Please keep this page open..."
+        : "Signing you in. Please keep this page open...",
     );
 
     try {
       if (withName) {
-        const { data, error: signUpError } =
-          await supabase.auth.signUp({
-            email: normalizedEmail,
-            password,
-            options: {
-              data: {
-                full_name: fullName.trim(),
-              },
+        const { data, error: signUpError } = await supabase.auth.signUp({
+          email: normalizedEmail,
+          password,
+          options: {
+            data: {
+              full_name: fullName.trim(),
+              policy_acceptance: policyEvidence,
             },
-          });
+          },
+        });
 
         if (signUpError) throw signUpError;
 
         if (data.session) {
-  startNexaLoginEvent();
-  window.location.assign("/account");
-  return;
+          startNexaLoginEvent();
+          window.location.assign("/account");
+          return;
         }
 
         setConfirmationEmail(normalizedEmail);
@@ -91,21 +100,21 @@ export function AuthForm({
       }
 
       const { error: signInError } =
-  await supabase.auth.signInWithPassword({
-    email: normalizedEmail,
-    password,
-  });
+        await supabase.auth.signInWithPassword({
+          email: normalizedEmail,
+          password,
+        });
 
-if (signInError) throw signInError;
+      if (signInError) throw signInError;
 
-startNexaLoginEvent();
-window.location.assign("/account");
+      startNexaLoginEvent();
+      window.location.assign("/account");
     } catch (err) {
       setMessage("");
       setError(
         err instanceof Error
           ? err.message
-          : "Something went wrong. Please try again."
+          : "Something went wrong. Please try again.",
       );
     } finally {
       setLoading(false);
@@ -128,13 +137,13 @@ window.location.assign("/account");
       if (resendError) throw resendError;
 
       setMessage(
-        "If this account can receive a confirmation email, a new confirmation message has been requested. Please check your inbox and spam folder."
+        "If this account can receive a confirmation email, a new confirmation message has been requested. Please check your inbox and spam folder.",
       );
     } catch (err) {
       setError(
         err instanceof Error
           ? err.message
-          : "We couldn't request another email. Please try again."
+          : "We couldn't request another email. Please try again.",
       );
     } finally {
       setResending(false);
@@ -277,7 +286,7 @@ window.location.assign("/account");
           )}
         </div>
 
-                {!withName && (
+        {!withName && (
           <p className="text-right text-sm">
             <Link
               to="/forgot-password"
@@ -287,6 +296,7 @@ window.location.assign("/account");
             </Link>
           </p>
         )}
+
         {withName && (
           <div>
             <label
@@ -329,8 +339,19 @@ window.location.assign("/account");
           </div>
         )}
 
+        {withName && (
+          <PolicyConsent
+            context="customer-registration"
+            onChange={setPolicyEvidence}
+            disabled={loading}
+          />
+        )}
+
         {error && (
-          <p role="alert" className="rounded-lg bg-red-50 p-3 text-sm text-red-700">
+          <p
+            role="alert"
+            className="rounded-lg bg-red-50 p-3 text-sm text-red-700"
+          >
             {error}
           </p>
         )}
@@ -357,4 +378,4 @@ window.location.assign("/account");
       <p className="mt-6 text-sm">{footer}</p>
     </div>
   );
-            }
+}
