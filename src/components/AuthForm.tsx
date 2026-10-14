@@ -1,45 +1,35 @@
-
 import { PolicyConsent } from "@/components/PolicyConsent";
-import { startNexaLoginEvent } from "@/components/NexaIdentityAnnouncement";
 import type { PolicyAcceptanceEvidence } from "@/lib/policies";
 import { Link } from "@tanstack/react-router";
+import { startNexaLoginEvent } from "@/components/NexaIdentityAnnouncement";
 import { useState, type FormEvent, type ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
-
-type AuthFormProps = {
-  title: string;
-  cta: string;
-  footer: ReactNode;
-  note?: string;
-  withName?: boolean;
-};
 
 export function AuthForm({
   title,
   cta,
   footer,
   note,
-  withName = false,
-}: AuthFormProps) {
+  withName,
+}: {
+  title: string;
+  cta: string;
+  footer: ReactNode;
+  note?: string;
+  withName?: boolean;
+}) {
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-
   const [loading, setLoading] = useState(false);
   const [resending, setResending] = useState(false);
-
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
-
   const [confirmationRequired, setConfirmationRequired] = useState(false);
   const [confirmationEmail, setConfirmationEmail] = useState("");
-
-  const [policyEvidence, setPolicyEvidence] =
-    useState<PolicyAcceptanceEvidence[] | null>(null);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -53,13 +43,6 @@ export function AuthForm({
 
     if (withName && !fullName.trim()) {
       setError("Please enter your full name.");
-      return;
-    }
-
-    if (withName && !policyEvidence?.length) {
-      setError(
-        "Please review and complete the required policy acknowledgements before creating your account.",
-      );
       return;
     }
 
@@ -77,34 +60,28 @@ export function AuthForm({
     setMessage(
       withName
         ? "Creating your account. Please keep this page open..."
-        : "Signing you in. Please keep this page open...",
+        : "Signing you in. Please keep this page open..."
     );
 
     try {
       if (withName) {
-        const { data, error: signUpError } = await supabase.auth.signUp({
-          email: normalizedEmail,
-          password,
-          options: {
-            data: {
-              full_name: fullName.trim(),
-              policy_acceptance: {
-                schema_version: 1,
-                accepted: true,
-                evidence: policyEvidence,
+        const { data, error: signUpError } =
+          await supabase.auth.signUp({
+            email: normalizedEmail,
+            password,
+            options: {
+              data: {
+                full_name: fullName.trim(),
               },
             },
-          },
-        });
+          });
 
-        if (signUpError) {
-          throw signUpError;
-        }
+        if (signUpError) throw signUpError;
 
         if (data.session) {
-          startNexaLoginEvent();
-          window.location.assign("/account");
-          return;
+  startNexaLoginEvent();
+  window.location.assign("/account");
+  return;
         }
 
         setConfirmationEmail(normalizedEmail);
@@ -114,23 +91,21 @@ export function AuthForm({
       }
 
       const { error: signInError } =
-        await supabase.auth.signInWithPassword({
-          email: normalizedEmail,
-          password,
-        });
+  await supabase.auth.signInWithPassword({
+    email: normalizedEmail,
+    password,
+  });
 
-      if (signInError) {
-        throw signInError;
-      }
+if (signInError) throw signInError;
 
-      startNexaLoginEvent();
-      window.location.assign("/account");
+startNexaLoginEvent();
+window.location.assign("/account");
     } catch (err) {
       setMessage("");
       setError(
         err instanceof Error
           ? err.message
-          : "Something went wrong. Please try again.",
+          : "Something went wrong. Please try again."
       );
     } finally {
       setLoading(false);
@@ -150,18 +125,16 @@ export function AuthForm({
         email: confirmationEmail,
       });
 
-      if (resendError) {
-        throw resendError;
-      }
+      if (resendError) throw resendError;
 
       setMessage(
-        "If this account can receive a confirmation email, a new confirmation message has been requested. Please check your inbox and spam folder.",
+        "If this account can receive a confirmation email, a new confirmation message has been requested. Please check your inbox and spam folder."
       );
     } catch (err) {
       setError(
         err instanceof Error
           ? err.message
-          : "We couldn't request another email. Please try again.",
+          : "We couldn't request another email. Please try again."
       );
     } finally {
       setResending(false);
@@ -211,7 +184,7 @@ export function AuthForm({
           )}
 
           {message && (
-            <p role="status" aria-live="polite" className="mt-4 text-sm">
+            <p role="status" className="mt-4 text-sm">
               {message}
             </p>
           )}
@@ -304,7 +277,7 @@ export function AuthForm({
           )}
         </div>
 
-        {!withName && (
+                {!withName && (
           <p className="text-right text-sm">
             <Link
               to="/forgot-password"
@@ -314,7 +287,6 @@ export function AuthForm({
             </Link>
           </p>
         )}
-
         {withName && (
           <div>
             <label
@@ -357,19 +329,8 @@ export function AuthForm({
           </div>
         )}
 
-        {withName && (
-          <PolicyConsent
-            context="customer-registration"
-            onChange={setPolicyEvidence}
-            disabled={loading}
-          />
-        )}
-
         {error && (
-          <p
-            role="alert"
-            className="rounded-lg bg-red-50 p-3 text-sm text-red-700"
-          >
+          <p role="alert" className="rounded-lg bg-red-50 p-3 text-sm text-red-700">
             {error}
           </p>
         )}
@@ -382,7 +343,7 @@ export function AuthForm({
 
         <button
           type="submit"
-          disabled={loading || (withName && !policyEvidence?.length)}
+          disabled={loading}
           className="btn btn-primary w-full"
         >
           {loading ? "Please wait..." : cta}
@@ -396,4 +357,4 @@ export function AuthForm({
       <p className="mt-6 text-sm">{footer}</p>
     </div>
   );
-}
+            }
