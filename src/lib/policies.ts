@@ -311,13 +311,31 @@ export function getPolicyHref(id: PolicyId) {
   return `/policies#${id}`;
 }
 
+
 export interface PolicyAcceptanceEvidence {
   policy_id: PolicyId;
   policy_version: string;
   accepted_at: string;
-  action: "agree_and_continue";
+  action: "agree_and_continue" | "acknowledge_privacy";
   source: PolicyContext;
 }
+
+export function createPolicyAcceptanceEvidence(
+  context: PolicyContext,
+  acceptedAt: string = new Date().toISOString(),
+): PolicyAcceptanceEvidence[] {
+  return getPoliciesForContext(context).map((policy) => ({
+    policy_id: policy.id,
+    policy_version: policy.version,
+    accepted_at: acceptedAt,
+    action:
+      policy.id === "privacy"
+        ? "acknowledge_privacy"
+        : "agree_and_continue",
+    source: context,
+  }));
+}
+
 
 export function createPolicyAcceptanceEvidence(
   context: PolicyContext,
