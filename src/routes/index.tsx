@@ -1,3 +1,4 @@
+import { ProductCard } from "@/components/ProductCard";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { Search, ChevronRight, ShoppingBag, ImageOff } from "lucide-react";
@@ -206,9 +207,18 @@ function Home() {
   }
 
   function renderProductCard(product: Product) {
-    const category = categories.find(
-      (item) => item.id === product.category_id,
-    );
+  const category = categories.find(
+    (item) => item.id === product.category_id,
+  );
+
+  return (
+    <ProductCard
+      key={product.id}
+      p={product}
+      categoryName={category?.name ?? "General"}
+    />
+  );
+  }
     const imageUrl = getPublicImageUrl(product.image_url);
     const imageFailed = failedImages.includes(product.id);
 
