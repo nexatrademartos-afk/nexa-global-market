@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import {
   Heart,
@@ -6,6 +7,10 @@ import {
   ShoppingBag,
   User,
   ShieldCheck,
+  Menu,
+  X,
+  LogIn,
+  UserPlus,
 } from "lucide-react";
 import { WorkspaceSwitcher } from "./WorkspaceSwitcher";
 import { useLocalList } from "@/lib/local-list";
@@ -15,11 +20,11 @@ export function Logo() {
     <Link
       to="/"
       aria-label="NEXA GLOBAL MART home"
-      className="flex items-baseline gap-1 font-display text-lg font-bold tracking-tight"
+      className="flex min-w-0 items-baseline gap-1 font-display text-lg font-bold tracking-tight"
     >
       NEXA
       <span className="text-gold">·</span>
-      <span className="text-xs font-semibold tracking-[0.2em] text-muted-foreground">
+      <span className="truncate text-xs font-semibold tracking-[0.12em] text-muted-foreground sm:tracking-[0.2em]">
         GLOBAL MART
       </span>
     </Link>
@@ -28,49 +33,47 @@ export function Logo() {
 
 export function SiteHeader() {
   const cart = useLocalList("nexa-cart");
+  const [menuOpen, setMenuOpen] = useState(false);
+
+  useEffect(() => {
+    setMenuOpen(false);
+  }, []);
+
+  function closeMenu() {
+    setMenuOpen(false);
+  }
 
   return (
-    <header className="sticky top-0 z-40 border-b bg-background/90 backdrop-blur">
-      <div className="mx-auto grid max-w-6xl grid-cols-[minmax(0,1fr)_auto] items-center gap-3 px-4 py-2">
-        <div className="flex min-w-0 items-center gap-6">
+    <header className="sticky top-0 z-40 border-b bg-background/95 backdrop-blur">
+      <div className="mx-auto flex min-h-16 max-w-6xl items-center justify-between gap-3 px-3 sm:px-4">
+        <div className="flex min-w-0 items-center gap-5">
           <Logo />
 
           <nav
             aria-label="Main navigation"
-            className="hidden gap-5 text-sm md:flex"
+            className="hidden items-center gap-5 text-sm lg:flex"
           >
-            <Link to="/shop" activeProps={{ className: "font-semibold" }}>
+            <Link to="/shop" activeProps={{ className: "font-semibold text-gold" }}>
               Shop
             </Link>
-
-            <Link to="/sell" activeProps={{ className: "font-semibold" }}>
+            <Link to="/sell" activeProps={{ className: "font-semibold text-gold" }}>
               Sell on NEXA
             </Link>
-
-            <Link to="/account" activeProps={{ className: "font-semibold" }}>
+            <Link to="/account" activeProps={{ className: "font-semibold text-gold" }}>
               Account
             </Link>
-
-            <Link to="/policies" activeProps={{ className: "font-semibold" }}>
+            <Link to="/policies" activeProps={{ className: "font-semibold text-gold" }}>
               Policy Centre
             </Link>
           </nav>
         </div>
 
-        <div className="flex items-center gap-1">
-          <Link
-            to="/policies"
-            aria-label="Policy Centre"
-            title="Policy Centre"
-            className="grid h-11 w-11 place-items-center rounded-full md:hidden"
-          >
-            <ShieldCheck className="h-5 w-5" />
-          </Link>
-
+        <div className="flex shrink-0 items-center gap-1">
           <Link
             to="/wishlist"
             aria-label="Wishlist"
-            className="hidden h-11 w-11 place-items-center rounded-full md:grid"
+            title="Wishlist"
+            className="hidden h-10 w-10 place-items-center rounded-full transition hover:bg-secondary sm:grid"
           >
             <Heart className="h-5 w-5" />
           </Link>
@@ -78,21 +81,190 @@ export function SiteHeader() {
           <Link
             to="/cart"
             aria-label="Cart"
-            className="relative grid h-11 w-11 place-items-center rounded-full"
+            title="Cart"
+            className="relative grid h-10 w-10 place-items-center rounded-full transition hover:bg-secondary"
           >
             <ShoppingBag className="h-5 w-5" />
-
             {cart.ids.length > 0 && (
-              <span className="absolute right-1 top-1 grid h-5 min-w-5 place-items-center rounded-full bg-gold px-1 text-[10px] font-bold text-gold-foreground">
+              <span className="absolute right-0 top-0 grid h-5 min-w-5 place-items-center rounded-full bg-gold px-1 text-[10px] font-bold text-gold-foreground">
                 {cart.ids.length}
               </span>
             )}
           </Link>
 
-          <WorkspaceSwitcher />
+          <div className="hidden sm:block">
+            <WorkspaceSwitcher />
+          </div>
+
+          <div className="hidden items-center gap-2 lg:flex">
+            <Link to="/sign-in" className="btn btn-outline">
+              Sign in
+            </Link>
+            <Link to="/sign-up" className="btn btn-gold">
+              Create account
+            </Link>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => setMenuOpen((current) => !current)}
+            aria-label={menuOpen ? "Close navigation menu" : "Open navigation menu"}
+            aria-expanded={menuOpen}
+            aria-controls="nexa-mobile-menu"
+            className="grid h-10 w-10 place-items-center rounded-full border border-border transition hover:bg-secondary lg:hidden"
+          >
+            {menuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+          </button>
         </div>
       </div>
+
+      {menuOpen && (
+        <div
+          id="nexa-mobile-menu"
+          className="border-t border-border bg-background px-4 py-4 shadow-xl lg:hidden"
+        >
+          <nav aria-label="Mobile menu" className="mx-auto grid max-w-6xl gap-1">
+            <Link to="/" onClick={closeMenu} className="rounded-lg px-3 py-3 text-sm hover:bg-secondary">
+              Home
+            </Link>
+            <Link to="/shop" onClick={closeMenu} className="rounded-lg px-3 py-3 text-sm hover:bg-secondary">
+              Shop products
+            </Link>
+            <Link to="/sell" onClick={closeMenu} className="rounded-lg px-3 py-3 text-sm hover:bg-secondary">
+              Sell on NEXA
+            </Link>
+            <Link to="/wishlist" onClick={closeMenu} className="rounded-lg px-3 py-3 text-sm hover:bg-secondary">
+              Wishlist
+            </Link>
+            <Link to="/cart" onClick={closeMenu} className="rounded-lg px-3 py-3 text-sm hover:bg-secondary">
+              Shopping cart
+            </Link>
+            <Link to="/account" onClick={closeMenu} className="rounded-lg px-3 py-3 text-sm hover:bg-secondary">
+              Customer account
+            </Link>
+            <Link to="/policies" onClick={closeMenu} className="rounded-lg px-3 py-3 text-sm hover:bg-secondary">
+              Policy Centre
+            </Link>
+
+            <div className="my-2 gold-rule" />
+
+            <Link
+              to="/sign-in"
+              onClick={closeMenu}
+              className="btn btn-outline w-full"
+            >
+              <LogIn className="h-4 w-4" />
+              Sign in
+            </Link>
+            <Link
+              to="/sign-up"
+              onClick={closeMenu}
+              className="btn btn-gold mt-2 w-full"
+            >
+              <UserPlus className="h-4 w-4" />
+              Create account
+            </Link>
+
+            <div className="mt-3 flex items-center gap-3 rounded-lg border border-border p-3 sm:hidden">
+              <WorkspaceSwitcher />
+              <p className="text-xs text-muted-foreground">
+                Approved workspace access is checked against your assigned roles.
+              </p>
+            </div>
+          </nav>
+        </div>
+      )}
     </header>
+  );
+}
+
+/**
+ * First-visit welcome banner.
+ * Dismissal is saved on this device so returning visitors are not interrupted.
+ */
+export function WelcomeBanner() {
+  const [visible, setVisible] = useState(false);
+
+  useEffect(() => {
+    try {
+      setVisible(localStorage.getItem("nexa-welcome-dismissed") !== "true");
+    } catch {
+      setVisible(true);
+    }
+  }, []);
+
+  function dismiss() {
+    try {
+      localStorage.setItem("nexa-welcome-dismissed", "true");
+    } catch {
+      // The banner can still be dismissed when storage is unavailable.
+    }
+    setVisible(false);
+  }
+
+  if (!visible) return null;
+
+  return (
+    <section
+      aria-labelledby="nexa-welcome-title"
+      className="border-b border-gold/30 bg-gradient-to-r from-gold-soft via-background to-gold-soft"
+    >
+      <div className="mx-auto flex max-w-6xl flex-col gap-4 px-4 py-5 sm:py-6">
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <p className="text-xs font-bold uppercase tracking-[0.2em] text-gold">
+              Welcome to NEXA
+            </p>
+            <h2 id="nexa-welcome-title" className="mt-2 text-xl font-bold sm:text-2xl">
+              Your marketplace. Your choice.
+            </h2>
+            <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">
+              Discover products and explore NEXA before creating an account.
+              You can browse freely and sign in whenever you need your account.
+            </p>
+          </div>
+
+          <button
+            type="button"
+            onClick={dismiss}
+            aria-label="Dismiss welcome message"
+            className="grid h-10 w-10 shrink-0 place-items-center rounded-full border border-border hover:bg-secondary"
+          >
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2">
+          <button type="button" onClick={dismiss} className="btn btn-gold">
+            Continue browsing
+          </button>
+
+          <Link to="/sign-in" onClick={dismiss} className="btn btn-outline">
+            <LogIn className="h-4 w-4" />
+            Log in
+          </Link>
+
+          <Link to="/sign-up" onClick={dismiss} className="btn btn-outline">
+            <UserPlus className="h-4 w-4" />
+            Create account
+          </Link>
+
+          <button
+            type="button"
+            disabled
+            title="Google sign-in is not available yet"
+            className="btn btn-outline cursor-not-allowed opacity-60"
+          >
+            Continue with Google
+            <span className="text-xs">(Coming soon)</span>
+          </button>
+        </div>
+
+        <p className="text-xs text-muted-foreground">
+          Preview storefront: checkout and payments are not live yet.
+        </p>
+      </div>
+    </section>
   );
 }
 
@@ -141,7 +313,10 @@ export function SiteFooter() {
 
         <div className="gold-rule my-6" />
 
-        <nav aria-label="Footer navigation" className="mb-6 flex flex-wrap gap-x-5 gap-y-3 text-sm">
+        <nav
+          aria-label="Footer navigation"
+          className="mb-6 flex flex-wrap gap-x-5 gap-y-3 text-sm"
+        >
           <Link
             to="/policies"
             className="inline-flex items-center gap-2 underline underline-offset-4"
@@ -149,10 +324,16 @@ export function SiteFooter() {
             <ShieldCheck className="h-4 w-4" />
             Policy Centre
           </Link>
+          <Link to="/sign-in" className="underline underline-offset-4">
+            Sign in
+          </Link>
+          <Link to="/sign-up" className="underline underline-offset-4">
+            Create account
+          </Link>
         </nav>
 
         <p className="text-xs opacity-60">
-          Preview build · storefront UI only. Payments, orders and accounts are
+          Preview build · storefront UI only. Payments and order placement are
           not live yet.
         </p>
 
