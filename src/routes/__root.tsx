@@ -15,6 +15,7 @@ import {
   MobileTabBar,
   SiteFooter,
   SiteHeader,
+  WelcomeBanner,
 } from "@/components/SiteChrome";
 
 function NotFoundComponent() {
