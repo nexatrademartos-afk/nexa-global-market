@@ -1,74 +1,566 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import hero from "@/assets/hero.jpg";
-import { CATEGORIES, PREVIEW_PRODUCTS } from "@/lib/preview-data";
-import { ProductCard } from "@/components/ProductCard";
-import { PlannedBadge, PreviewNotice } from "@/components/states";
+import { useEffect, useMemo, useState } from "react";
+import { Search, ChevronRight, ShoppingBag, ImageOff } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+
+type Category = {
+  id: string;
+  name: string;
+  slug: string;
+  sort_order: number;
+  image_url: string | null;
+};
+
+type Product = {
+  id: string;
+  name: string;
+  slug: string;
+  price: number;
+  compare_at_price: number | null;
+  discount_pct: number | null;
+  image_url: string | null;
+  category_id: string | null;
+  is_featured: boolean;
+  stock: number;
+};
+
+type Banner = {
+  id: string;
+  title: string;
+  subtitle: string | null;
+  image_url: string | null;
+  sort_order: number;
+};
+
+const CATEGORY_ORDER = [
+  "Clothing",
+  "Men clothes",
+  "Weman clothes",
+  "Women clothes",
+  "Kids",
+  "Shoes",
+  "Cellphones & Accessories",
+  "Electronics",
+  "Household",
+  "Beauty",
+];
 
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "NEXA Trade Mart — Shop More. Save More. Get Rewarded." },
-      { name: "description", content: "African-rooted global marketplace. Shop curated goods, save more and earn rewards." },
-      { property: "og:title", content: "NEXA Trade Mart" },
-      { property: "og:description", content: "Shop More. Save More. Get Rewarded. African-rooted, globally minded commerce." },
+      { title: "NEXA•Global Mart — Shop More. Save More. Get Rewarded." },
+      {
+        name: "description",
+        content:
+          "Explore the NEXA•Global Mart catalogue, browse categories and discover available products.",
+      },
+      { property: "og:title", content: "NEXA•Global Mart" },
+      {
+        property: "og:description",
+        content: "Shop More. Save More. Get Rewarded.",
+      },
     ],
   }),
   component: Home,
 });
 
+function getPublicImageUrl(path: string | null | undefined) {
+  if (!path) return null;
+
+  const value = path.trim();
+  if (!value) return null;
+
+  // Preserve complete image URLs from other storage providers.
+  if (/^https?:\/\//i.test(value)) return value;
+
+  const cleanPath = value.replace(/^\/+/, "").replace(/^store-media\//, "");
+
+  const { data } = supabase.storage
+    .from("store-media")
+    .getPublicUrl(cleanPath);
+
+  return data.publicUrl || null;
+}
+
+function formatPrice(price: number) {
+  return new Intl.NumberFormat("en-ZA", {
+    style: "currency",
+    currency: "ZAR",
+    maximumFractionDigits: 2,
+  }).format(price);
+}
+
 function Home() {
-  return (
-    <>
-      <section className="bg-ink text-ink-foreground">
-        <div className="mx-auto grid max-w-6xl gap-8 px-4 py-10 md:grid-cols-2 md:items-center md:py-16">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.25em] text-gold">African-rooted · Global</p>
-            <h1 className="mt-3 text-4xl font-bold leading-[1.05] md:text-6xl">
-              Shop More.<br />Save More.<br /><span className="text-gold">Get Rewarded.</span>
-            </h1>
-            <p className="mt-4 max-w-md text-sm opacity-75">Curated goods from makers, shops and brands across Africa and the world — in one trusted marketplace.</p>
-            <div className="mt-6 flex flex-wrap gap-2">
-              <Link to="/shop" className="btn btn-gold">Start shopping</Link>
-              <Link to="/sell" className="btn btn-on-ink">Sell on NEXA</Link>
+  const [products, setProducts] = useState<Product[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [banners, setBanners] = useState<Banner[]>([]);
+  const [search, setSearch] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
+  const [failedImages, setFailedImages] = useState<string[]>([]);
+
+  useEffect(() => {
+    let active = true;
+
+    async function loadStorefront() {
+      setLoading(true);
+      setLoadError(false);
+
+      const [productResult, categoryResult, bannerResult] = await Promise.all([
+        supabase
+          .from("products")
+          .select(
+            "id,name,slug,price,compare_at_price,discount_pct,image_url,category_id,is_featured,stock",
+          )
+          .eq("is_active", true)
+          .gt("price", 0)
+          .gt("stock", 0)
+          .order("created_at", { ascending: false })
+          .limit(500),
+
+        supabase
+          .from("categories")
+          .select("id,name,slug,sort_order,image_url")
+          .eq("is_active", true)
+          .order("sort_order", { ascending: true }),
+
+        supabase
+          .from("banners")
+          .select("id,title,subtitle,image_url,sort_order")
+          .eq("is_active", true)
+          .order("sort_order", { ascending: true }),
+      ]);
+
+      if (!active) return;
+
+      if (productResult.error || categoryResult.error) {
+        console.error(
+          "NEXA storefront catalogue could not be loaded.",
+          productResult.error ?? categoryResult.error,
+        );
+        setLoadError(true);
+      } else {
+        setProducts((productResult.data ?? []) as Product[]);
+        setCategories((categoryResult.data ?? []) as Category[]);
+      }
+
+      if (bannerResult.error) {
+        console.error("NEXA promotional banners could not be loaded.", bannerResult.error);
+      } else {
+        setBanners((bannerResult.data ?? []) as Banner[]);
+      }
+
+      setLoading(false);
+    }
+
+    void loadStorefront();
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const visibleProducts = useMemo(() => {
+    const term = search.trim().toLowerCase();
+
+    return products.filter((product) => {
+      const category = categories.find(
+        (item) => item.id === product.category_id,
+      );
+
+      const matchesSearch =
+        !term ||
+        product.name.toLowerCase().includes(term) ||
+        (category?.name ?? "").toLowerCase().includes(term) ||
+        product.slug.toLowerCase().includes(term);
+
+      const matchesCategory =
+        !selectedCategory || product.category_id === selectedCategory;
+
+      return matchesSearch && matchesCategory;
+    });
+  }, [products, categories, search, selectedCategory]);
+
+  const featuredProducts = visibleProducts.filter(
+    (product) => product.is_featured,
+  );
+
+  const orderedCategories = useMemo(() => {
+    const rank = (name: string) => {
+      const index = CATEGORY_ORDER.findIndex(
+        (item) => item.toLowerCase() === name.toLowerCase(),
+      );
+      return index === -1 ? CATEGORY_ORDER.length : index;
+    };
+
+    return [...categories].sort(
+      (a, b) => rank(a.name) - rank(b.name) || a.sort_order - b.sort_order,
+    );
+  }, [categories]);
+
+  function markImageFailed(id: string) {
+    setFailedImages((current) =>
+      current.includes(id) ? current : [...current, id],
+    );
+  }
+
+  function renderProductCard(product: Product) {
+    const category = categories.find(
+      (item) => item.id === product.category_id,
+    );
+    const imageUrl = getPublicImageUrl(product.image_url);
+    const imageFailed = failedImages.includes(product.id);
+
+    return (
+      <article
+        key={product.id}
+        className="group overflow-hidden rounded-xl border border-gold/30 bg-card transition duration-200 hover:border-gold hover:shadow-[0_0_22px_rgba(212,175,55,0.14)]"
+      >
+        <div className="relative grid aspect-square place-items-center overflow-hidden bg-ink">
+          {imageUrl && !imageFailed ? (
+            <img
+              src={imageUrl}
+              alt={product.name}
+              loading="lazy"
+              className="h-full w-full object-cover transition duration-300 group-hover:scale-[1.03]"
+              onError={() => markImageFailed(product.id)}
+            />
+          ) : (
+            <div className="flex flex-col items-center gap-2 text-muted-foreground">
+              <ImageOff className="h-8 w-8 text-gold/70" />
+              <span className="px-3 text-center text-xs">Image unavailable</span>
             </div>
+          )}
+        </div>
+
+        <div className="space-y-2 p-3">
+          <p className="line-clamp-1 text-[11px] uppercase tracking-wide text-muted-foreground">
+            {category?.name ?? "General"}
+          </p>
+          <h3 className="line-clamp-2 min-h-10 text-sm font-semibold text-foreground">
+            {product.name}
+          </h3>
+          <p className="font-bold text-gold">{formatPrice(product.price)}</p>
+
+          {product.compare_at_price !== null &&
+            product.compare_at_price > product.price && (
+              <p className="text-xs text-muted-foreground line-through">
+                {formatPrice(product.compare_at_price)}
+              </p>
+            )}
+        </div>
+      </article>
+    );
+  }
+
+  return (
+    <main className="min-h-screen bg-background text-foreground">
+      <section className="border-b border-gold/20 bg-ink">
+        <div className="mx-auto max-w-6xl px-4 py-8 md:py-12">
+          <p className="text-xs font-bold uppercase tracking-[0.24em] text-gold">
+            African-rooted · Globally minded
+          </p>
+
+          <h1 className="mt-4 text-3xl font-bold leading-tight sm:text-5xl">
+            <span className="text-gold">Shop More.</span>
+            <br />
+            <span className="text-slate-300">Save More.</span>
+            <br />
+            <span className="text-gold">Get Rewarded.</span>
+          </h1>
+
+          <p className="mt-4 max-w-xl text-sm leading-6 text-slate-300">
+            Discover products across fashion, footwear, electronics, household
+            essentials and more. Browse freely and create an account when
+            you’re ready.
+          </p>
+
+          <div className="mt-6 flex flex-wrap gap-3">
+            <a href="#catalogue" className="btn btn-gold">
+              <ShoppingBag className="h-4 w-4" />
+              Explore products
+            </a>
+            <Link to="/sign-up" className="btn btn-on-ink">
+              Create account
+            </Link>
           </div>
-          <img src={hero} alt="Woven basket, leather bag, gold jewellery and headphones" width={1280} height={960}
-            fetchPriority="high" className="aspect-[4/3] w-full rounded-2xl object-cover" />
         </div>
       </section>
 
-      <section className="mx-auto max-w-6xl px-4 py-8">
-        <h2 className="text-xl font-bold">Categories</h2>
-        <div className="-mx-4 mt-3 flex gap-2 overflow-x-auto px-4 pb-2">
-          {CATEGORIES.map((c) => (
-            <Link key={c} to="/shop" search={{ category: c, page: 1 }} className="btn btn-outline shrink-0">{c}</Link>
+      <section className="mx-auto max-w-6xl px-4 py-5">
+        <form
+          onSubmit={(event) => {
+            event.preventDefault();
+            document
+              .getElementById("catalogue")
+              ?.scrollIntoView({ behavior: "smooth" });
+          }}
+          className="flex gap-2"
+          role="search"
+        >
+          <label className="relative min-w-0 flex-1">
+            <span className="sr-only">Search available products</span>
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <input
+              className="field pl-10"
+              type="search"
+              value={search}
+              onChange={(event) => {
+                setSearch(event.target.value);
+                setSelectedCategory(null);
+              }}
+              placeholder="Search clothes, shoes, electronics..."
+            />
+          </label>
+          <button type="submit" className="btn btn-gold">
+            Search
+          </button>
+        </form>
+      </section>
+
+      {banners.length > 0 && (
+        <section className="mx-auto max-w-6xl px-4 py-3">
+          <div className="mb-3 flex items-center justify-between">
+            <h2 className="text-lg font-bold">Promotions</h2>
+            <span className="text-xs text-muted-foreground">
+              Swipe to explore
+            </span>
+          </div>
+
+          <div className="-mx-4 flex snap-x snap-mandatory gap-4 overflow-x-auto px-4 pb-3">
+            {banners.map((banner) => {
+              const imageUrl = getPublicImageUrl(banner.image_url);
+              const imageFailed = failedImages.includes(`banner-${banner.id}`);
+
+              return (
+                <article
+                  key={banner.id}
+                  className="relative min-w-[85%] snap-start overflow-hidden rounded-2xl border border-gold/40 bg-ink sm:min-w-[65%] md:min-w-[48%]"
+                >
+                  <div className="relative aspect-[16/7]">
+                    {imageUrl && !imageFailed ? (
+                      <img
+                        src={imageUrl}
+                        alt={banner.title}
+                        loading="lazy"
+                        className="h-full w-full object-cover"
+                        onError={() => markImageFailed(`banner-${banner.id}`)}
+                      />
+                    ) : (
+                      <div className="grid h-full place-items-center bg-card px-5 text-center">
+                        <p className="font-semibold text-gold">{banner.title}</p>
+                      </div>
+                    )}
+
+                    <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/90 via-black/50 to-transparent p-4 pt-12">
+                      <h3 className="text-lg font-bold text-white">
+                        {banner.title}
+                      </h3>
+                      {banner.subtitle && (
+                        <p className="mt-1 text-sm text-slate-200">
+                          {banner.subtitle}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                </article>
+              );
+            })}
+          </div>
+        </section>
+      )}
+
+      <section className="mx-auto max-w-6xl px-4 py-6">
+        <div className="mb-3 flex items-center justify-between gap-3">
+          <h2 className="text-xl font-bold">Browse categories</h2>
+          <Link
+            to="/shop"
+            className="inline-flex items-center gap-1 text-sm text-gold"
+          >
+            View shop <ChevronRight className="h-4 w-4" />
+          </Link>
+        </div>
+
+        <div className="flex gap-2 overflow-x-auto pb-3">
+          <button
+            type="button"
+            onClick={() => setSelectedCategory(null)}
+            className={`btn shrink-0 ${
+              !selectedCategory ? "btn-gold" : "btn-outline"
+            }`}
+          >
+            All products
+          </button>
+
+          {orderedCategories.map((category) => (
+            <button
+              key={category.id}
+              type="button"
+              onClick={() =>
+                setSelectedCategory((current) =>
+                  current === category.id ? null : category.id,
+                )
+              }
+              className={`btn shrink-0 ${
+                selectedCategory === category.id
+                  ? "btn-gold"
+                  : "btn-outline"
+              }`}
+            >
+              {category.name}
+            </button>
           ))}
         </div>
       </section>
 
-      <section className="mx-auto max-w-6xl space-y-3 px-4">
-        <div className="flex items-end justify-between">
-          <h2 className="text-xl font-bold">Featured</h2>
-          <Link to="/shop" className="text-sm font-semibold underline underline-offset-4">View all</Link>
-        </div>
-        <PreviewNotice />
-        <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-          {PREVIEW_PRODUCTS.slice(0, 8).map((p) => <ProductCard key={p.id} p={p} />)}
+      <section id="catalogue" className="mx-auto max-w-6xl px-4 py-4">
+        {loadError && (
+          <div className="mb-5 rounded-xl border border-red-500/50 bg-red-950/30 p-4 text-sm text-red-200">
+            The live catalogue could not be loaded. Please try again later.
+          </div>
+        )}
+
+        {loading ? (
+          <p className="py-10 text-center text-sm text-muted-foreground">
+            Loading available products...
+          </p>
+        ) : !loadError && visibleProducts.length === 0 ? (
+          <div className="rounded-xl border border-gold/30 bg-card p-8 text-center">
+            <h2 className="text-lg font-bold">No matching products found</h2>
+            <p className="mt-2 text-sm text-muted-foreground">
+              Try another search or choose a different category.
+            </p>
+            <button
+              type="button"
+              onClick={() => {
+                setSearch("");
+                setSelectedCategory(null);
+              }}
+              className="btn btn-outline mt-4"
+            >
+              Clear search
+            </button>
+          </div>
+        ) : (
+          <>
+            {!search.trim() && !selectedCategory && featuredProducts.length > 0 && (
+              <div className="mb-9">
+                <div className="mb-4 flex items-center justify-between gap-3">
+                  <h2 className="text-xl font-bold">Featured products</h2>
+                  <span className="text-xs text-muted-foreground">
+                    Selected catalogue listings
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
+                  {featuredProducts.slice(0, 8).map(renderProductCard)}
+                </div>
+              </div>
+            )}
+
+            {orderedCategories.map((category) => {
+              const categoryProducts = visibleProducts.filter(
+                (product) => product.category_id === category.id,
+              );
+
+              if (categoryProducts.length === 0) return null;
+
+              return (
+                <section key={category.id} className="mb-10">
+                  <div className="mb-4 flex items-center justify-between gap-3">
+                    <h2 className="text-xl font-bold">{category.name}</h2>
+                    <span className="text-xs text-muted-foreground">
+                      {categoryProducts.length}{" "}
+                      {categoryProducts.length === 1 ? "product" : "products"}
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
+                    {categoryProducts.map(renderProductCard)}
+                  </div>
+                </section>
+              );
+            })}
+
+            {visibleProducts.some(
+              (product) =>
+                !product.category_id ||
+                !categories.some(
+                  (category) => category.id === product.category_id,
+                ),
+            ) && (
+              <section className="mb-10">
+                <h2 className="mb-4 text-xl font-bold">Other products</h2>
+                <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
+                  {visibleProducts
+                    .filter(
+                      (product) =>
+                        !product.category_id ||
+                        !categories.some(
+                          (category) => category.id === product.category_id,
+                        ),
+                    )
+                    .map(renderProductCard)}
+                </div>
+              </section>
+            )}
+          </>
+        )}
+      </section>
+
+      <section className="mx-auto max-w-6xl px-4 py-8">
+        <div className="rounded-2xl border border-gold/40 bg-card p-6 text-center shadow-[0_0_24px_rgba(212,175,55,0.08)] sm:p-9">
+          <h2 className="text-2xl font-bold">
+            Your marketplace. Your choice.
+          </h2>
+          <p className="mx-auto mt-3 max-w-xl text-sm leading-6 text-muted-foreground">
+            Keep browsing as a guest, or create an account to get started with
+            your NEXA journey.
+          </p>
+
+          <div className="mt-5 flex flex-wrap justify-center gap-3">
+            <Link to="/sign-up" className="btn btn-gold">
+              Create account
+            </Link>
+            <Link to="/sign-in" className="btn btn-outline">
+              Sign in
+            </Link>
+            <button
+              type="button"
+              disabled
+              title="Google sign-in is not available yet"
+              className="btn btn-outline cursor-not-allowed opacity-60"
+            >
+              Continue with Google · Coming soon
+            </button>
+          </div>
         </div>
       </section>
 
-      <section className="mx-auto mt-10 grid max-w-6xl gap-3 px-4 md:grid-cols-3">
-        {[
-          ["NEXA Rewards", "Earn on every order."],
-          ["Referrals", "Invite friends, get rewarded."],
-          ["B2B & wholesale", "Bulk buying for businesses."],
-        ].map(([t, b]) => (
-          <div key={t} className="surface flex items-start justify-between gap-3 p-5">
-            <div><h3 className="font-semibold">{t}</h3><p className="text-sm text-muted-foreground">{b}</p></div>
-            <PlannedBadge label="Coming soon" />
-          </div>
-        ))}
-      </section>
-    </>
+      <footer className="mt-8 border-t border-gold/30 bg-ink">
+        <div className="mx-auto max-w-6xl px-4 py-8">
+          <p className="font-display text-xl font-bold">
+            <span className="text-gold">NEXA</span>
+            <span className="text-slate-300">•Global Mart</span>
+          </p>
+          <p className="mt-2 text-sm text-slate-300">
+            Shop More. Save More. Get Rewarded.
+          </p>
+
+          <div className="my-5 h-px bg-gradient-to-r from-transparent via-gold/70 to-transparent" />
+
+          <nav className="flex flex-wrap gap-x-5 gap-y-3 text-sm text-slate-300">
+            <Link to="/" className="hover:text-gold">Home</Link>
+            <Link to="/shop" className="hover:text-gold">Shop</Link>
+            <Link to="/policies" className="hover:text-gold">Policy Centre</Link>
+            <Link to="/sign-in" className="hover:text-gold">Sign in</Link>
+            <Link to="/sign-up" className="hover:text-gold">Create account</Link>
+          </nav>
+
+          <p className="mt-5 text-xs text-slate-400">Powered by TJC-OS</p>
+        </div>
+      </footer>
+    </main>
   );
 }
