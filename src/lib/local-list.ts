@@ -112,7 +112,7 @@ export function useLocalList(key: string) {
         const nextIds = ids.includes(id) ? ids : [...ids, id];
         const nextQuantities = readQuantities();
 
-        nextQuantities[id] = Math.max(1, nextQuantities[id] ?? 0) + 1;
+        nextQuantities[id] = Math.max(0, nextQuantities[id] ?? 0) + 1;         
 
         localStorage.setItem(CART_KEY, JSON.stringify(nextIds));
         localStorage.setItem(
