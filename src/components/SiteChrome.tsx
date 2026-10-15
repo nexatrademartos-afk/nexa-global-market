@@ -5,6 +5,7 @@ import {
   Search,
   ShoppingBag,
   User,
+  ShieldCheck,
 } from "lucide-react";
 import { WorkspaceSwitcher } from "./WorkspaceSwitcher";
 import { useLocalList } from "@/lib/local-list";
@@ -34,20 +35,38 @@ export function SiteHeader() {
         <div className="flex min-w-0 items-center gap-6">
           <Logo />
 
-          <nav className="hidden gap-5 text-sm md:flex">
+          <nav
+            aria-label="Main navigation"
+            className="hidden gap-5 text-sm md:flex"
+          >
             <Link to="/shop" activeProps={{ className: "font-semibold" }}>
               Shop
             </Link>
+
             <Link to="/sell" activeProps={{ className: "font-semibold" }}>
               Sell on NEXA
             </Link>
+
             <Link to="/account" activeProps={{ className: "font-semibold" }}>
               Account
+            </Link>
+
+            <Link to="/policies" activeProps={{ className: "font-semibold" }}>
+              Policy Centre
             </Link>
           </nav>
         </div>
 
         <div className="flex items-center gap-1">
+          <Link
+            to="/policies"
+            aria-label="Policy Centre"
+            title="Policy Centre"
+            className="grid h-11 w-11 place-items-center rounded-full md:hidden"
+          >
+            <ShieldCheck className="h-5 w-5" />
+          </Link>
+
           <Link
             to="/wishlist"
             aria-label="Wishlist"
@@ -62,6 +81,7 @@ export function SiteHeader() {
             className="relative grid h-11 w-11 place-items-center rounded-full"
           >
             <ShoppingBag className="h-5 w-5" />
+
             {cart.ids.length > 0 && (
               <span className="absolute right-1 top-1 grid h-5 min-w-5 place-items-center rounded-full bg-gold px-1 text-[10px] font-bold text-gold-foreground">
                 {cart.ids.length}
@@ -83,12 +103,13 @@ export function MobileTabBar() {
     { to: "/wishlist", label: "Saved", icon: Heart },
     { to: "/cart", label: "Cart", icon: ShoppingBag },
     { to: "/account", label: "Account", icon: User },
+    { to: "/policies", label: "Policies", icon: ShieldCheck },
   ] as const;
 
   return (
     <nav
       aria-label="Primary"
-      className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-5 border-t bg-background md:hidden"
+      className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-6 border-t bg-background md:hidden"
     >
       {items.map(({ to, label, icon: Icon }) => (
         <Link
@@ -96,7 +117,7 @@ export function MobileTabBar() {
           to={to}
           activeOptions={{ exact: to === "/" }}
           activeProps={{ className: "text-foreground" }}
-          className="flex min-h-14 flex-col items-center justify-center gap-0.5 text-[11px] text-muted-foreground"
+          className="flex min-h-14 flex-col items-center justify-center gap-0.5 text-[10px] text-muted-foreground"
         >
           <Icon className="h-5 w-5" />
           {label}
@@ -120,6 +141,16 @@ export function SiteFooter() {
 
         <div className="gold-rule my-6" />
 
+        <nav aria-label="Footer navigation" className="mb-6 flex flex-wrap gap-x-5 gap-y-3 text-sm">
+          <Link
+            to="/policies"
+            className="inline-flex items-center gap-2 underline underline-offset-4"
+          >
+            <ShieldCheck className="h-4 w-4" />
+            Policy Centre
+          </Link>
+        </nav>
+
         <p className="text-xs opacity-60">
           Preview build · storefront UI only. Payments, orders and accounts are
           not live yet.
@@ -131,4 +162,4 @@ export function SiteFooter() {
       </div>
     </footer>
   );
-} 
+}
