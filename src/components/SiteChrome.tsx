@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import {
@@ -19,13 +20,13 @@ export function Logo() {
   return (
     <Link
       to="/"
-      aria-label="NEXA GLOBAL MART home"
-      className="flex min-w-0 items-baseline gap-1 font-display text-lg font-bold tracking-tight"
+      aria-label="NEXA Global Mart home"
+      className="inline-flex min-w-0 items-baseline gap-1 whitespace-nowrap font-display text-lg font-extrabold tracking-tight"
     >
-      NEXA
-      <span className="text-gold">·</span>
-      <span className="truncate text-xs font-semibold tracking-[0.12em] text-muted-foreground sm:tracking-[0.2em]">
-        GLOBAL MART
+      <span className="text-gold">NEXA</span>
+      <span className="text-gold">•</span>
+      <span className="text-sm font-bold tracking-wide text-slate-300 sm:text-base">
+        Global Mart
       </span>
     </Link>
   );
@@ -44,7 +45,7 @@ export function SiteHeader() {
   }
 
   return (
-    <header className="sticky top-0 z-40 border-b bg-background/95 backdrop-blur">
+    <header className="sticky top-0 z-40 border-b border-gold/30 bg-background/95 shadow-[0_2px_18px_rgba(212,175,55,0.08)] backdrop-blur">
       <div className="mx-auto flex min-h-16 max-w-6xl items-center justify-between gap-3 px-3 sm:px-4">
         <div className="flex min-w-0 items-center gap-5">
           <Logo />
@@ -53,16 +54,28 @@ export function SiteHeader() {
             aria-label="Main navigation"
             className="hidden items-center gap-5 text-sm lg:flex"
           >
-            <Link to="/shop" activeProps={{ className: "font-semibold text-gold" }}>
+            <Link
+              to="/shop"
+              activeProps={{ className: "font-semibold text-gold" }}
+            >
               Shop
             </Link>
-            <Link to="/sell" activeProps={{ className: "font-semibold text-gold" }}>
+            <Link
+              to="/sell"
+              activeProps={{ className: "font-semibold text-gold" }}
+            >
               Sell on NEXA
             </Link>
-            <Link to="/account" activeProps={{ className: "font-semibold text-gold" }}>
+            <Link
+              to="/account"
+              activeProps={{ className: "font-semibold text-gold" }}
+            >
               Account
             </Link>
-            <Link to="/policies" activeProps={{ className: "font-semibold text-gold" }}>
+            <Link
+              to="/policies"
+              activeProps={{ className: "font-semibold text-gold" }}
+            >
               Policy Centre
             </Link>
           </nav>
@@ -108,12 +121,18 @@ export function SiteHeader() {
           <button
             type="button"
             onClick={() => setMenuOpen((current) => !current)}
-            aria-label={menuOpen ? "Close navigation menu" : "Open navigation menu"}
+            aria-label={
+              menuOpen ? "Close navigation menu" : "Open navigation menu"
+            }
             aria-expanded={menuOpen}
             aria-controls="nexa-mobile-menu"
-            className="grid h-10 w-10 place-items-center rounded-full border border-border transition hover:bg-secondary lg:hidden"
+            className="grid h-10 w-10 place-items-center rounded-full border border-gold/30 transition hover:bg-secondary lg:hidden"
           >
-            {menuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+            {menuOpen ? (
+              <X className="h-5 w-5" />
+            ) : (
+              <Menu className="h-5 w-5" />
+            )}
           </button>
         </div>
       </div>
@@ -121,28 +140,59 @@ export function SiteHeader() {
       {menuOpen && (
         <div
           id="nexa-mobile-menu"
-          className="border-t border-border bg-background px-4 py-4 shadow-xl lg:hidden"
+          className="border-t border-gold/20 bg-background px-4 py-4 shadow-xl lg:hidden"
         >
-          <nav aria-label="Mobile menu" className="mx-auto grid max-w-6xl gap-1">
-            <Link to="/" onClick={closeMenu} className="rounded-lg px-3 py-3 text-sm hover:bg-secondary">
+          <nav
+            aria-label="Mobile menu"
+            className="mx-auto grid max-w-6xl gap-1"
+          >
+            <Link
+              to="/"
+              onClick={closeMenu}
+              className="rounded-lg px-3 py-3 text-sm hover:bg-secondary"
+            >
               Home
             </Link>
-            <Link to="/shop" onClick={closeMenu} className="rounded-lg px-3 py-3 text-sm hover:bg-secondary">
+            <Link
+              to="/shop"
+              onClick={closeMenu}
+              className="rounded-lg px-3 py-3 text-sm hover:bg-secondary"
+            >
               Shop products
             </Link>
-            <Link to="/sell" onClick={closeMenu} className="rounded-lg px-3 py-3 text-sm hover:bg-secondary">
+            <Link
+              to="/sell"
+              onClick={closeMenu}
+              className="rounded-lg px-3 py-3 text-sm hover:bg-secondary"
+            >
               Sell on NEXA
             </Link>
-            <Link to="/wishlist" onClick={closeMenu} className="rounded-lg px-3 py-3 text-sm hover:bg-secondary">
+            <Link
+              to="/wishlist"
+              onClick={closeMenu}
+              className="rounded-lg px-3 py-3 text-sm hover:bg-secondary"
+            >
               Wishlist
             </Link>
-            <Link to="/cart" onClick={closeMenu} className="rounded-lg px-3 py-3 text-sm hover:bg-secondary">
+            <Link
+              to="/cart"
+              onClick={closeMenu}
+              className="rounded-lg px-3 py-3 text-sm hover:bg-secondary"
+            >
               Shopping cart
             </Link>
-            <Link to="/account" onClick={closeMenu} className="rounded-lg px-3 py-3 text-sm hover:bg-secondary">
+            <Link
+              to="/account"
+              onClick={closeMenu}
+              className="rounded-lg px-3 py-3 text-sm hover:bg-secondary"
+            >
               Customer account
             </Link>
-            <Link to="/policies" onClick={closeMenu} className="rounded-lg px-3 py-3 text-sm hover:bg-secondary">
+            <Link
+              to="/policies"
+              onClick={closeMenu}
+              className="rounded-lg px-3 py-3 text-sm hover:bg-secondary"
+            >
               Policy Centre
             </Link>
 
@@ -187,7 +237,9 @@ export function WelcomeBanner() {
 
   useEffect(() => {
     try {
-      setVisible(localStorage.getItem("nexa-welcome-dismissed") !== "true");
+      setVisible(
+        localStorage.getItem("nexa-welcome-dismissed") !== "true",
+      );
     } catch {
       setVisible(true);
     }
@@ -213,9 +265,12 @@ export function WelcomeBanner() {
         <div className="flex items-start justify-between gap-3">
           <div>
             <p className="text-xs font-bold uppercase tracking-[0.2em] text-gold">
-              Welcome to NEXA
+              Welcome to NEXA•Global Mart
             </p>
-            <h2 id="nexa-welcome-title" className="mt-2 text-xl font-bold sm:text-2xl">
+            <h2
+              id="nexa-welcome-title"
+              className="mt-2 text-xl font-bold sm:text-2xl"
+            >
               Your marketplace. Your choice.
             </h2>
             <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">
@@ -239,12 +294,20 @@ export function WelcomeBanner() {
             Continue browsing
           </button>
 
-          <Link to="/sign-in" onClick={dismiss} className="btn btn-outline">
+          <Link
+            to="/sign-in"
+            onClick={dismiss}
+            className="btn btn-outline"
+          >
             <LogIn className="h-4 w-4" />
             Log in
           </Link>
 
-          <Link to="/sign-up" onClick={dismiss} className="btn btn-outline">
+          <Link
+            to="/sign-up"
+            onClick={dismiss}
+            className="btn btn-outline"
+          >
             <UserPlus className="h-4 w-4" />
             Create account
           </Link>
@@ -281,14 +344,14 @@ export function MobileTabBar() {
   return (
     <nav
       aria-label="Primary"
-      className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-6 border-t bg-background md:hidden"
+      className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-6 border-t border-gold/20 bg-background md:hidden"
     >
       {items.map(({ to, label, icon: Icon }) => (
         <Link
           key={to}
           to={to}
           activeOptions={{ exact: to === "/" }}
-          activeProps={{ className: "text-foreground" }}
+          activeProps={{ className: "text-gold" }}
           className="flex min-h-14 flex-col items-center justify-center gap-0.5 text-[10px] text-muted-foreground"
         >
           <Icon className="h-5 w-5" />
@@ -301,13 +364,15 @@ export function MobileTabBar() {
 
 export function SiteFooter() {
   return (
-    <footer className="mt-16 bg-ink pb-24 text-ink-foreground md:pb-0">
+    <footer className="mt-16 border-t border-gold/30 bg-ink pb-24 text-ink-foreground md:pb-0">
       <div className="mx-auto max-w-6xl px-4 py-10">
-        <p className="font-display text-xl font-bold">
-          NEXA <span className="text-gold">GLOBAL MART</span>
+        <p className="font-display text-xl font-extrabold tracking-tight">
+          <span className="text-gold">NEXA</span>
+          <span className="text-gold">•</span>
+          <span className="text-slate-300">Global Mart</span>
         </p>
 
-        <p className="mt-1 text-sm opacity-70">
+        <p className="mt-2 text-sm text-slate-300">
           Shop More. Save More. Get Rewarded.
         </p>
 
@@ -332,14 +397,16 @@ export function SiteFooter() {
           </Link>
         </nav>
 
-        <p className="text-xs opacity-60">
+        <p className="text-xs text-slate-400">
           Preview build · storefront UI only. Payments and order placement are
           not live yet.
         </p>
 
-        <p className="mt-4 text-sm font-semibold">
-          Powered by TJC-OS
-        </p>
+        <div className="mt-6 border-t border-gold/20 pt-4 text-center">
+          <p className="text-sm font-semibold tracking-wide text-slate-300">
+            Powered by <span className="text-gold">TJC-OS</span>
+          </p>
+        </div>
       </div>
     </footer>
   );
