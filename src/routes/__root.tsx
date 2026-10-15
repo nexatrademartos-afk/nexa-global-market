@@ -124,10 +124,11 @@ function RootComponent() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <SiteHeader />
-      <main className="min-h-[70vh]">
-        <Outlet />
-      </main>
+   <SiteHeader />
+<WelcomeBanner />
+<main className="min-h-[70vh]">
+  <Outlet />
+</main>
       <SiteFooter />
       <MobileTabBar />
     </QueryClientProvider>
