@@ -84,12 +84,17 @@ export function Logo() {
     <Link
       to="/"
       aria-label="NEXA Global Mart home"
-      className="inline-flex min-w-0 items-baseline gap-1 whitespace-nowrap font-display text-lg font-extrabold tracking-tight"
+      className="flex min-w-0 flex-col items-start gap-0 whitespace-nowrap"
     >
-      <span className="text-gold">NEXA</span>
-      <span className="text-gold">•</span>
-      <span className="text-sm font-bold tracking-wide text-slate-300 sm:text-base">
-        Global Mart
+      <span className="inline-flex items-baseline gap-1 font-display text-lg font-extrabold tracking-tight">
+        <span className="text-gold">NEXA</span>
+        <span className="text-gold">•</span>
+        <span className="text-sm font-bold tracking-wide text-slate-300 sm:text-base">
+          Global Mart
+        </span>
+      </span>
+      <span className="mt-0.5 text-[9px] font-medium tracking-wide text-slate-300 sm:text-[10px]">
+        Shop More. Save More. Get Rewarded.
       </span>
     </Link>
   );
