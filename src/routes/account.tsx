@@ -13,7 +13,6 @@ export const ACCOUNT_NAV = [
   { to: "/account/notifications", label: "Notifications & Offers" },
   { to: "/account/returns", label: "Help & Support" },
   { to: "/account/settings", label: "Security & Privacy" },
-  { to: "/account/applications", label: "Role Applications" },
 ] as const;
 
 export const Route = createFileRoute("/account")({
