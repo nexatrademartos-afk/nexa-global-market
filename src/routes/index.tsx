@@ -1,7 +1,8 @@
+
 import { ProductCard } from "@/components/ProductCard";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
-import { Search, ChevronRight, ShoppingBag, ImageOff } from "lucide-react";
+import { Search, ChevronRight, ShoppingBag } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 
 type Category = {
@@ -74,21 +75,15 @@ function getPublicImageUrl(path: string | null | undefined) {
   // Preserve complete image URLs from other storage providers.
   if (/^https?:\/\//i.test(value)) return value;
 
-  const cleanPath = value.replace(/^\/+/, "").replace(/^store-media\//, "");
+  const cleanPath = value
+    .replace(/^\/+/, "")
+    .replace(/^store-media\//, "");
 
   const { data } = supabase.storage
     .from("store-media")
     .getPublicUrl(cleanPath);
 
   return data.publicUrl || null;
-}
-
-function formatPrice(price: number) {
-  return new Intl.NumberFormat("en-ZA", {
-    style: "currency",
-    currency: "ZAR",
-    maximumFractionDigits: 2,
-  }).format(price);
 }
 
 function Home() {
@@ -100,6 +95,39 @@ function Home() {
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
   const [failedImages, setFailedImages] = useState<string[]>([]);
+
+  // Keep account prompts in sync with the real Supabase session.
+  const [signedIn, setSignedIn] = useState(false);
+  const [sessionReady, setSessionReady] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+
+    async function checkSession() {
+      const { data, error } = await supabase.auth.getSession();
+
+      if (!active) return;
+
+      setSignedIn(!error && Boolean(data.session));
+      setSessionReady(true);
+    }
+
+    void checkSession();
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (!active) return;
+
+      setSignedIn(Boolean(session));
+      setSessionReady(true);
+    });
+
+    return () => {
+      active = false;
+      subscription.unsubscribe();
+    };
+  }, []);
 
   useEffect(() => {
     let active = true;
@@ -147,7 +175,10 @@ function Home() {
       }
 
       if (bannerResult.error) {
-        console.error("NEXA promotional banners could not be loaded.", bannerResult.error);
+        console.error(
+          "NEXA promotional banners could not be loaded.",
+          bannerResult.error,
+        );
       } else {
         setBanners((bannerResult.data ?? []) as Banner[]);
       }
@@ -207,19 +238,6 @@ function Home() {
   }
 
   function renderProductCard(product: Product) {
-  const category = categories.find(
-    (item) => item.id === product.category_id,
-  );
-
-  return (
-    <ProductCard
-      key={product.id}
-      p={product}
-      categoryName={category?.name ?? "General"}
-    />
-  );
-  }
-      function renderProductCard(product: Product) {
     const category = categories.find(
       (item) => item.id === product.category_id,
     );
@@ -260,9 +278,12 @@ function Home() {
               <ShoppingBag className="h-4 w-4" />
               Explore products
             </a>
-            <Link to="/sign-up" className="btn btn-on-ink">
-              Create account
-            </Link>
+
+            {sessionReady && !signedIn && (
+              <Link to="/sign-up" className="btn btn-on-ink">
+                Create account
+              </Link>
+            )}
           </div>
         </div>
       </section>
@@ -328,7 +349,9 @@ function Home() {
                       />
                     ) : (
                       <div className="grid h-full place-items-center bg-card px-5 text-center">
-                        <p className="font-semibold text-gold">{banner.title}</p>
+                        <p className="font-semibold text-gold">
+                          {banner.title}
+                        </p>
                       </div>
                     )}
 
@@ -423,20 +446,22 @@ function Home() {
           </div>
         ) : (
           <>
-            {!search.trim() && !selectedCategory && featuredProducts.length > 0 && (
-              <div className="mb-9">
-                <div className="mb-4 flex items-center justify-between gap-3">
-                  <h2 className="text-xl font-bold">Featured products</h2>
-                  <span className="text-xs text-muted-foreground">
-                    Selected catalogue listings
-                  </span>
-                </div>
+            {!search.trim() &&
+              !selectedCategory &&
+              featuredProducts.length > 0 && (
+                <div className="mb-9">
+                  <div className="mb-4 flex items-center justify-between gap-3">
+                    <h2 className="text-xl font-bold">Featured products</h2>
+                    <span className="text-xs text-muted-foreground">
+                      Selected catalogue listings
+                    </span>
+                  </div>
 
-                <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
-                  {featuredProducts.slice(0, 8).map(renderProductCard)}
+                  <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
+                    {featuredProducts.slice(0, 8).map(renderProductCard)}
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
 
             {orderedCategories.map((category) => {
               const categoryProducts = visibleProducts.filter(
@@ -490,30 +515,31 @@ function Home() {
 
       <section className="mx-auto max-w-6xl px-4 py-8">
         <div className="rounded-2xl border border-gold/40 bg-card p-6 text-center shadow-[0_0_24px_rgba(212,175,55,0.08)] sm:p-9">
-          <h2 className="text-2xl font-bold">
-            Your marketplace. Your choice.
-          </h2>
+          <h2 className="text-2xl font-bold">Your marketplace. Your choice.</h2>
           <p className="mx-auto mt-3 max-w-xl text-sm leading-6 text-muted-foreground">
-            Keep browsing as a guest, or create an account to get started with
-            your NEXA journey.
+            {signedIn
+              ? "Keep exploring products across NEXA•Global Mart."
+              : "Keep browsing as a guest, or create an account to get started with your NEXA journey."}
           </p>
 
-          <div className="mt-5 flex flex-wrap justify-center gap-3">
-            <Link to="/sign-up" className="btn btn-gold">
-              Create account
-            </Link>
-            <Link to="/sign-in" className="btn btn-outline">
-              Sign in
-            </Link>
-            <button
-              type="button"
-              disabled
-              title="Google sign-in is not available yet"
-              className="btn btn-outline cursor-not-allowed opacity-60"
-            >
-              Continue with Google · Coming soon
-            </button>
-          </div>
+          {sessionReady && !signedIn && (
+            <div className="mt-5 flex flex-wrap justify-center gap-3">
+              <Link to="/sign-up" className="btn btn-gold">
+                Create account
+              </Link>
+              <Link to="/sign-in" className="btn btn-outline">
+                Sign in
+              </Link>
+              <button
+                type="button"
+                disabled
+                title="Google sign-in is not available yet"
+                className="btn btn-outline cursor-not-allowed opacity-60"
+              >
+                Continue with Google · Coming soon
+              </button>
+            </div>
+          )}
         </div>
       </section>
 
@@ -530,11 +556,26 @@ function Home() {
           <div className="my-5 h-px bg-gradient-to-r from-transparent via-gold/70 to-transparent" />
 
           <nav className="flex flex-wrap gap-x-5 gap-y-3 text-sm text-slate-300">
-            <Link to="/" className="hover:text-gold">Home</Link>
-            <Link to="/shop" className="hover:text-gold">Shop</Link>
-            <Link to="/policies" className="hover:text-gold">Policy Centre</Link>
-            <Link to="/sign-in" className="hover:text-gold">Sign in</Link>
-            <Link to="/sign-up" className="hover:text-gold">Create account</Link>
+            <Link to="/" className="hover:text-gold">
+              Home
+            </Link>
+            <Link to="/shop" className="hover:text-gold">
+              Shop
+            </Link>
+            <Link to="/policies" className="hover:text-gold">
+              Policy Centre
+            </Link>
+
+            {sessionReady && !signedIn && (
+              <>
+                <Link to="/sign-in" className="hover:text-gold">
+                  Sign in
+                </Link>
+                <Link to="/sign-up" className="hover:text-gold">
+                  Create account
+                </Link>
+              </>
+            )}
           </nav>
 
           <p className="mt-5 text-xs text-slate-400">Powered by TJC-OS</p>
