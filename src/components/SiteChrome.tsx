@@ -1,10 +1,9 @@
 
 import { useEffect, useState } from "react";
-import { Link } from "@tanstack/react-router";
+import { Link, useNavigate } from "@tanstack/react-router";
 import {
   Heart,
   Home,
-  Search,
   ShoppingBag,
   User,
   ShieldCheck,
@@ -14,8 +13,71 @@ import {
   LogIn,
   UserPlus,
 } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
 import { WorkspaceSwitcher } from "./WorkspaceSwitcher";
 import { useLocalList } from "@/lib/local-list";
+
+function useCustomerSession() {
+  const [signedIn, setSignedIn] = useState(false);
+  const [sessionReady, setSessionReady] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+
+    async function checkSession() {
+      const { data, error } = await supabase.auth.getSession();
+
+      if (!active) return;
+
+      setSignedIn(!error && Boolean(data.session));
+      setSessionReady(true);
+    }
+
+    void checkSession();
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (!active) return;
+
+      setSignedIn(Boolean(session));
+      setSessionReady(true);
+    });
+
+    return () => {
+      active = false;
+      subscription.unsubscribe();
+    };
+  }, []);
+
+  return { signedIn, sessionReady };
+}
+
+function useCustomerSignOut() {
+  const navigate = useNavigate();
+  const [signingOut, setSigningOut] = useState(false);
+
+  async function signOut() {
+    if (signingOut) return;
+
+    setSigningOut(true);
+
+    try {
+      const { error } = await supabase.auth.signOut();
+
+      if (error) {
+        setSigningOut(false);
+        return;
+      }
+
+      await navigate({ to: "/", replace: true });
+    } catch {
+      setSigningOut(false);
+    }
+  }
+
+  return { signOut, signingOut };
+}
 
 export function Logo() {
   return (
@@ -36,6 +98,8 @@ export function Logo() {
 export function SiteHeader() {
   const cart = useLocalList("nexa-cart");
   const [menuOpen, setMenuOpen] = useState(false);
+  const { signedIn, sessionReady } = useCustomerSession();
+  const { signOut, signingOut } = useCustomerSignOut();
 
   useEffect(() => {
     setMenuOpen(false);
@@ -111,12 +175,31 @@ export function SiteHeader() {
           </div>
 
           <div className="hidden items-center gap-2 lg:flex">
-            <Link to="/sign-in" className="btn btn-outline">
-              Sign in
-            </Link>
-            <Link to="/sign-up" className="btn btn-gold">
-              Create account
-            </Link>
+            {sessionReady && signedIn ? (
+              <>
+                <Link to="/account" className="btn btn-outline">
+                  <User className="h-4 w-4" />
+                  My dashboard
+                </Link>
+                <button
+                  type="button"
+                  onClick={() => void signOut()}
+                  disabled={signingOut}
+                  className="btn btn-gold disabled:opacity-60"
+                >
+                  {signingOut ? "Signing out..." : "Sign out"}
+                </button>
+              </>
+            ) : (
+              <>
+                <Link to="/sign-in" className="btn btn-outline">
+                  Sign in
+                </Link>
+                <Link to="/sign-up" className="btn btn-gold">
+                  Create account
+                </Link>
+              </>
+            )}
           </div>
 
           <button
@@ -187,7 +270,7 @@ export function SiteHeader() {
               onClick={closeMenu}
               className="rounded-lg px-3 py-3 text-sm hover:bg-secondary"
             >
-              Customer account
+              Customer dashboard
             </Link>
             <Link
               to="/policies"
@@ -199,22 +282,38 @@ export function SiteHeader() {
 
             <div className="my-2 gold-rule" />
 
-            <Link
-              to="/sign-in"
-              onClick={closeMenu}
-              className="btn btn-outline w-full"
-            >
-              <LogIn className="h-4 w-4" />
-              Sign in
-            </Link>
-            <Link
-              to="/sign-up"
-              onClick={closeMenu}
-              className="btn btn-gold mt-2 w-full"
-            >
-              <UserPlus className="h-4 w-4" />
-              Create account
-            </Link>
+            {sessionReady && signedIn ? (
+              <button
+                type="button"
+                onClick={() => {
+                  closeMenu();
+                  void signOut();
+                }}
+                disabled={signingOut}
+                className="btn btn-gold mt-2 w-full disabled:opacity-60"
+              >
+                {signingOut ? "Signing out..." : "Sign out"}
+              </button>
+            ) : (
+              <>
+                <Link
+                  to="/sign-in"
+                  onClick={closeMenu}
+                  className="btn btn-outline w-full"
+                >
+                  <LogIn className="h-4 w-4" />
+                  Sign in
+                </Link>
+                <Link
+                  to="/sign-up"
+                  onClick={closeMenu}
+                  className="btn btn-gold mt-2 w-full"
+                >
+                  <UserPlus className="h-4 w-4" />
+                  Create account
+                </Link>
+              </>
+            )}
 
             <div className="mt-3 flex items-center gap-3 rounded-lg border border-border p-3 sm:hidden">
               <WorkspaceSwitcher />
@@ -231,12 +330,19 @@ export function SiteHeader() {
 
 /**
  * First-visit welcome banner.
- * Dismissal is saved on this device so returning visitors are not interrupted.
+ * Guests can dismiss it on this device.
+ * Authenticated customers do not see the guest welcome actions.
  */
 export function WelcomeBanner() {
+  const { signedIn, sessionReady } = useCustomerSession();
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {
+    if (!sessionReady || signedIn) {
+      setVisible(false);
+      return;
+    }
+
     try {
       setVisible(
         localStorage.getItem("nexa-welcome-dismissed") !== "true",
@@ -244,7 +350,7 @@ export function WelcomeBanner() {
     } catch {
       setVisible(true);
     }
-  }, []);
+  }, [signedIn, sessionReady]);
 
   function dismiss() {
     try {
@@ -255,7 +361,7 @@ export function WelcomeBanner() {
     setVisible(false);
   }
 
-  if (!visible) return null;
+  if (!sessionReady || signedIn || !visible) return null;
 
   return (
     <section
@@ -331,13 +437,18 @@ export function WelcomeBanner() {
     </section>
   );
 }
+
 export function MobileTabBar() {
+  const { signedIn, sessionReady } = useCustomerSession();
+
   const items = [
     { to: "/", label: "Home", icon: Home },
     { to: "/sign-in", label: "Account", icon: User },
     { to: "/support", label: "Support", icon: MessageCircle },
     { to: "/policies", label: "Policies", icon: ShieldCheck },
   ] as const;
+
+  if (!sessionReady || signedIn) return null;
 
   return (
     <nav
@@ -361,6 +472,9 @@ export function MobileTabBar() {
 }
 
 export function SiteFooter() {
+  const { signedIn, sessionReady } = useCustomerSession();
+  const { signOut, signingOut } = useCustomerSignOut();
+
   return (
     <footer className="mt-16 border-t border-gold/30 bg-ink pb-24 text-ink-foreground md:pb-0">
       <div className="mx-auto max-w-6xl px-4 py-10">
@@ -387,12 +501,31 @@ export function SiteFooter() {
             <ShieldCheck className="h-4 w-4" />
             Policy Centre
           </Link>
-          <Link to="/sign-in" className="underline underline-offset-4">
-            Sign in
-          </Link>
-          <Link to="/sign-up" className="underline underline-offset-4">
-            Create account
-          </Link>
+
+          {sessionReady && signedIn ? (
+            <>
+              <Link to="/account" className="underline underline-offset-4">
+                My dashboard
+              </Link>
+              <button
+                type="button"
+                onClick={() => void signOut()}
+                disabled={signingOut}
+                className="underline underline-offset-4 disabled:opacity-60"
+              >
+                {signingOut ? "Signing out..." : "Sign out"}
+              </button>
+            </>
+          ) : (
+            <>
+              <Link to="/sign-in" className="underline underline-offset-4">
+                Sign in
+              </Link>
+              <Link to="/sign-up" className="underline underline-offset-4">
+                Create account
+              </Link>
+            </>
+          )}
         </nav>
 
         <p className="text-xs text-slate-400">
