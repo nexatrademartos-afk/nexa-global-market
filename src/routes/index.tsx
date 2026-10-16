@@ -219,48 +219,17 @@ function Home() {
     />
   );
   }
-    const imageUrl = getPublicImageUrl(product.image_url);
-    const imageFailed = failedImages.includes(product.id);
+      function renderProductCard(product: Product) {
+    const category = categories.find(
+      (item) => item.id === product.category_id,
+    );
 
     return (
-      <article
+      <ProductCard
         key={product.id}
-        className="group overflow-hidden rounded-xl border border-gold/30 bg-card transition duration-200 hover:border-gold hover:shadow-[0_0_22px_rgba(212,175,55,0.14)]"
-      >
-        <div className="relative grid aspect-square place-items-center overflow-hidden bg-ink">
-          {imageUrl && !imageFailed ? (
-            <img
-              src={imageUrl}
-              alt={product.name}
-              loading="lazy"
-              className="h-full w-full object-cover transition duration-300 group-hover:scale-[1.03]"
-              onError={() => markImageFailed(product.id)}
-            />
-          ) : (
-            <div className="flex flex-col items-center gap-2 text-muted-foreground">
-              <ImageOff className="h-8 w-8 text-gold/70" />
-              <span className="px-3 text-center text-xs">Image unavailable</span>
-            </div>
-          )}
-        </div>
-
-        <div className="space-y-2 p-3">
-          <p className="line-clamp-1 text-[11px] uppercase tracking-wide text-muted-foreground">
-            {category?.name ?? "General"}
-          </p>
-          <h3 className="line-clamp-2 min-h-10 text-sm font-semibold text-foreground">
-            {product.name}
-          </h3>
-          <p className="font-bold text-gold">{formatPrice(product.price)}</p>
-
-          {product.compare_at_price !== null &&
-            product.compare_at_price > product.price && (
-              <p className="text-xs text-muted-foreground line-through">
-                {formatPrice(product.compare_at_price)}
-              </p>
-            )}
-        </div>
-      </article>
+        p={product}
+        categoryName={category?.name ?? "General"}
+      />
     );
   }
 
