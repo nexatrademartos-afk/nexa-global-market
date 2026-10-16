@@ -5,14 +5,11 @@ import {
   ArrowRight,
   Bell,
   CircleHelp,
-  ClipboardList,
   Gift,
   Heart,
   MapPin,
-  MessageCircle,
   Package,
   Search,
-  Settings,
   ShieldCheck,
   ShoppingBag,
   Sparkles,
@@ -29,118 +26,125 @@ type CustomerProfile = {
   customer_code: string | null;
 };
 
-const SERVICES = [
+type Service = {
+  title: string;
+  description: string;
+  to:
+    | "/shop"
+    | "/account/orders"
+    | "/account/wishlist"
+    | "/account/cart"
+    | "/account/profile"
+    | "/account/addresses"
+    | "/account/rewards"
+    | "/account/notifications"
+    | "/account/returns"
+    | "/account/settings";
+  icon: typeof ShoppingBag;
+  available: boolean;
+};
+
+const PRIORITY_SERVICES: Service[] = [
   {
-    title: "Shop products",
-    description: "Explore clothing, electronics, beauty and more.",
-    to: "/shop",
-    icon: ShoppingBag,
-    status: "available",
-  },
-  {
-    title: "Orders & delivery",
-    description: "Order history, delivery progress and tracking.",
+    title: "My Orders",
+    description: "Access your orders and delivery updates.",
     to: "/account/orders",
     icon: Package,
-    status: "soon",
+    available: false,
   },
   {
-    title: "My wishlist",
-    description: "Find products you have saved.",
-    to: "/account/wishlist",
-    icon: Heart,
-    status: "available",
+    title: "NEXA Wallet",
+    description: "Wallet services and payment features.",
+    to: "/account/settings",
+    icon: Wallet,
+    available: false,
   },
   {
-    title: "My cart",
-    description: "Review items saved in this browser.",
+    title: "Q Points",
+    description: "Your future points and rewards services.",
+    to: "/account/rewards",
+    icon: Gift,
+    available: false,
+  },
+];
+
+const OTHER_SERVICES: Service[] = [
+  {
+    title: "Shop products",
+    description: "Explore products across the marketplace.",
+    to: "/shop",
+    icon: ShoppingBag,
+    available: true,
+  },
+  {
+    title: "My Cart",
+    description: "Review items in your shopping cart.",
     to: "/account/cart",
     icon: ShoppingBag,
-    status: "available",
+    available: true,
   },
   {
-    title: "My profile",
-    description: "Your name and contact details.",
+    title: "Shopping & Savings",
+    description: "Find your saved products and wishlist.",
+    to: "/account/wishlist",
+    icon: Heart,
+    available: true,
+  },
+  {
+    title: "My Account",
+    description: "View your profile and account details.",
     to: "/account/profile",
     icon: UserRound,
-    status: "soon",
+    available: false,
   },
   {
-    title: "Delivery addresses",
+    title: "Delivery Addresses",
     description: "Manage your saved delivery locations.",
     to: "/account/addresses",
     icon: MapPin,
-    status: "soon",
+    available: false,
   },
   {
-    title: "Q Points & rewards",
-    description: "Points balance, history and rewards.",
-    to: "/account/rewards",
-    icon: Gift,
-    status: "soon",
-  },
-  {
-    title: "Coupons & offers",
-    description: "Discounts and special promotions.",
-    to: "/account/rewards",
-    icon: TicketPercent,
-    status: "soon",
-  },
-  {
-    title: "Referrals",
-    description: "Invite friends and follow referral rewards.",
-    to: "/account/rewards",
-    icon: Sparkles,
-    status: "soon",
-  },
-  {
-    title: "Notifications",
-    description: "Updates from NEXA about your account.",
+    title: "Notifications & Offers",
+    description: "Account updates and special offers.",
     to: "/account/notifications",
     icon: Bell,
-    status: "soon",
+    available: false,
   },
   {
-    title: "Help & support",
-    description: "Find help with orders and your account.",
+    title: "Help & Support",
+    description: "Find assistance with your account.",
     to: "/account/returns",
     icon: CircleHelp,
-    status: "soon",
+    available: false,
   },
   {
-    title: "NEXA AI assistant",
-    description: "Your future 24/7 shopping assistant.",
-    to: "/account/returns",
-    icon: MessageCircle,
-    status: "soon",
-  },
-  {
-    title: "NEXA Pay & wallet",
-    description: "Future payment and wallet services.",
-    to: "/account/settings",
-    icon: Wallet,
-    status: "soon",
-  },
-  {
-    title: "Account security",
-    description: "Privacy and security settings.",
+    title: "Security & Privacy",
+    description: "Account security and privacy settings.",
     to: "/account/settings",
     icon: ShieldCheck,
-    status: "soon",
+    available: false,
   },
   {
-    title: "My activity",
-    description: "A summary of your customer activity.",
-    to: "/account/orders",
-    icon: ClipboardList,
-    status: "soon",
+    title: "Referral Benefits",
+    description: "Referral features and future benefits.",
+    to: "/account/rewards",
+    icon: Sparkles,
+    available: false,
   },
-] as const;
+  {
+    title: "Coupons & Promotions",
+    description: "Explore discount and promotion features.",
+    to: "/account/rewards",
+    icon: TicketPercent,
+    available: false,
+  },
+];
 
 export const Route = createFileRoute("/account/")({
   head: () => ({
     meta: [
-      { title: "Customer Dashboard — NEXA Trade Mart" },
+      { title: "Customer Dashboard — NEXA GLOBAL MART" },
       {
         name: "description",
         content: "Your personal NEXA customer dashboard.",
@@ -169,7 +173,13 @@ function CustomerDashboard() {
         if (authError) throw authError;
 
         const user = authData.user;
-        if (!user) return;
+
+        if (!user) {
+          if (active) {
+            setError("Your session could not be verified. Please sign in again.");
+          }
+          return;
+        }
 
         const metadataName =
           typeof user.user_metadata?.full_name === "string"
@@ -193,7 +203,7 @@ function CustomerDashboard() {
       } catch {
         if (active) {
           setError(
-            "Your account is signed in, but some profile details could not be loaded. Please refresh and try again."
+            "Some account details could not be loaded. Please refresh and try again."
           );
         }
       } finally {
@@ -208,19 +218,25 @@ function CustomerDashboard() {
     };
   }, []);
 
-  const firstName = fullName.trim().split(/\s+/)[0] || "there";
+  const firstName = fullName.trim().split(/\s+/)[0] || "";
 
-  const visibleServices = SERVICES.filter((service) => {
+  const filterServices = (services: Service[]) => {
     const term = search.trim().toLowerCase();
-    return (
-      !term ||
-      service.title.toLowerCase().includes(term) ||
-      service.description.toLowerCase().includes(term)
+
+    if (!term) return services;
+
+    return services.filter(
+      (service) =>
+        service.title.toLowerCase().includes(term) ||
+        service.description.toLowerCase().includes(term)
     );
-  });
+  };
+
+  const visiblePriority = filterServices(PRIORITY_SERVICES);
+  const visibleOther = filterServices(OTHER_SERVICES);
 
   return (
-    <div className="space-y-5 md:space-y-6">
+    <div className="space-y-6 md:space-y-8">
       <section className="overflow-hidden rounded-2xl border border-gold/50 bg-ink text-ink-foreground">
         <div className="p-5 md:p-7">
           <p className="text-[10px] font-semibold uppercase tracking-[0.25em] text-gold sm:text-xs">
@@ -228,8 +244,16 @@ function CustomerDashboard() {
           </p>
 
           <h1 className="mt-3 font-display text-2xl font-bold md:text-4xl">
-            {loading ? "Welcome to NEXA" : `Welcome back, ${firstName}!`}
+            {loading
+              ? "Welcome to NEXA"
+              : firstName
+                ? `Welcome back, ${firstName}!`
+                : "Welcome back!"}
           </h1>
+
+          <p className="mt-2 text-sm leading-6 text-ink-foreground/70">
+            Shop More. Save More. Get Rewarded.
+          </p>
 
           <p className="mt-2 text-sm leading-6 text-ink-foreground/70">
             Your shopping and customer services, organised in one place.
@@ -261,9 +285,10 @@ function CustomerDashboard() {
               Signed in
             </span>
           </div>
+
           <p className="mt-3 text-xs leading-5 text-ink-foreground/60">
-            Use this ID when contacting NEXA support. It is not your password
-            or a payment credential.
+            Use your customer ID when contacting support. It is not your
+            password or a payment credential.
           </p>
         </div>
       </section>
@@ -279,14 +304,34 @@ function CustomerDashboard() {
       <section className="space-y-3">
         <div>
           <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-muted-foreground sm:text-xs">
-            Your account
+            Your priorities
           </p>
           <h2 className="mt-1 text-xl font-bold md:text-2xl">
-            Customer services
+            Your customer essentials
           </h2>
           <p className="mt-1 text-sm text-muted-foreground">
-            Choose a service. Features that are still being built are marked
-            Coming Soon.
+            Your key customer services, together in one place.
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+          {visiblePriority.map((service) => (
+            <ServiceCard key={service.title} service={service} featured />
+          ))}
+        </div>
+      </section>
+
+      <section className="space-y-3">
+        <div>
+          <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-muted-foreground sm:text-xs">
+            Customer services
+          </p>
+          <h2 className="mt-1 text-xl font-bold md:text-2xl">
+            Shopping & account
+          </h2>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Search below to find a service. Features still being developed are
+            marked Coming Soon.
           </p>
         </div>
 
@@ -296,56 +341,18 @@ function CustomerDashboard() {
             value={search}
             onChange={(event) => setSearch(event.target.value)}
             className="field pl-10"
-            placeholder="Search your customer services..."
+            placeholder="Search customer services..."
             aria-label="Search customer services"
           />
         </label>
 
         <div className="grid grid-cols-2 gap-3 lg:grid-cols-3">
-          {visibleServices.map((service) => {
-            const Icon = service.icon;
-            const available = service.status === "available";
-
-            return (
-              <Link
-                key={service.title}
-                to={service.to}
-                className={`group flex min-h-40 flex-col rounded-2xl border p-3 transition hover:-translate-y-0.5 hover:border-gold hover:shadow-sm sm:min-h-44 sm:p-4 ${
-                  service.title === "Shop products"
-                    ? "border-gold/60 bg-gold-soft"
-                    : "surface"
-                }`}
-              >
-                <div className="flex items-start justify-between gap-2">
-                  <span className="grid h-9 w-9 place-items-center rounded-xl border border-gold/40 sm:h-10 sm:w-10">
-                    <Icon className="h-4 w-4 text-gold sm:h-5 sm:w-5" />
-                  </span>
-                  {available ? (
-                    <span className="rounded-full border px-2 py-1 text-[9px] font-bold uppercase tracking-wide sm:text-[10px]">
-                      Available
-                    </span>
-                  ) : (
-                    <PlannedBadge label="Coming soon" />
-                  )}
-                </div>
-
-                <span className="mt-3 text-sm font-bold leading-5 sm:text-base">
-                  {service.title}
-                </span>
-                <span className="mt-1 text-xs leading-5 text-muted-foreground">
-                  {service.description}
-                </span>
-
-                <span className="mt-auto flex items-center gap-1 pt-3 text-xs font-semibold">
-                  {available ? "Open service" : "View section"}
-                  <ArrowRight className="h-3.5 w-3.5 transition group-hover:translate-x-0.5" />
-                </span>
-              </Link>
-            );
-          })}
+          {visibleOther.map((service) => (
+            <ServiceCard key={service.title} service={service} />
+          ))}
         </div>
 
-        {visibleServices.length === 0 && (
+        {visiblePriority.length === 0 && visibleOther.length === 0 && (
           <div className="surface rounded-2xl p-6 text-center">
             <p className="font-semibold">No services found</p>
             <p className="mt-1 text-sm text-muted-foreground">
@@ -390,8 +397,58 @@ function CustomerDashboard() {
       </section>
 
       <p className="pb-2 text-center text-xs text-muted-foreground">
-        NEXA TRADE MART · Shop More. Save More. Get Rewarded.
+        NEXA GLOBAL MART · Shop More. Save More. Get Rewarded.
       </p>
     </div>
   );
-      }
+}
+
+function ServiceCard({
+  service,
+  featured = false,
+}: {
+  service: Service;
+  featured?: boolean;
+}) {
+  const Icon = service.icon;
+
+  return (
+    <Link
+      to={service.to}
+      className={`group flex min-h-40 flex-col rounded-2xl border p-3 transition hover:-translate-y-0.5 hover:border-gold hover:shadow-sm sm:min-h-44 sm:p-4 ${
+        featured
+          ? "border-gold/60 bg-gold-soft"
+          : service.title === "Shop products"
+            ? "border-gold/60 bg-gold-soft"
+            : "surface"
+      }`}
+    >
+      <div className="flex items-start justify-between gap-2">
+        <span className="grid h-9 w-9 place-items-center rounded-xl border border-gold/40 sm:h-10 sm:w-10">
+          <Icon className="h-4 w-4 text-gold sm:h-5 sm:w-5" />
+        </span>
+
+        {service.available ? (
+          <span className="rounded-full border px-2 py-1 text-[9px] font-bold uppercase tracking-wide sm:text-[10px]">
+            Available
+          </span>
+        ) : (
+          <PlannedBadge label="Coming soon" />
+        )}
+      </div>
+
+      <span className="mt-3 text-sm font-bold leading-5 sm:text-base">
+        {service.title}
+      </span>
+
+      <span className="mt-1 text-xs leading-5 text-muted-foreground">
+        {service.description}
+      </span>
+
+      <span className="mt-auto flex items-center gap-1 pt-3 text-xs font-semibold">
+        {service.available ? "Open service" : "View section"}
+        <ArrowRight className="h-3.5 w-3.5 transition group-hover:translate-x-0.5" />
+      </span>
+    </Link>
+  );
+}
