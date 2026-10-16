@@ -3,7 +3,8 @@ import { useEffect, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import {
   Heart,
-  Home,
+    Menu,
+  MessageCircle,
   Search,
   ShoppingBag,
   User,
