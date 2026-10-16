@@ -330,21 +330,18 @@ export function WelcomeBanner() {
     </section>
   );
 }
-
 export function MobileTabBar() {
   const items = [
     { to: "/", label: "Home", icon: Home },
-    { to: "/shop", label: "Shop", icon: Search },
-    { to: "/wishlist", label: "Saved", icon: Heart },
-    { to: "/cart", label: "Cart", icon: ShoppingBag },
-    { to: "/account", label: "Account", icon: User },
+    { to: "/sign-in", label: "Account", icon: User },
+    { to: "/support", label: "Support", icon: MessageCircle },
     { to: "/policies", label: "Policies", icon: ShieldCheck },
   ] as const;
 
   return (
     <nav
-      aria-label="Primary"
-      className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-6 border-t border-gold/20 bg-background md:hidden"
+      aria-label="Guest navigation"
+      className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-4 border-t border-gold/20 bg-background md:hidden"
     >
       {items.map(({ to, label, icon: Icon }) => (
         <Link
