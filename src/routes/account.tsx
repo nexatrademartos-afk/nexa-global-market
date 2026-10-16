@@ -1,5 +1,7 @@
+
 import { useEffect, useState } from "react";
 import { createFileRoute, Link, Outlet, useNavigate } from "@tanstack/react-router";
+import { Home, Package, UserRound, Wallet, Truck } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 
 export const ACCOUNT_NAV = [
@@ -97,26 +99,22 @@ function AccountLayout() {
   }
 
   return (
-    <div className="mx-auto max-w-6xl px-4 py-6 md:grid md:grid-cols-[220px_minmax(0,1fr)] md:gap-8">
-      <aside className="mb-4 md:mb-0">
-        <p className="mb-2 text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-          NEXA Customer Dashboard
-        </p>
+    <div className="mx-auto max-w-6xl px-4 py-5 pb-24 md:grid md:grid-cols-[220px_minmax(0,1fr)] md:gap-8 md:py-6 md:pb-6">
+      <aside className="mb-4 hidden md:block md:mb-0">
+        <nav aria-label="Customer account navigation" className="flex flex-col gap-1">
+          <p className="mb-2 text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+            Customer account
+          </p>
 
-        <nav
-          aria-label="Customer account navigation"
-          className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-2 md:mx-0 md:flex-col md:gap-1 md:px-0"
-        >
           {ACCOUNT_NAV.map((item) => (
             <Link
               key={item.to}
               to={item.to}
               activeOptions={{ exact: true }}
               activeProps={{
-                className:
-                  "bg-primary text-primary-foreground md:bg-secondary md:text-foreground md:font-semibold",
+                className: "bg-secondary text-foreground font-semibold",
               }}
-              className="flex min-h-11 shrink-0 items-center rounded-full border px-4 text-sm md:rounded-lg md:border-0 md:px-3"
+              className="flex min-h-11 items-center rounded-lg border border-transparent px-3 text-sm hover:border-gold/30 hover:bg-secondary"
             >
               {item.label}
             </Link>
@@ -124,16 +122,16 @@ function AccountLayout() {
 
           <Link
             to="/account/applications"
-            className="flex min-h-11 shrink-0 items-center rounded-full border border-gold/40 px-4 text-sm md:mt-3 md:rounded-lg md:px-3"
+            className="mt-3 flex min-h-11 items-center rounded-lg border border-gold/40 px-3 text-sm hover:bg-secondary"
           >
             External Workspaces
           </Link>
 
           <button
             type="button"
-            onClick={handleSignOut}
+            onClick={() => void handleSignOut()}
             disabled={signingOut}
-            className="flex min-h-11 shrink-0 items-center rounded-full border px-4 text-left text-sm text-muted-foreground disabled:opacity-60 md:mt-1 md:rounded-lg md:px-3"
+            className="mt-1 flex min-h-11 items-center rounded-lg border px-3 text-left text-sm text-muted-foreground disabled:opacity-60"
           >
             {signingOut ? "Signing out..." : "Sign out"}
           </button>
@@ -143,6 +141,39 @@ function AccountLayout() {
       <section className="min-w-0">
         <Outlet />
       </section>
+
+      <nav
+        aria-label="Customer quick navigation"
+        className="fixed inset-x-0 bottom-0 z-50 grid grid-cols-5 border-t border-gold/30 bg-background/95 px-1 pb-[env(safe-area-inset-bottom)] shadow-[0_-5px_20px_rgba(0,0,0,0.3)] backdrop-blur md:hidden"
+      >
+        <QuickNavItem to="/" label="Home" icon={Home} />
+        <QuickNavItem to="/account/orders" label="My Orders" icon={Package} />
+        <QuickNavItem to="/account/profile" label="Profile" icon={UserRound} />
+        <QuickNavItem to="/account/settings" label="NEXA Wallet" icon={Wallet} />
+        <QuickNavItem to="/account/orders" label="Delivery" icon={Truck} />
+      </nav>
     </div>
+  );
+}
+
+function QuickNavItem({
+  to,
+  label,
+  icon: Icon,
+}: {
+  to: "/" | "/account/orders" | "/account/profile" | "/account/settings";
+  label: string;
+  icon: typeof Home;
+}) {
+  return (
+    <Link
+      to={to}
+      activeOptions={{ exact: true }}
+      activeProps={{ className: "text-gold" }}
+      className="flex min-h-16 flex-col items-center justify-center gap-1 px-0.5 text-center text-[10px] leading-tight text-muted-foreground transition-colors hover:text-gold"
+    >
+      <Icon className="h-5 w-5" aria-hidden="true" />
+      <span>{label}</span>
+    </Link>
   );
 }
