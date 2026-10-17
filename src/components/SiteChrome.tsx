@@ -386,7 +386,7 @@ export function WelcomeBanner() {
         <div className="flex items-start justify-between gap-3">
           <div>
             <p className="text-xs font-bold uppercase tracking-[0.2em] text-gold">
-              Welcome to NEXA•Global Mart
+              Welcome to NEXA GLOBAL MART
             </p>
             <h2
               id="nexa-welcome-title"
