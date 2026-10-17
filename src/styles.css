@@ -164,7 +164,7 @@
     background-position: center top;
 background-repeat: repeat-y;
 background-size: 100% auto;
-background-attachment: scroll;
+background-attachment: scrolled slowly 30%;
   }
 }
 
