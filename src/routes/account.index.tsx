@@ -1,4 +1,3 @@
-
 import { useEffect, useMemo, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import {
@@ -45,7 +44,7 @@ type Service = {
   available: boolean;
 };
 
-const PRIORITY_SERVICES: Service[] = [
+const SERVICES: Service[] = [
   {
     title: "My Orders",
     to: "/account/orders",
@@ -70,9 +69,6 @@ const PRIORITY_SERVICES: Service[] = [
     icon: Truck,
     available: false,
   },
-];
-
-const OTHER_SERVICES: Service[] = [
   {
     title: "Shop Products",
     to: "/shop",
@@ -213,28 +209,18 @@ function CustomerDashboard() {
 
   const firstName = fullName.trim().split(/\s+/)[0] || "there";
 
-  const filteredPriority = useMemo(() => {
+  const filteredServices = useMemo(() => {
     const term = search.trim().toLowerCase();
 
-    if (!term) return PRIORITY_SERVICES;
+    if (!term) return SERVICES;
 
-    return PRIORITY_SERVICES.filter((service) =>
-      service.title.toLowerCase().includes(term),
-    );
-  }, [search]);
-
-  const filteredOther = useMemo(() => {
-    const term = search.trim().toLowerCase();
-
-    if (!term) return OTHER_SERVICES;
-
-    return OTHER_SERVICES.filter((service) =>
+    return SERVICES.filter((service) =>
       service.title.toLowerCase().includes(term),
     );
   }, [search]);
 
   return (
-    <div className="mx-auto w-full max-w-6xl space-y-6 px-4 py-5 pb-8 sm:py-7">
+    <div className="mx-auto w-full max-w-6xl space-y-4 px-4 py-4 pb-8 sm:space-y-5 sm:py-6">
       <section className="flex items-center justify-between gap-3">
         <div className="min-w-0">
           <h1 className="font-display text-xl font-bold tracking-tight sm:text-2xl">
@@ -254,39 +240,50 @@ function CustomerDashboard() {
         </span>
       </section>
 
-      <section className="surface rounded-2xl border border-gold/40 p-4 sm:p-5">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="min-w-0">
+      <section className="surface rounded-2xl border border-gold/40 px-3 py-3 sm:px-4">
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0 flex-1">
             <p className="text-xs font-medium text-muted-foreground">
               Your NEXA Customer ID
             </p>
-            <p className="mt-1 break-all font-mono text-lg font-bold tracking-wide sm:text-xl">
-              {loading ? "Loading..." : customerCode || "ID unavailable"}
-            </p>
+
+            <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1.5">
+              <p className="break-all font-mono text-base font-bold tracking-wide sm:text-lg">
+                {loading ? "Loading..." : customerCode || "ID unavailable"}
+              </p>
+
+              <span className="inline-flex shrink-0 items-center gap-1 text-xs font-semibold text-muted-foreground">
+                <ShieldCheck
+                  className="h-4 w-4 text-gold"
+                  aria-hidden="true"
+                />
+                Signed in
+              </span>
+            </div>
           </div>
 
-          <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-gold/40 px-3 py-1.5 text-xs font-semibold">
-            <ShieldCheck className="h-4 w-4 text-gold" />
-            Signed in
-          </span>
+          <button
+            type="button"
+            aria-label="About your NEXA Customer ID"
+            aria-expanded={showIdInfo}
+            aria-controls="customer-id-information"
+            title="About your ID"
+            onClick={() => setShowIdInfo((current) => !current)}
+            className="grid h-9 w-9 shrink-0 place-items-center rounded-full border border-gold/40 text-gold transition-colors hover:bg-gold-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold"
+          >
+            {showIdInfo ? (
+              <X className="h-4 w-4" aria-hidden="true" />
+            ) : (
+              <CircleHelp className="h-5 w-5" aria-hidden="true" />
+            )}
+          </button>
         </div>
 
-        <button
-          type="button"
-          aria-expanded={showIdInfo}
-          onClick={() => setShowIdInfo((current) => !current)}
-          className="mt-3 inline-flex min-h-9 items-center gap-2 text-sm font-semibold text-gold hover:underline"
-        >
-          {showIdInfo ? (
-            <X className="h-4 w-4" />
-          ) : (
-            <CircleHelp className="h-4 w-4" />
-          )}
-          {showIdInfo ? "Close ID information" : "About your ID"}
-        </button>
-
         {showIdInfo && (
-          <p className="mt-2 rounded-xl bg-muted/50 p-3 text-sm leading-5 text-muted-foreground">
+          <p
+            id="customer-id-information"
+            className="mt-3 rounded-xl bg-muted/50 p-3 text-sm leading-5 text-muted-foreground"
+          >
             Your NEXA Customer ID identifies your customer account when you
             contact support. Keep your sign-in details private. Your ID is
             not your password or a payment credential.
@@ -304,36 +301,25 @@ function CustomerDashboard() {
       )}
 
       <section className="space-y-3">
-        <h2 className="text-base font-bold sm:text-lg">Your essentials</h2>
-
-        <div className="grid grid-cols-2 gap-3">
-          {filteredPriority.map((service) => (
-            <ServiceCard
-              key={service.title}
-              service={service}
-              featured
-            />
-          ))}
-        </div>
-      </section>
-
-      <section className="space-y-3">
         <div className="flex items-center justify-between gap-3">
           <h2 className="text-base font-bold sm:text-lg">Explore services</h2>
           <span className="text-xs text-muted-foreground">
-            {filteredOther.length} services
+            {filteredServices.length}{" "}
+            {filteredServices.length === 1 ? "service" : "services"}
           </span>
         </div>
 
         <label className="relative block">
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+
           <input
             value={search}
             onChange={(event) => setSearch(event.target.value)}
             className="field pl-10 pr-10"
             placeholder="Find a service"
-            aria-label="Search account services"
+            aria-label="Search all account services"
           />
+
           {search && (
             <button
               type="button"
@@ -347,14 +333,21 @@ function CustomerDashboard() {
         </label>
 
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
-          {filteredOther.map((service) => (
-            <ServiceCard key={service.title} service={service} />
+          {filteredServices.map((service, index) => (
+            <ServiceCard
+              key={service.title}
+              service={service}
+              featured={index < 4 && !search.trim()}
+            />
           ))}
         </div>
 
-        {filteredPriority.length === 0 && filteredOther.length === 0 && (
+        {filteredServices.length === 0 && (
           <div className="surface rounded-xl p-5 text-center">
             <p className="font-semibold">No matching services</p>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Try another search term to find a service.
+            </p>
             <button
               type="button"
               className="mt-2 text-sm font-semibold text-gold hover:underline"
@@ -397,9 +390,7 @@ function ServiceCard({
           <Icon className="h-5 w-5 text-gold" aria-hidden="true" />
         </span>
 
-        {!service.available && (
-          <PlannedBadge label="Coming soon" />
-        )}
+        {!service.available && <PlannedBadge label="Coming soon" />}
       </div>
 
       <span className="mt-3 text-sm font-bold leading-5 sm:text-base">
