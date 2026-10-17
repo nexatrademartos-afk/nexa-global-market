@@ -48,21 +48,69 @@ const CATEGORY_ORDER = [
 ];
 
 export const Route = createFileRoute("/")({
+  
   head: () => ({
     meta: [
-      { title: "NEXA•Global Mart — Shop More. Save More. Get Rewarded." },
+      {
+        title: "NEXA GLOBAL MART — Shop More. Save More. Get Rewarded.",
+      },
       {
         name: "description",
         content:
-          "Explore the NEXA•Global Mart catalogue, browse categories and discover available products.",
+          "Discover products, explore global shopping opportunities, and shop with confidence at NEXA GLOBAL MART. Shop More. Save More. Get Rewarded.",
       },
-      { property: "og:title", content: "NEXA•Global Mart" },
+      {
+        property: "og:type",
+        content: "website",
+      },
+      {
+        property: "og:site_name",
+        content: "NEXA GLOBAL MART",
+      },
+      {
+        property: "og:title",
+        content: "NEXA GLOBAL MART — Shop More. Save More. Get Rewarded.",
+      },
       {
         property: "og:description",
-        content: "Shop More. Save More. Get Rewarded.",
+        content:
+          "Discover products and global shopping opportunities. Shop More. Save More. Get Rewarded.",
+      },
+      {
+        property: "og:image",
+        content:
+          "https://nexa-global-mart.tjc-os.workers.dev/og-image.png",
+      },
+      {
+        property: "og:image:alt",
+        content:
+          "NEXA GLOBAL MART gold globe logo, silver wordmark, and Shop More. Save More. Get Rewarded. tagline.",
+      },
+      {
+        property: "og:image:type",
+        content: "image/png",
+      },
+      {
+        name: "twitter:card",
+        content: "summary_large_image",
+      },
+      {
+        name: "twitter:title",
+        content: "NEXA GLOBAL MART — Shop More. Save More. Get Rewarded.",
+      },
+      {
+        name: "twitter:description",
+        content:
+          "Discover products and global shopping opportunities with NEXA GLOBAL MART.",
+      },
+      {
+        name: "twitter:image",
+        content:
+          "https://nexa-global-mart.tjc-os.workers.dev/og-image.png",
       },
     ],
   }),
+  
   component: Home,
 });
 
