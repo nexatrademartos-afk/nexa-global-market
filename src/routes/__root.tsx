@@ -4,13 +4,23 @@ import {
   Link,
   createRootRouteWithContext,
   useRouter,
+  useLocation,
   HeadContent,
   Scripts,
   type ErrorComponentProps,
 } from "@tanstack/react-router";
-import type { ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
+import {
+  LayoutGrid,
+  Package,
+  ShoppingCart,
+  Truck,
+  UserRound,
+  Wallet,
+} from "lucide-react";
 
 import appCss from "../styles.css?url";
+import { supabase } from "@/integrations/supabase/client";
 import {
   MobileTabBar,
   SiteFooter,
@@ -121,16 +131,139 @@ function RootShell({ children }: { children: ReactNode }) {
 
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
+  const pathname = useLocation({
+    select: (location) => location.pathname,
+  });
+
+  const [signedIn, setSignedIn] = useState(false);
+  const [sessionReady, setSessionReady] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+
+    async function checkSession() {
+      const { data, error } = await supabase.auth.getSession();
+
+      if (!active) return;
+
+      setSignedIn(!error && Boolean(data.session));
+      setSessionReady(true);
+    }
+
+    void checkSession();
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (!active) return;
+
+      setSignedIn(Boolean(session));
+      setSessionReady(true);
+    });
+
+    return () => {
+      active = false;
+      subscription.unsubscribe();
+    };
+  }, []);
+
+  const isAccountPage =
+    pathname === "/account" || pathname.startsWith("/account/");
+
+  const isCustomerBrowsePage =
+    pathname === "/" ||
+    pathname === "/shop" ||
+    pathname === "/cart" ||
+    pathname === "/wishlist" ||
+    pathname === "/support" ||
+    pathname.startsWith("/product/");
+
+  const showCustomerQuickNav =
+    sessionReady &&
+    signedIn &&
+    !isAccountPage &&
+    isCustomerBrowsePage;
 
   return (
     <QueryClientProvider client={queryClient}>
-   <SiteHeader />
-<WelcomeBanner />
-<main className="min-h-[70vh]">
-  <Outlet />
-</main>
+      <SiteHeader />
+      <WelcomeBanner />
+
+      <main
+        className={`min-h-[70vh] ${
+          showCustomerQuickNav ? "pb-20 md:pb-0" : ""
+        }`}
+      >
+        <Outlet />
+      </main>
+
       <SiteFooter />
       <MobileTabBar />
+
+      {showCustomerQuickNav && <CustomerQuickNav />}
     </QueryClientProvider>
   );
-} 
+}
+
+function CustomerQuickNav() {
+  return (
+    <nav
+      aria-label="Customer quick navigation"
+      className="fixed inset-x-0 bottom-0 z-50 grid grid-cols-6 border-t border-gold/30 bg-background/95 px-1 pb-[env(safe-area-inset-bottom)] shadow-[0_-5px_20px_rgba(0,0,0,0.3)] backdrop-blur md:hidden"
+    >
+      <QuickNavItem to="/shop" label="Shop" icon={ShoppingCart} />
+      <QuickNavItem
+        to="/account/orders"
+        label="My Orders"
+        icon={Package}
+      />
+      <QuickNavItem
+        to="/account"
+        label="Dashboard"
+        icon={LayoutGrid}
+      />
+      <QuickNavItem
+        to="/account/settings"
+        label="NEXA Wallet"
+        icon={Wallet}
+      />
+      <QuickNavItem
+        to="/account/orders"
+        label="Delivery"
+        icon={Truck}
+      />
+      <QuickNavItem
+        to="/account/profile"
+        label="Profile"
+        icon={UserRound}
+      />
+    </nav>
+  );
+}
+
+function QuickNavItem({
+  to,
+  label,
+  icon: Icon,
+}: {
+  to:
+    | "/shop"
+    | "/account"
+    | "/account/orders"
+    | "/account/settings"
+    | "/account/profile";
+  label: string;
+  icon: typeof ShoppingCart;
+}) {
+  return (
+    <Link
+      to={to}
+      activeOptions={{ exact: true }}
+      activeProps={{ className: "text-gold" }}
+      className="flex min-h-16 min-w-0 flex-col items-center justify-center gap-1 px-0.5 text-center text-[9px] leading-tight text-muted-foreground transition-colors hover:text-gold sm:text-[10px]"
+    >
+      <Icon className="h-5 w-5 shrink-0" aria-hidden="true" />
+      <span>{label}</span>
+    </Link>
+  );
+}
