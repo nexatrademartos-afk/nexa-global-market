@@ -1,4 +1,3 @@
-
 import { ProductCard } from "@/components/ProductCard";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
@@ -49,7 +48,6 @@ const CATEGORY_ORDER = [
 ];
 
 export const Route = createFileRoute("/")({
-  
   head: () => ({
     meta: [
       {
@@ -111,7 +109,6 @@ export const Route = createFileRoute("/")({
       },
     ],
   }),
-  
   component: Home,
 });
 
@@ -184,13 +181,12 @@ function Home() {
     async function loadStorefront() {
       setLoading(true);
       setLoadError(false);
-"id,name,slug,price,compare_at_price,discount_pct,image_url,category_id,is_featured,stock,merchandising_tags"
-      
+
       const [productResult, categoryResult, bannerResult] = await Promise.all([
         supabase
           .from("products")
           .select(
-            "id,name,slug,price,compare_at_price,discount_pct,image_url,category_id,is_featured,stock",
+            "id,name,slug,price,compare_at_price,discount_pct,image_url,category_id,is_featured,stock,merchandising_tags",
           )
           .eq("is_active", true)
           .gt("price", 0)
@@ -267,29 +263,30 @@ function Home() {
   const featuredProducts = visibleProducts.filter(
     (product) => product.is_featured,
   );
-  
-const merchandisingSections = [
-  {
-    tag: "hot",
-    title: "Hot right now",
-    subtitle: "Products selected by our team as hot picks.",
-  },
-  {
-    tag: "promotion",
-    title: "Promotions",
-    subtitle: "Special offers selected for the shop.",
-  },
-  {
-    tag: "luxury",
-    title: "Luxury & premium",
-    subtitle: "Premium products selected for this collection.",
-  },
-  {
-    tag: "affordable",
-    title: "Affordable finds",
-    subtitle: "Products selected for the affordable collection.",
-  },
-] as const;
+
+  const merchandisingSections = [
+    {
+      tag: "hot",
+      title: "Hot right now",
+      subtitle: "Products selected by our team as hot picks.",
+    },
+    {
+      tag: "promotion",
+      title: "Promotions",
+      subtitle: "Special offers selected for the shop.",
+    },
+    {
+      tag: "luxury",
+      title: "Luxury & premium",
+      subtitle: "Premium products selected for this collection.",
+    },
+    {
+      tag: "affordable",
+      title: "Affordable finds",
+      subtitle: "Products selected for the affordable collection.",
+    },
+  ] as const;
+
   const orderedCategories = useMemo(() => {
     const rank = (name: string) => {
       const index = CATEGORY_ORDER.findIndex(
@@ -534,6 +531,31 @@ const merchandisingSections = [
                   </div>
                 </div>
               )}
+
+            {!search.trim() &&
+              !selectedCategory &&
+              merchandisingSections.map((section) => {
+                const sectionProducts = visibleProducts.filter((product) =>
+                  (product.merchandising_tags ?? []).includes(section.tag),
+                );
+
+                if (sectionProducts.length === 0) return null;
+
+                return (
+                  <section key={section.tag} className="mb-10">
+                    <div className="mb-4">
+                      <h2 className="text-xl font-bold">{section.title}</h2>
+                      <p className="mt-1 text-sm text-muted-foreground">
+                        {section.subtitle}
+                      </p>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
+                      {sectionProducts.slice(0, 8).map(renderProductCard)}
+                    </div>
+                  </section>
+                );
+              })}
 
             {orderedCategories.map((category) => {
               const categoryProducts = visibleProducts.filter(
