@@ -78,37 +78,81 @@ function ErrorComponent({ error, reset }: ErrorComponentProps) {
 
 export const Route =
   createRootRouteWithContext<{ queryClient: QueryClient }>()({
-    head: () => ({
-      meta: [
-        { charSet: "utf-8" },
-        {
-          name: "viewport",
-          content: "width=device-width, initial-scale=1, viewport-fit=cover",
-        },
-        { name: "theme-color", content: "#111111" },
-        { title: "NEXA GLOBAL MART" },
-        {
-          name: "description",
-          content: "Shop More. Save More. Get Rewarded.",
-        },
-        { property: "og:type", content: "website" },
-        { name: "twitter:card", content: "summary_large_image" },
-      ],
-      links: [
-        { rel: "preconnect", href: "https://fonts.googleapis.com" },
-        {
-          rel: "preconnect",
-          href: "https://fonts.gstatic.com",
-          crossOrigin: "anonymous",
-        },
-        {
-          rel: "stylesheet",
-          href: "https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&family=Syne:wght@600;700;800&display=swap",
-        },
-        { rel: "stylesheet", href: appCss },
-        { rel: "icon", href: "/favicon.ico", type: "image/x-icon" },
-      ],
-    }),
+ head: () => ({
+  meta: [
+    { charSet: "utf-8" },
+    {
+      name: "viewport",
+      content: "width=device-width, initial-scale=1, viewport-fit=cover",
+    },
+    {
+      name: "theme-color",
+      content: "#080808",
+    },
+    {
+      title: "NEXA GLOBAL MART",
+    },
+    {
+      name: "description",
+      content:
+        "NEXA GLOBAL MART — Shop More. Save More. Get Rewarded. Discover products, explore opportunities, and shop with confidence.",
+    },
+    {
+      property: "og:type",
+      content: "website",
+    },
+    {
+      property: "og:site_name",
+      content: "NEXA GLOBAL MART",
+    },
+    {
+      property: "og:title",
+      content: "NEXA GLOBAL MART",
+    },
+    {
+      property: "og:description",
+      content:
+        "Shop More. Save More. Get Rewarded. Discover products and global shopping opportunities with NEXA GLOBAL MART.",
+    },
+    {
+      name: "twitter:card",
+      content: "summary_large_image",
+    },
+    {
+      name: "twitter:title",
+      content: "NEXA GLOBAL MART",
+    },
+    {
+      name: "twitter:description",
+      content:
+        "Shop More. Save More. Get Rewarded.",
+    },
+  ],
+  links: [
+    {
+      rel: "preconnect",
+      href: "https://fonts.googleapis.com",
+    },
+    {
+      rel: "preconnect",
+      href: "https://fonts.gstatic.com",
+      crossOrigin: "anonymous",
+    },
+    {
+      rel: "stylesheet",
+      href: "https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&family=Syne:wght@600;700;800&display=swap",
+    },
+    {
+      rel: "stylesheet",
+      href: appCss,
+    },
+    {
+      rel: "icon",
+      href: "/favicon.ico?v=2",
+      type: "image/x-icon",
+    },
+  ],
+}),
     shellComponent: RootShell,
     component: RootComponent,
     notFoundComponent: NotFoundComponent,
