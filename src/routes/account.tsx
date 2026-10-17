@@ -1,7 +1,14 @@
 
 import { useEffect, useState } from "react";
 import { createFileRoute, Link, Outlet, useNavigate } from "@tanstack/react-router";
-import { Home, Package, UserRound, Wallet, Truck } from "lucide-react";
+import {
+  LayoutGrid,
+  Package,
+  ShoppingCart,
+  Truck,
+  UserRound,
+  Wallet,
+} from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 
 export const ACCOUNT_NAV = [
@@ -101,7 +108,10 @@ function AccountLayout() {
   return (
     <div className="mx-auto max-w-6xl px-4 py-5 pb-24 md:grid md:grid-cols-[220px_minmax(0,1fr)] md:gap-8 md:py-6 md:pb-6">
       <aside className="mb-4 hidden md:block md:mb-0">
-        <nav aria-label="Customer account navigation" className="flex flex-col gap-1">
+        <nav
+          aria-label="Customer account navigation"
+          className="flex flex-col gap-1"
+        >
           <p className="mb-2 text-xs font-semibold uppercase tracking-widest text-muted-foreground">
             Customer account
           </p>
@@ -144,13 +154,34 @@ function AccountLayout() {
 
       <nav
         aria-label="Customer quick navigation"
-        className="fixed inset-x-0 bottom-0 z-50 grid grid-cols-5 border-t border-gold/30 bg-background/95 px-1 pb-[env(safe-area-inset-bottom)] shadow-[0_-5px_20px_rgba(0,0,0,0.3)] backdrop-blur md:hidden"
+        className="fixed inset-x-0 bottom-0 z-50 grid grid-cols-6 border-t border-gold/30 bg-background/95 px-1 pb-[env(safe-area-inset-bottom)] shadow-[0_-5px_20px_rgba(0,0,0,0.3)] backdrop-blur md:hidden"
       >
-        <QuickNavItem to="/" label="Home" icon={Home} />
-        <QuickNavItem to="/account/orders" label="My Orders" icon={Package} />
-        <QuickNavItem to="/account/profile" label="Profile" icon={UserRound} />
-        <QuickNavItem to="/account/settings" label="NEXA Wallet" icon={Wallet} />
-        <QuickNavItem to="/account/orders" label="Delivery" icon={Truck} />
+        <QuickNavItem to="/shop" label="Shop" icon={ShoppingCart} />
+        <QuickNavItem
+          to="/account/orders"
+          label="My Orders"
+          icon={Package}
+        />
+        <QuickNavItem
+          to="/account"
+          label="Dashboard"
+          icon={LayoutGrid}
+        />
+        <QuickNavItem
+          to="/account/settings"
+          label="NEXA Wallet"
+          icon={Wallet}
+        />
+        <QuickNavItem
+          to="/account/orders"
+          label="Delivery"
+          icon={Truck}
+        />
+        <QuickNavItem
+          to="/account/profile"
+          label="Profile"
+          icon={UserRound}
+        />
       </nav>
     </div>
   );
@@ -161,18 +192,23 @@ function QuickNavItem({
   label,
   icon: Icon,
 }: {
-  to: "/" | "/account/orders" | "/account/profile" | "/account/settings";
+  to:
+    | "/shop"
+    | "/account"
+    | "/account/orders"
+    | "/account/settings"
+    | "/account/profile";
   label: string;
-  icon: typeof Home;
+  icon: typeof ShoppingCart;
 }) {
   return (
     <Link
       to={to}
       activeOptions={{ exact: true }}
       activeProps={{ className: "text-gold" }}
-      className="flex min-h-16 flex-col items-center justify-center gap-1 px-0.5 text-center text-[10px] leading-tight text-muted-foreground transition-colors hover:text-gold"
+      className="flex min-h-16 min-w-0 flex-col items-center justify-center gap-1 px-0.5 text-center text-[9px] leading-tight text-muted-foreground transition-colors hover:text-gold sm:text-[10px]"
     >
-      <Icon className="h-5 w-5" aria-hidden="true" />
+      <Icon className="h-5 w-5 shrink-0" aria-hidden="true" />
       <span>{label}</span>
     </Link>
   );
