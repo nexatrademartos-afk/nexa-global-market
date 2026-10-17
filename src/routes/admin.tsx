@@ -635,6 +635,210 @@ async function deleteCategory(category: Category) {
         )}
 
         <section className="rounded-2xl border border-white/10 bg-[#090909] p-4 sm:p-6">
+  <div className="mb-5">
+    <h2 className="text-xl font-bold">Category management</h2>
+    <p className="mt-1 text-sm text-[#A6A6A6]">
+      Create and manage product categories without changing source code.
+    </p>
+  </div>
+
+  <form onSubmit={saveCategory} className="space-y-4">
+    <div className="grid gap-4 sm:grid-cols-2">
+      <label className="grid gap-2 text-sm font-medium">
+        Category name *
+        <input
+          required
+          value={categoryForm.name}
+          onChange={(event) => {
+            const name = event.target.value;
+            setCategoryForm((current) => ({
+              ...current,
+              name,
+              slug: current.slug || makeSlug(name),
+            }));
+          }}
+          placeholder="e.g. Laptops"
+          className="field w-full"
+        />
+      </label>
+
+      <label className="grid gap-2 text-sm font-medium">
+        URL slug *
+        <input
+          required
+          value={categoryForm.slug}
+          onChange={(event) =>
+            updateCategoryForm("slug", makeSlug(event.target.value))
+          }
+          placeholder="laptops"
+          className="field w-full"
+        />
+      </label>
+
+      <label className="grid gap-2 text-sm font-medium">
+        Category image URL
+        <input
+          type="url"
+          value={categoryForm.image_url}
+          onChange={(event) =>
+            updateCategoryForm("image_url", event.target.value)
+          }
+          placeholder="https://example.com/category.jpg"
+          className="field w-full"
+        />
+      </label>
+
+      <label className="grid gap-2 text-sm font-medium">
+        Display order
+        <input
+          required
+          type="number"
+          min="0"
+          step="1"
+          value={categoryForm.sort_order}
+          onChange={(event) =>
+            updateCategoryForm("sort_order", event.target.value)
+          }
+          className="field w-full"
+        />
+      </label>
+    </div>
+
+    <label className="grid gap-2 text-sm font-medium">
+      Description
+      <textarea
+        rows={2}
+        value={categoryForm.description}
+        onChange={(event) =>
+          updateCategoryForm("description", event.target.value)
+        }
+        placeholder="Optional category description."
+        className="field w-full"
+      />
+    </label>
+
+    <label className="flex items-start gap-3 rounded-xl border border-white/10 p-4">
+      <input
+        type="checkbox"
+        checked={categoryForm.is_active}
+        onChange={(event) =>
+          updateCategoryForm("is_active", event.target.checked)
+        }
+        className="mt-1 accent-[#E4C15A]"
+      />
+      <span>
+        <span className="block text-sm font-semibold">
+          Active category
+        </span>
+        <span className="mt-1 block text-xs text-[#A6A6A6]">
+          Active categories can be offered in the storefront.
+        </span>
+      </span>
+    </label>
+
+    <div className="flex flex-wrap gap-3">
+      <button
+        type="submit"
+        disabled={savingCategory}
+        className="btn btn-primary"
+      >
+        {savingCategory
+          ? "Saving category..."
+          : editingCategoryId
+            ? "Save category changes"
+            : "Create category"}
+      </button>
+
+      {editingCategoryId && (
+        <button
+          type="button"
+          onClick={resetCategoryForm}
+          className="btn btn-outline"
+        >
+          Cancel editing
+        </button>
+      )}
+    </div>
+  </form>
+
+  <div className="mt-6 border-t border-white/10 pt-5">
+    <h3 className="mb-3 font-semibold">
+      Existing categories ({categories.length})
+    </h3>
+
+    {categories.length === 0 ? (
+      <p className="py-4 text-sm text-[#A6A6A6]">
+        No categories found. Create your first category above.
+      </p>
+    ) : (
+      <div className="space-y-3">
+        {categories.map((category) => {
+          const assignedProducts = products.filter(
+            (product) => product.category_id === category.id,
+          ).length;
+
+          return (
+            <article
+              key={category.id}
+              className="flex flex-col gap-3 rounded-xl border border-white/10 bg-[#080808] p-4 sm:flex-row sm:items-center"
+            >
+              <div className="min-w-0 flex-1">
+                <h4 className="font-semibold">{category.name}</h4>
+                <p className="mt-1 break-all text-xs text-[#A6A6A6]">
+                  {category.slug} · Order {category.sort_order} ·{" "}
+                  {assignedProducts} product(s)
+                </p>
+                {category.description && (
+                  <p className="mt-1 text-sm text-[#A6A6A6]">
+                    {category.description}
+                  </p>
+                )}
+                <span className="mt-2 inline-flex rounded-full border border-white/15 px-2 py-1 text-xs">
+                  {category.is_active ? "Active" : "Inactive"}
+                </span>
+              </div>
+
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={() => startEditingCategory(category)}
+                  className="btn btn-outline"
+                >
+                  Edit
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => void toggleCategory(category)}
+                  className="btn btn-outline"
+                >
+                  {category.is_active ? "Deactivate" : "Activate"}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => void deleteCategory(category)}
+                  disabled={assignedProducts > 0}
+                  className="btn btn-outline disabled:cursor-not-allowed disabled:opacity-40"
+                  title={
+                    assignedProducts > 0
+                      ? "Reassign products before deleting this category."
+                      : "Delete category"
+                  }
+                >
+                  <Trash2 className="mr-1 inline h-4 w-4" />
+                  Delete
+                </button>
+              </div>
+            </article>
+          );
+        })}
+      </div>
+    )}
+  </div>
+</section>
+        
+        <section className="rounded-2xl border border-white/10 bg-[#090909] p-4 sm:p-6">
           <div className="mb-5 flex items-center gap-3">
             <div className="grid h-10 w-10 place-items-center rounded-lg bg-[#15120A] text-[#E4C15A]">
               {editingId ? <Package className="h-5 w-5" /> : <Plus className="h-5 w-5" />}
