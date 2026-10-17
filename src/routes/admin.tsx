@@ -1,19 +1,16 @@
+
 import { useCallback, useEffect, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import {
   CheckCircle2,
-  ClipboardCheck,
-  Headset,
   ImagePlus,
-  Megaphone,
   Package,
   Plus,
   RefreshCw,
   ShieldCheck,
-  ShoppingCart,
-  Tags,
-  Users,
-  Warehouse,
+  Star,
+  Tag,
+  Trash2,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import type { Tables } from "@/integrations/supabase/types";
@@ -21,17 +18,44 @@ import type { Tables } from "@/integrations/supabase/types";
 type Product = Tables<"products">;
 type Category = Tables<"categories">;
 
+const MERCHANDISING_OPTIONS = [
+  {
+    value: "hot",
+    label: "Hot",
+    description: "Show in the Hot section.",
+  },
+  {
+    value: "promotion",
+    label: "Promotion",
+    description: "Show in Promotions; set a comparison price for a sale.",
+  },
+  {
+    value: "luxury",
+    label: "Luxury / Premium",
+    description: "Show in the Luxury section.",
+  },
+  {
+    value: "affordable",
+    label: "Affordable",
+    description: "Show in the Affordable section.",
+  },
+] as const;
+
+type MerchandisingTag = (typeof MERCHANDISING_OPTIONS)[number]["value"];
+
 type ProductForm = {
   name: string;
   slug: string;
   description: string;
   price: string;
+  compare_at_price: string;
   stock: string;
   sku: string;
   image_url: string;
   category_id: string;
   is_active: boolean;
   is_featured: boolean;
+  merchandising_tags: MerchandisingTag[];
 };
 
 const emptyForm: ProductForm = {
@@ -39,67 +63,18 @@ const emptyForm: ProductForm = {
   slug: "",
   description: "",
   price: "",
+  compare_at_price: "",
   stock: "0",
   sku: "",
   image_url: "",
   category_id: "",
   is_active: false,
   is_featured: false,
+  merchandising_tags: [],
 };
 
-const ADMIN_MODULES = [
-  {
-    name: "Products",
-    description: "Add, edit and publish products.",
-    status: "active",
-    icon: Package,
-  },
-  {
-    name: "Categories",
-    description: "Organise the product catalogue.",
-    status: "soon",
-    icon: Tags,
-  },
-  {
-    name: "Staff & Access",
-    description: "Staff accounts and permissions.",
-    status: "soon",
-    icon: Users,
-  },
-  {
-    name: "Role Applications",
-    description: "Review requests for platform roles.",
-    status: "soon",
-    icon: ClipboardCheck,
-  },
-  {
-    name: "Orders & Returns",
-    description: "Manage customer orders and returns.",
-    status: "soon",
-    icon: ShoppingCart,
-  },
-  {
-    name: "Suppliers & Warehouse",
-    description: "Supplier and inventory operations.",
-    status: "soon",
-    icon: Warehouse,
-  },
-  {
-    name: "Marketing",
-    description: "Promotions and campaigns.",
-    status: "soon",
-    icon: Megaphone,
-  },
-  {
-    name: "Support & Policies",
-    description: "Customer support and policies.",
-    status: "soon",
-    icon: Headset,
-  },
-] as const;
-
 export const Route = createFileRoute("/admin")({
-  component: AdminDashboard,
+  component: AdminProductsPage,
 });
 
 function makeSlug(value: string) {
@@ -112,8 +87,17 @@ function makeSlug(value: string) {
     .replace(/^-|-$/g, "");
 }
 
-function AdminDashboard() {
-  const [adminFirstName, setAdminFirstName] = useState("Admin");
+function safeTags(value: unknown): MerchandisingTag[] {
+  if (!Array.isArray(value)) return [];
+
+  const allowed = MERCHANDISING_OPTIONS.map((option) => option.value);
+  return value.filter(
+    (tag): tag is MerchandisingTag =>
+      typeof tag === "string" && allowed.includes(tag as MerchandisingTag),
+  );
+}
+
+function AdminProductsPage() {
   const [checking, setChecking] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
   const [products, setProducts] = useState<Product[]>([]);
@@ -137,11 +121,11 @@ function AdminDashboard() {
       supabase
         .from("categories")
         .select("*")
-        .order("sort_order"),
+        .order("sort_order", { ascending: true }),
     ]);
 
     if (productResult.error) {
-      setErrorMessage(productResult.error.message);
+      setErrorMessage(`Could not load products: ${productResult.error.message}`);
     } else {
       setProducts(productResult.data ?? []);
     }
@@ -150,7 +134,7 @@ function AdminDashboard() {
       setErrorMessage((current) =>
         current
           ? `${current} Categories: ${categoryResult.error.message}`
-          : `Categories: ${categoryResult.error.message}`,
+          : `Could not load categories: ${categoryResult.error.message}`,
       );
     } else {
       setCategories(categoryResult.data ?? []);
@@ -183,29 +167,8 @@ function AdminDashboard() {
 
       if (!active) return;
 
-      const approvedAdmin = !roleError && Boolean(role);
-      setIsAdmin(approvedAdmin);
-
-      if (approvedAdmin) {
-        const { data: profile } = await supabase
-          .from("profiles")
-          .select("full_name")
-          .eq("id", userResult.user.id)
-          .maybeSingle();
-
-        if (!active) return;
-
-        const registeredName =
-          profile?.full_name?.trim() ||
-          userResult.user.user_metadata?.full_name ||
-          "";
-
-        setAdminFirstName(
-          registeredName.split(/\s+/).filter(Boolean)[0] || "Admin",
-        );
-      }
-
-      if (active) setChecking(false);
+      setIsAdmin(!roleError && Boolean(role));
+      setChecking(false);
     }
 
     void checkAdminAccess();
@@ -233,12 +196,17 @@ function AdminDashboard() {
       slug: product.slug,
       description: product.description ?? "",
       price: String(product.price),
+      compare_at_price:
+        product.compare_at_price == null
+          ? ""
+          : String(product.compare_at_price),
       stock: String(product.stock),
       sku: product.sku ?? "",
       image_url: product.image_url ?? "",
       category_id: product.category_id ?? "",
       is_active: product.is_active,
       is_featured: product.is_featured,
+      merchandising_tags: safeTags(product.merchandising_tags),
     });
     setMessage("");
     setErrorMessage("");
@@ -252,6 +220,15 @@ function AdminDashboard() {
     setErrorMessage("");
   }
 
+  function toggleMerchandisingTag(tag: MerchandisingTag, checked: boolean) {
+    setForm((current) => ({
+      ...current,
+      merchandising_tags: checked
+        ? Array.from(new Set([...current.merchandising_tags, tag]))
+        : current.merchandising_tags.filter((item) => item !== tag),
+    }));
+  }
+
   async function saveProduct(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setSaving(true);
@@ -262,15 +239,17 @@ function AdminDashboard() {
     const slug = makeSlug(form.slug || name);
     const price = Number(form.price);
     const stock = Number(form.stock);
+    const compareText = form.compare_at_price.trim();
+    const compareAtPrice = compareText ? Number(compareText) : null;
 
     if (!name || !slug) {
-      setErrorMessage("Enter a product name and a valid URL slug.");
+      setErrorMessage("Enter a product name and valid URL slug.");
       setSaving(false);
       return;
     }
 
-    if (!Number.isFinite(price) || price < 0) {
-      setErrorMessage("Enter a valid, non-negative product price.");
+    if (!Number.isFinite(price) || price <= 0) {
+      setErrorMessage("Price must be greater than zero.");
       setSaving(false);
       return;
     }
@@ -281,17 +260,34 @@ function AdminDashboard() {
       return;
     }
 
+    if (
+      compareAtPrice !== null &&
+      (!Number.isFinite(compareAtPrice) || compareAtPrice <= price)
+    ) {
+      setErrorMessage(
+        "The comparison price must be greater than the selling price.",
+      );
+      setSaving(false);
+      return;
+    }
+
     const values = {
       name,
       slug,
       description: form.description.trim() || null,
       price,
+      compare_at_price: compareAtPrice,
+      discount_pct:
+        compareAtPrice !== null
+          ? Math.round(((compareAtPrice - price) / compareAtPrice) * 100)
+          : null,
       stock,
       sku: form.sku.trim() || null,
       image_url: form.image_url.trim() || null,
       category_id: form.category_id || null,
       is_active: form.is_active,
       is_featured: form.is_featured,
+      merchandising_tags: form.merchandising_tags,
       updated_at: new Date().toISOString(),
     };
 
@@ -300,16 +296,12 @@ function AdminDashboard() {
       : await supabase.from("products").insert(values);
 
     if (result.error) {
-      setErrorMessage(`Could not save the product. ${result.error.message}`);
+      setErrorMessage(`Could not save the product: ${result.error.message}`);
       setSaving(false);
       return;
     }
 
-    setMessage(
-      editingId
-        ? "Product details saved successfully."
-        : "Product created successfully.",
-    );
+    setMessage(editingId ? "Product updated successfully." : "Product added successfully.");
     setEditingId(null);
     setForm(emptyForm);
     await loadProducts();
@@ -323,10 +315,11 @@ function AdminDashboard() {
     setMessage("");
     setErrorMessage("");
 
+    const nextValue = !product[field];
     const { error } = await supabase
       .from("products")
       .update({
-        [field]: !product[field],
+        [field]: nextValue,
         updated_at: new Date().toISOString(),
       })
       .eq("id", product.id);
@@ -338,48 +331,67 @@ function AdminDashboard() {
 
     setProducts((current) =>
       current.map((item) =>
-        item.id === product.id
-          ? { ...item, [field]: !product[field] }
-          : item,
+        item.id === product.id ? { ...item, [field]: nextValue } : item,
       ),
     );
 
     setMessage(
       field === "is_active"
-        ? product.is_active
-          ? "Product unpublished."
-          : "Product published."
-        : product.is_featured
-          ? "Product removed from featured items."
-          : "Product marked as featured.",
+        ? nextValue
+          ? "Product published."
+          : "Product unpublished."
+        : nextValue
+          ? "Product marked as featured."
+          : "Product removed from featured items.",
     );
+  }
+
+  async function deleteProduct(product: Product) {
+    const confirmed = window.confirm(
+      `Permanently delete "${product.name}"? This cannot be undone. If this product is linked to an order, the database may block deletion.`,
+    );
+
+    if (!confirmed) return;
+
+    setMessage("");
+    setErrorMessage("");
+
+    const { error } = await supabase
+      .from("products")
+      .delete()
+      .eq("id", product.id);
+
+    if (error) {
+      setErrorMessage(`Could not delete product: ${error.message}`);
+      return;
+    }
+
+    setProducts((current) => current.filter((item) => item.id !== product.id));
+
+    if (editingId === product.id) resetForm();
+
+    setMessage("Product deleted.");
   }
 
   if (checking) {
     return (
-      <main className="min-h-[70vh] bg-[#050505] px-4 py-12 text-white">
-        <div
-          className="mx-auto max-w-4xl rounded-2xl border border-[#C9A227]/60 bg-[#090909] p-6 shadow-[0_0_14px_rgba(201,162,39,0.16)]"
-          role="status"
-        >
+      <main className="min-h-[70vh] bg-[#050505] px-4 py-10 text-white">
+        <p className="mx-auto max-w-5xl rounded-xl border border-white/10 bg-[#090909] p-5">
           Checking administrator access...
-        </div>
+        </p>
       </main>
     );
   }
 
   if (!isAdmin) {
     return (
-      <main className="min-h-[70vh] bg-[#050505] px-4 py-12 text-white">
-        <section className="mx-auto max-w-3xl rounded-3xl border border-[#C9A227]/60 bg-[#090909] p-6 shadow-[0_0_14px_rgba(201,162,39,0.16)] md:p-10">
+      <main className="min-h-[70vh] bg-[#050505] px-4 py-10 text-white">
+        <section className="mx-auto max-w-3xl rounded-2xl border border-white/10 bg-[#090909] p-6 md:p-10">
           <ShieldCheck className="h-10 w-10 text-[#E4C15A]" />
-          <h1 className="mt-4 text-2xl font-bold">
-            Admin access required
-          </h1>
+          <h1 className="mt-4 text-2xl font-bold">Admin access required</h1>
           <p className="mt-3 text-sm leading-6 text-[#A6A6A6]">
-            This area is for authorised NEXA administrators. Sign in with an
-            account that has the admin role. A customer account alone does not
-            grant access.
+            This area is for authorised administrators. Sign in with an account
+            that has the admin role. A customer account alone does not grant access.
           </p>
           <a href="/sign-in" className="btn btn-primary mt-5 inline-flex">
             Go to sign in
@@ -389,499 +401,412 @@ function AdminDashboard() {
     );
   }
 
-  const activeCount = products.filter((product) => product.is_active).length;
+  const publishedCount = products.filter((product) => product.is_active).length;
 
   return (
-    <main className="min-h-[70vh] bg-[#050505] px-3 pb-16 pt-5 text-white sm:px-4">
-      <div className="mx-auto max-w-6xl rounded-[2rem] border border-[#C9A227] p-2 shadow-[0_0_14px_rgba(201,162,39,0.22),0_0_30px_rgba(201,162,39,0.10)] md:p-3">
-        <div className="space-y-6 rounded-[1.5rem] bg-[#080808] px-3 py-5 sm:px-5 md:px-6 md:py-8">
-          <header className="rounded-2xl border border-[#C9A227] bg-[#090909] p-5 text-white shadow-[0_0_14px_rgba(201,162,39,0.20)] sm:p-6 md:p-9">
-            <p className="text-xs font-semibold uppercase tracking-[0.25em] text-[#E4C15A]">
-              NEXA · Administration
+    <main className="min-h-screen bg-[#050505] px-3 py-5 text-white sm:px-4">
+      <div className="mx-auto max-w-6xl space-y-5">
+        <header className="flex flex-wrap items-end justify-between gap-4 border-b border-white/10 pb-5">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#E4C15A]">
+              NEXA GLOBAL MART
             </p>
-
-            <h1 className="mt-3 text-3xl font-bold md:text-4xl">
-              Welcome back, {adminFirstName}
-            </h1>
-
-            <h2 className="mt-3 text-xl font-semibold text-[#E4C15A]">
-              Product Management
-            </h2>
-
-            <p className="mt-3 max-w-2xl text-sm leading-6 text-[#A6A6A6]">
-              Add products, maintain your catalogue and control which products
-              are published to customers. Changes are saved to the NEXA database.
+            <h1 className="mt-2 text-3xl font-bold">Products</h1>
+            <p className="mt-2 max-w-2xl text-sm text-[#A6A6A6]">
+              Add products, manage catalogue details, and choose the shop sections
+              where customers discover each product.
             </p>
-
-            <div className="mt-6 grid grid-cols-2 gap-3 sm:max-w-md">
-              <div className="rounded-xl border border-[#C9A227]/40 bg-[#080808] p-4">
-                <p className="text-xs text-[#A6A6A6]">All products</p>
-                <p className="mt-1 text-2xl font-bold text-white">
-                  {products.length}
-                </p>
-              </div>
-
-              <div className="rounded-xl border border-[#C9A227]/40 bg-[#080808] p-4">
-                <p className="text-xs text-[#A6A6A6]">Published</p>
-                <p className="mt-1 text-2xl font-bold text-white">
-                  {activeCount}
-                </p>
-              </div>
+          </div>
+          <div className="flex gap-3">
+            <div className="rounded-xl border border-white/10 bg-[#090909] px-4 py-3">
+              <p className="text-xs text-[#A6A6A6]">All products</p>
+              <p className="mt-1 text-xl font-bold">{products.length}</p>
             </div>
-          </header>
+            <div className="rounded-xl border border-white/10 bg-[#090909] px-4 py-3">
+              <p className="text-xs text-[#A6A6A6]">Published</p>
+              <p className="mt-1 text-xl font-bold">{publishedCount}</p>
+            </div>
+          </div>
+        </header>
 
-          <section aria-label="Administration modules" className="space-y-4">
+        {(message || errorMessage) && (
+          <div
+            role={errorMessage ? "alert" : "status"}
+            className={`rounded-xl border p-4 text-sm ${
+              errorMessage
+                ? "border-red-500/40 bg-red-950/20 text-red-200"
+                : "border-emerald-500/30 bg-emerald-950/20 text-emerald-200"
+            }`}
+          >
+            {errorMessage || message}
+          </div>
+        )}
+
+        <section className="rounded-2xl border border-white/10 bg-[#090909] p-4 sm:p-6">
+          <div className="mb-5 flex items-center gap-3">
+            <div className="grid h-10 w-10 place-items-center rounded-lg bg-[#15120A] text-[#E4C15A]">
+              {editingId ? <Package className="h-5 w-5" /> : <Plus className="h-5 w-5" />}
+            </div>
             <div>
-              <h2 className="text-lg font-bold text-[#E4C15A]">
-                Admin Dashboard
+              <h2 className="text-xl font-bold">
+                {editingId ? "Edit product" : "Add a product"}
               </h2>
-              <p className="mt-1 text-sm text-[#A6A6A6]">
-                Select an available area to manage your operations.
+              <p className="text-sm text-[#A6A6A6]">
+                Manage product details and customer-facing merchandising.
               </p>
             </div>
+          </div>
 
-            <div className="grid grid-cols-2 gap-3 sm:gap-4">
-              {ADMIN_MODULES.map((module) => {
-                const Icon = module.icon;
-                const isActive = module.status === "active";
+          <form onSubmit={saveProduct} className="space-y-5">
+            <div className="grid gap-4 sm:grid-cols-2">
+              <label className="grid gap-2 text-sm font-medium">
+                Product name *
+                <input
+                  required
+                  value={form.name}
+                  onChange={(event) => {
+                    const name = event.target.value;
+                    setForm((current) => ({
+                      ...current,
+                      name,
+                      slug: current.slug || makeSlug(name),
+                    }));
+                  }}
+                  placeholder="e.g. Premium leather jacket"
+                  className="field w-full"
+                />
+              </label>
 
-                const tileClass =
-                  "flex min-h-[150px] flex-col items-start rounded-2xl border border-[#C9A227] bg-[#090909] p-3 text-left shadow-[0_0_10px_rgba(201,162,39,0.16)] transition duration-200 sm:min-h-[165px] sm:p-4";
+              <label className="grid gap-2 text-sm font-medium">
+                URL slug *
+                <input
+                  required
+                  value={form.slug}
+                  onChange={(event) => updateForm("slug", makeSlug(event.target.value))}
+                  placeholder="premium-leather-jacket"
+                  className="field w-full"
+                />
+              </label>
 
-                const tileContent = (
-                  <>
-                    <div className="flex w-full items-start justify-between gap-2">
-                      <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-[#C9A227]/70 bg-[#15120A] text-[#E4C15A] sm:h-11 sm:w-11">
-                        <Icon className="h-5 w-5" />
+              <label className="grid gap-2 text-sm font-medium">
+                Selling price (ZAR) *
+                <input
+                  required
+                  type="number"
+                  min="0.01"
+                  step="0.01"
+                  value={form.price}
+                  onChange={(event) => updateForm("price", event.target.value)}
+                  placeholder="299.00"
+                  className="field w-full"
+                />
+              </label>
+
+              <label className="grid gap-2 text-sm font-medium">
+                Comparison price (ZAR)
+                <input
+                  type="number"
+                  min="0.01"
+                  step="0.01"
+                  value={form.compare_at_price}
+                  onChange={(event) => updateForm("compare_at_price", event.target.value)}
+                  placeholder="e.g. 399.00 before discount"
+                  className="field w-full"
+                />
+                <span className="text-xs font-normal text-[#A6A6A6]">
+                  Optional. Must be higher than the selling price.
+                </span>
+              </label>
+
+              <label className="grid gap-2 text-sm font-medium">
+                Stock quantity *
+                <input
+                  required
+                  type="number"
+                  min="0"
+                  step="1"
+                  value={form.stock}
+                  onChange={(event) => updateForm("stock", event.target.value)}
+                  className="field w-full"
+                />
+              </label>
+
+              <label className="grid gap-2 text-sm font-medium">
+                Category
+                <select
+                  value={form.category_id}
+                  onChange={(event) => updateForm("category_id", event.target.value)}
+                  className="field w-full"
+                >
+                  <option value="">Choose a category</option>
+                  {categories.map((category) => (
+                    <option key={category.id} value={category.id}>
+                      {category.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <label className="grid gap-2 text-sm font-medium">
+                SKU / product code
+                <input
+                  value={form.sku}
+                  onChange={(event) => updateForm("sku", event.target.value)}
+                  placeholder="Optional stock code"
+                  className="field w-full"
+                />
+              </label>
+            </div>
+
+            <label className="grid gap-2 text-sm font-medium">
+              Product image URL
+              <span className="flex items-center gap-2 text-xs font-normal text-[#A6A6A6]">
+                <ImagePlus className="h-4 w-4" />
+                Use a direct, publicly accessible image URL.
+              </span>
+              <input
+                type="url"
+                value={form.image_url}
+                onChange={(event) => updateForm("image_url", event.target.value)}
+                placeholder="https://example.com/product-image.jpg"
+                className="field w-full"
+              />
+            </label>
+
+            {form.image_url && (
+              <div className="max-w-xs overflow-hidden rounded-xl border border-white/10 p-2">
+                <img
+                  src={form.image_url}
+                  alt="Product preview"
+                  className="aspect-square w-full rounded-lg bg-white object-contain"
+                  onError={(event) => {
+                    event.currentTarget.style.display = "none";
+                  }}
+                />
+              </div>
+            )}
+
+            <label className="grid gap-2 text-sm font-medium">
+              Description
+              <textarea
+                rows={4}
+                value={form.description}
+                onChange={(event) => updateForm("description", event.target.value)}
+                placeholder="Describe the product and its key details."
+                className="field w-full"
+              />
+            </label>
+
+            <fieldset className="space-y-3">
+              <legend className="text-sm font-semibold">
+                Shop placement and merchandising
+              </legend>
+              <p className="text-xs text-[#A6A6A6]">
+                Select any combination. These labels are separate from the product category.
+              </p>
+              <div className="grid gap-3 sm:grid-cols-2">
+                {MERCHANDISING_OPTIONS.map((option) => (
+                  <label
+                    key={option.value}
+                    className="flex items-start gap-3 rounded-xl border border-white/10 p-4 transition-colors hover:border-[#C9A227]/60"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={form.merchandising_tags.includes(option.value)}
+                      onChange={(event) =>
+                        toggleMerchandisingTag(option.value, event.target.checked)
+                      }
+                      className="mt-1 accent-[#E4C15A]"
+                    />
+                    <span>
+                      <span className="block text-sm font-semibold">{option.label}</span>
+                      <span className="mt-1 block text-xs text-[#A6A6A6]">
+                        {option.description}
                       </span>
+                    </span>
+                  </label>
+                ))}
+              </div>
+            </fieldset>
 
-                      <span
-                        className={`rounded-full border px-2 py-1 text-[9px] font-semibold leading-tight sm:text-[10px] ${
-                          isActive
-                            ? "border-[#C9A227] text-[#E4C15A]"
-                            : "border-[#555555] text-[#A6A6A6]"
-                        }`}
-                      >
-                        {isActive ? "Active" : "Coming soon"}
-                      </span>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <label className="flex items-start gap-3 rounded-xl border border-white/10 p-4">
+                <input
+                  type="checkbox"
+                  checked={form.is_active}
+                  onChange={(event) => updateForm("is_active", event.target.checked)}
+                  className="mt-1 accent-[#E4C15A]"
+                />
+                <span>
+                  <span className="block text-sm font-semibold">Publish product</span>
+                  <span className="mt-1 block text-xs text-[#A6A6A6]">
+                    Published products can appear in the customer shop.
+                  </span>
+                </span>
+              </label>
+
+              <label className="flex items-start gap-3 rounded-xl border border-white/10 p-4">
+                <input
+                  type="checkbox"
+                  checked={form.is_featured}
+                  onChange={(event) => updateForm("is_featured", event.target.checked)}
+                  className="mt-1 accent-[#E4C15A]"
+                />
+                <span>
+                  <span className="block text-sm font-semibold">Featured product</span>
+                  <span className="mt-1 block text-xs text-[#A6A6A6]">
+                    Include in the existing Featured products section.
+                  </span>
+                </span>
+              </label>
+            </div>
+
+            <div className="flex flex-wrap gap-3">
+              <button type="submit" disabled={saving} className="btn btn-primary">
+                {saving ? "Saving..." : editingId ? "Save product changes" : "Save product"}
+              </button>
+              {editingId && (
+                <button type="button" onClick={resetForm} className="btn btn-outline">
+                  Cancel editing
+                </button>
+              )}
+            </div>
+          </form>
+        </section>
+
+        <section className="rounded-2xl border border-white/10 bg-[#090909] p-4 sm:p-6">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h2 className="text-xl font-bold">Product catalogue</h2>
+              <p className="mt-1 text-sm text-[#A6A6A6]">
+                Existing database products and their shop placement.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => void loadProducts()}
+              disabled={loadingProducts}
+              className="btn btn-outline"
+            >
+              <RefreshCw className="mr-2 inline h-4 w-4" />
+              Refresh
+            </button>
+          </div>
+
+          {loadingProducts ? (
+            <p className="py-8 text-sm text-[#A6A6A6]">Loading products...</p>
+          ) : products.length === 0 ? (
+            <p className="py-8 text-sm text-[#A6A6A6]">
+              No products found. Add your first product above.
+            </p>
+          ) : (
+            <div className="mt-5 space-y-3">
+              {products.map((product) => {
+                const category = categories.find(
+                  (item) => item.id === product.category_id,
+                );
+                const tags = safeTags(product.merchandising_tags);
+
+                return (
+                  <article
+                    key={product.id}
+                    className="flex flex-col gap-4 rounded-xl border border-white/10 bg-[#080808] p-4 sm:flex-row sm:items-center"
+                  >
+                    {product.image_url ? (
+                      <img
+                        src={product.image_url}
+                        alt={product.name}
+                        className="h-20 w-20 shrink-0 rounded-lg bg-white object-contain"
+                        onError={(event) => {
+                          event.currentTarget.style.display = "none";
+                        }}
+                      />
+                    ) : (
+                      <div className="grid h-20 w-20 shrink-0 place-items-center rounded-lg bg-[#15120A] text-[#E4C15A]">
+                        <Package className="h-7 w-7" />
+                      </div>
+                    )}
+
+                    <div className="min-w-0 flex-1">
+                      <h3 className="font-semibold">{product.name}</h3>
+                      <p className="mt-1 break-all text-xs text-[#A6A6A6]">
+                        {product.slug}
+                        {product.sku ? ` · SKU: ${product.sku}` : ""}
+                      </p>
+                      <p className="mt-1 text-sm text-[#D0D0D0]">
+                        R{Number(product.price).toFixed(2)} · Stock: {product.stock}
+                        {category ? ` · ${category.name}` : ""}
+                      </p>
+                      <div className="mt-2 flex flex-wrap gap-2 text-xs">
+                        <span className="rounded-full border border-white/15 px-2 py-1">
+                          {product.is_active ? "Published" : "Unpublished"}
+                        </span>
+                        {product.is_featured && (
+                          <span className="rounded-full border border-[#C9A227]/50 px-2 py-1 text-[#E4C15A]">
+                            Featured
+                          </span>
+                        )}
+                        {tags.map((tag) => {
+                          const option = MERCHANDISING_OPTIONS.find(
+                            (item) => item.value === tag,
+                          );
+                          return (
+                            <span
+                              key={tag}
+                              className="rounded-full border border-[#C9A227]/40 px-2 py-1 text-[#E4C15A]"
+                            >
+                              {option?.label ?? tag}
+                            </span>
+                          );
+                        })}
+                      </div>
                     </div>
 
-                    <span className="mt-4 text-sm font-semibold leading-snug text-white sm:text-base">
-                      {module.name}
-                    </span>
-
-                    <span className="mt-1 text-xs leading-5 text-[#A6A6A6] sm:text-sm">
-                      {module.description}
-                    </span>
-
-                    {isActive && (
-                      <span className="mt-3 text-xs font-semibold text-[#E4C15A]">
-                        Open products →
-                      </span>
-                    )}
-                  </>
-                );
-
-                return isActive ? (
-                  <button
-                    key={module.name}
-                    type="button"
-                    onClick={() =>
-                      document.getElementById("products")?.scrollIntoView({
-                        behavior: "smooth",
-                        block: "start",
-                      })
-                    }
-                    className={`${tileClass} cursor-pointer hover:border-[#E4C15A] hover:shadow-[0_0_18px_rgba(201,162,39,0.35)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E4C15A]`}
-                  >
-                    {tileContent}
-                  </button>
-                ) : (
-                  <div
-                    key={module.name}
-                    aria-label={`${module.name}, coming soon`}
-                    className={`${tileClass} cursor-not-allowed`}
-                  >
-                    {tileContent}
-                  </div>
+                    <div className="flex flex-wrap gap-2 sm:justify-end">
+                      <button
+                        type="button"
+                        onClick={() => startEditing(product)}
+                        className="btn btn-outline"
+                      >
+                        Edit
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => void toggleProduct(product, "is_active")}
+                        className="btn btn-outline"
+                      >
+                        {product.is_active ? "Unpublish" : "Publish"}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => void toggleProduct(product, "is_featured")}
+                        className="btn btn-outline"
+                        aria-label={
+                          product.is_featured
+                            ? `Remove ${product.name} from featured products`
+                            : `Feature ${product.name}`
+                        }
+                      >
+                        <Star className="mr-1 inline h-4 w-4" />
+                        {product.is_featured ? "Unfeature" : "Feature"}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => void deleteProduct(product)}
+                        className="btn btn-outline"
+                        aria-label={`Delete ${product.name}`}
+                      >
+                        <Trash2 className="mr-1 inline h-4 w-4" />
+                        Delete
+                      </button>
+                    </div>
+                  </article>
                 );
               })}
             </div>
-          </section>
-
-          {(message || errorMessage) && (
-            <div
-              role={errorMessage ? "alert" : "status"}
-              className={`rounded-xl border p-4 text-sm ${
-                errorMessage
-                  ? "border-[#C9A227]/60 text-[#E4C15A]"
-                  : "border-[#C9A227]/40 text-white"
-              }`}
-            >
-              {errorMessage || message}
-            </div>
           )}
-
-          <section
-            id="products"
-            className="scroll-mt-6 rounded-2xl border border-[#C9A227]/70 bg-[#090909] p-5 shadow-[0_0_12px_rgba(201,162,39,0.12)] md:p-7"
-          >
-            <div className="mb-5 flex items-center gap-3">
-              <div className="grid h-11 w-11 place-items-center rounded-xl border border-[#C9A227]/50 bg-[#15120A]">
-                {editingId ? (
-                  <Package className="h-5 w-5 text-[#E4C15A]" />
-                ) : (
-                  <Plus className="h-5 w-5 text-[#E4C15A]" />
-                )}
-              </div>
-
-              <div>
-                <h2 className="text-xl font-bold text-white">
-                  {editingId ? "Edit product" : "Add a product"}
-                </h2>
-                <p className="text-sm text-[#A6A6A6]">
-                  Fields marked with * are required.
-                </p>
-              </div>
-            </div>
-
-            <form onSubmit={saveProduct} className="space-y-5">
-              <div className="grid gap-4 sm:grid-cols-2">
-                <label className="grid gap-2 text-sm font-medium">
-                  Product name *
-                  <input
-                    required
-                    value={form.name}
-                    onChange={(event) => {
-                      const name = event.target.value;
-                      setForm((current) => ({
-                        ...current,
-                        name,
-                        slug: current.slug || makeSlug(name),
-                      }));
-                    }}
-                    placeholder="e.g. Leather Travel Bag"
-                    className="field w-full"
-                  />
-                </label>
-
-                <label className="grid gap-2 text-sm font-medium">
-                  URL slug *
-                  <input
-                    required
-                    value={form.slug}
-                    onChange={(event) =>
-                      updateForm("slug", makeSlug(event.target.value))
-                    }
-                    placeholder="leather-travel-bag"
-                    className="field w-full"
-                  />
-                </label>
-
-                <label className="grid gap-2 text-sm font-medium">
-                  Price (ZAR) *
-                  <input
-                    required
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    value={form.price}
-                    onChange={(event) =>
-                      updateForm("price", event.target.value)
-                    }
-                    placeholder="299.00"
-                    className="field w-full"
-                  />
-                </label>
-
-                <label className="grid gap-2 text-sm font-medium">
-                  Stock quantity *
-                  <input
-                    required
-                    type="number"
-                    min="0"
-                    step="1"
-                    value={form.stock}
-                    onChange={(event) =>
-                      updateForm("stock", event.target.value)
-                    }
-                    className="field w-full"
-                  />
-                </label>
-
-                <label className="grid gap-2 text-sm font-medium">
-                  Category
-                  <select
-                    value={form.category_id}
-                    onChange={(event) =>
-                      updateForm("category_id", event.target.value)
-                    }
-                    className="field w-full"
-                  >
-                    <option value="">Choose a category</option>
-                    {categories.map((category) => (
-                      <option key={category.id} value={category.id}>
-                        {category.name}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-
-                <label className="grid gap-2 text-sm font-medium">
-                  SKU / product code
-                  <input
-                    value={form.sku}
-                    onChange={(event) =>
-                      updateForm("sku", event.target.value)
-                    }
-                    placeholder="Optional stock code"
-                    className="field w-full"
-                  />
-                </label>
-              </div>
-
-              <label className="grid gap-2 text-sm font-medium">
-                Product image URL
-                      <span className="flex items-center gap-2 text-xs font-normal text-[#A6A6A6]">
-                  <ImagePlus className="h-4 w-4" />
-                  Use a direct, publicly accessible image URL for now.
-                </span>
-                <input
-                  type="url"
-                  value={form.image_url}
-                  onChange={(event) =>
-                    updateForm("image_url", event.target.value)
-                  }
-                  placeholder="https://example.com/product-image.jpg"
-                  className="field w-full"
-                />
-              </label>
-
-              {form.image_url && (
-                <div className="max-w-xs overflow-hidden rounded-xl border border-[#C9A227]/40 p-2">
-                  <img
-                    src={form.image_url}
-                    alt="Product image preview"
-                    className="aspect-square w-full rounded-lg object-contain"
-                    onError={(event) => {
-                      event.currentTarget.style.display = "none";
-                    }}
-                  />
-                </div>
-              )}
-
-              <label className="grid gap-2 text-sm font-medium">
-                Description
-                <textarea
-                  rows={4}
-                  value={form.description}
-                  onChange={(event) =>
-                    updateForm("description", event.target.value)
-                  }
-                  placeholder="Describe the product, its features and key details."
-                  className="field w-full"
-                />
-              </label>
-
-              <div className="grid gap-3 sm:grid-cols-2">
-                <label className="flex items-start gap-3 rounded-xl border border-[#C9A227]/40 p-4">
-                  <input
-                    type="checkbox"
-                    checked={form.is_active}
-                    onChange={(event) =>
-                      updateForm("is_active", event.target.checked)
-                    }
-                    className="mt-1"
-                  />
-                  <span>
-                    <span className="block text-sm font-semibold">
-                      Publish product
-                    </span>
-                    <span className="mt-1 block text-xs text-[#A6A6A6]">
-                      Published products can be shown to customers.
-                    </span>
-                  </span>
-                </label>
-
-                <label className="flex items-start gap-3 rounded-xl border border-[#C9A227]/40 p-4">
-                  <input
-                    type="checkbox"
-                    checked={form.is_featured}
-                    onChange={(event) =>
-                      updateForm("is_featured", event.target.checked)
-                    }
-                    className="mt-1"
-                  />
-                  <span>
-                    <span className="block text-sm font-semibold">
-                      Featured product
-                    </span>
-                    <span className="mt-1 block text-xs text-[#A6A6A6]">
-                      Mark this item for future featured catalogue sections.
-                    </span>
-                  </span>
-                </label>
-              </div>
-
-              <div className="flex flex-wrap gap-3">
-                <button
-                  type="submit"
-                  disabled={saving}
-                  className="btn btn-primary"
-                >
-                  {saving
-                    ? "Saving..."
-                    : editingId
-                      ? "Save product changes"
-                      : "Save product"}
-                </button>
-
-                {editingId && (
-                  <button
-                    type="button"
-                    onClick={resetForm}
-                    className="btn btn-outline"
-                  >
-                    Cancel editing
-                  </button>
-                )}
-              </div>
-            </form>
-          </section>
-                    <section className="rounded-2xl border border-[#C9A227]/70 bg-[#090909] p-5 shadow-[0_0_12px_rgba(201,162,39,0.12)] md:p-7">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <div>
-                <h2 className="text-xl font-bold text-white">
-                  Product catalogue
-                </h2>
-                <p className="mt-1 text-sm text-[#A6A6A6]">
-                  Existing database products. No records are deleted here.
-                </p>
-              </div>
-
-              <button
-                type="button"
-                onClick={() => void loadProducts()}
-                disabled={loadingProducts}
-                className="btn btn-outline"
-              >
-                <RefreshCw className="mr-2 inline h-4 w-4" />
-                Refresh
-              </button>
-            </div>
-
-            {loadingProducts ? (
-              <p className="py-8 text-sm text-[#A6A6A6]">
-                Loading products...
-              </p>
-            ) : products.length === 0 ? (
-              <p className="py-8 text-sm text-[#A6A6A6]">
-                No products found. Add your first product using the form above.
-              </p>
-            ) : (
-              <div className="mt-5 space-y-3">
-                {products.map((product) => {
-                  const category = categories.find(
-                    (item) => item.id === product.category_id,
-                  );
-
-                  return (
-                    <article
-                      key={product.id}
-                      className="flex flex-col gap-4 rounded-xl border border-[#C9A227]/50 bg-[#080808] p-4 shadow-[0_0_8px_rgba(201,162,39,0.10)] sm:flex-row sm:items-center"
-                    >
-                      {product.image_url ? (
-                        <img
-                          src={product.image_url}
-                          alt={product.name}
-                          className="h-20 w-20 shrink-0 rounded-lg border border-[#C9A227]/40 bg-white object-contain"
-                          onError={(event) => {
-                            event.currentTarget.style.display = "none";
-                          }}
-                        />
-                      ) : (
-                        <div className="grid h-20 w-20 shrink-0 place-items-center rounded-lg border border-[#C9A227]/50 bg-[#15120A] text-[#E4C15A]">
-                          <Package className="h-7 w-7" />
-                        </div>
-                      )}
-
-                      <div className="min-w-0 flex-1">
-                        <h3 className="font-semibold text-white">
-                          {product.name}
-                        </h3>
-
-                        <p className="mt-1 break-all text-xs text-[#A6A6A6]">
-                          {product.slug}
-                        </p>
-
-                        <p className="mt-1 text-sm text-[#D0D0D0]">
-                          R{Number(product.price).toFixed(2)} · Stock:{" "}
-                          {product.stock}
-                          {category ? ` · ${category.name}` : ""}
-                        </p>
-
-                        <div className="mt-2 flex flex-wrap gap-2 text-xs">
-                          <span
-                            className={`rounded-full border px-2 py-1 ${
-                              product.is_active
-                                ? "border-[#C9A227] text-[#E4C15A]"
-                                : "border-[#555555] text-[#A6A6A6]"
-                            }`}
-                          >
-                            {product.is_active ? "Published" : "Unpublished"}
-                          </span>
-
-                          {product.is_featured && (
-                            <span className="rounded-full border border-[#C9A227]/60 px-2 py-1 text-[#E4C15A]">
-                              Featured
-                            </span>
-                          )}
-                        </div>
-                      </div>
-
-                      <div className="flex flex-wrap gap-2 sm:justify-end">
-                        <button
-                          type="button"
-                          onClick={() => startEditing(product)}
-                          className="btn btn-outline"
-                        >
-                          Edit
-                        </button>
-
-                        <button
-                          type="button"
-                          onClick={() =>
-                            void toggleProduct(product, "is_active")
-                          }
-                          className="btn btn-outline"
-                        >
-                          {product.is_active ? "Unpublish" : "Publish"}
-                        </button>
-
-                        <button
-                          type="button"
-                          onClick={() =>
-                            void toggleProduct(product, "is_featured")
-                          }
-                          aria-label={
-                            product.is_featured
-                              ? `Remove ${product.name} from featured products`
-                              : `Feature ${product.name}`
-                          }
-                          className="btn btn-outline"
-                        >
-                          <CheckCircle2 className="mr-1 inline h-4 w-4" />
-                          {product.is_featured ? "Unfeature" : "Feature"}
-                        </button>
-                      </div>
-                    </article>
-                  );
-                })}
-              </div>
-            )}
-          </section>
-        </div>
+        </section>
       </div>
     </main>
   );
-                    }
+}
