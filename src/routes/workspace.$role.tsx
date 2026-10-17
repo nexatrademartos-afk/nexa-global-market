@@ -106,6 +106,8 @@ export const Route = createFileRoute("/workspace/$role")({
 
 function WorkspacePage() {
   const workspace = getWorkspace(Route.useLoaderData().key)!;
+  const [showAdminApplicationNotice, setShowAdminApplicationNotice] =
+  useState(false);
 
   const [access, setAccess] = useState<AccessState>({
     status: "checking",
@@ -236,44 +238,96 @@ function WorkspacePage() {
       )}
 
       {access.status === "denied" && (
-        <section className="surface rounded-2xl border border-gold/30 p-6 md:p-8">
-          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-gold">
-            NEXA · Protected workspace
+  <section className="surface rounded-2xl border border-gold/30 p-6 md:p-8">
+    <p className="text-xs font-semibold uppercase tracking-[0.2em] text-gold">
+      NEXA · Protected workspace
+    </p>
+
+    {showAdminApplicationNotice && workspace.key === "admin" ? (
+      <>
+        <h1 className="mt-2 text-2xl font-bold">
+          Admin Applications — Coming Soon
+        </h1>
+        <p className="mt-3 text-sm text-muted-foreground">
+          The Admin application process is not available yet. When it
+          launches, applications will be handled separately from the
+          customer dashboard's existing role applications. This notice
+          does not grant workspace access.
+        </p>
+        <button
+          type="button"
+          className="btn btn-outline mt-5"
+          onClick={() => setShowAdminApplicationNotice(false)}
+        >
+          Back
+        </button>
+        <Link to="/account" className="btn btn-primary mt-5 ml-3">
+          Return to Customer Dashboard
+        </Link>
+      </>
+    ) : (
+      <>
+        <h1 className="mt-2 text-2xl font-bold">
+          Your account is not authorised to access this workspace
+        </h1>
+
+        <p className="mt-3 text-sm text-muted-foreground">
+          Your account does not have the approved role required to access
+          the {workspace.name} workspace. Access is granted only after
+          the appropriate authorisation.
+        </p>
+
+        {access.roles.length > 0 && (
+          <p className="mt-3 text-sm text-muted-foreground">
+            Your currently assigned role{access.roles.length === 1 ? " is " : "s are "}
+            <strong className="text-foreground">
+              {access.roles.map((role) => ROLE_LABELS[role]).join(", ")}
+            </strong>.
           </p>
-          <h1 className="mt-2 text-2xl font-bold">
-            This account isn't approved for {workspace.name}
-          </h1>
+        )}
 
-          {access.roles.length > 0 ? (
-            <>
-              <p className="mt-3 text-sm text-muted-foreground">
-                Your assigned role{access.roles.length === 1 ? " is " : "s are "}
-                <strong className="text-foreground">
-                  {access.roles.map((role) => ROLE_LABELS[role]).join(", ")}
-                </strong>
-                . Signing in does not automatically approve another role.
-              </p>
+        <div className="mt-5 flex flex-wrap gap-3">
+          {access.roles.map((role) =>
+            role === "customer" ? (
+              <Link
+                key={role}
+                to="/account"
+                className="btn btn-outline"
+              >
+                Open Customer Dashboard
+              </Link>
+            ) : (
+              <a
+                key={role}
+                href={`/workspace/${role}`}
+                className="btn btn-outline"
+              >
+                Open {ROLE_LABELS[role]}
+              </a>
+            ),
+          )}
 
-              <div className="mt-5 flex flex-wrap gap-3">
-                {access.roles.map((role) =>
-                  role === "customer" ? (
-                    <Link
-                      key={role}
-                      to="/account"
-                      className="btn btn-outline"
-                    >
-                      Open Customer
-                    </Link>
-                  ) : (
-                    <a
-                      key={role}
-                      href={`/workspace/${role}`}
-                      className="btn btn-outline"
-                    >
-                      Open {ROLE_LABELS[role]}
-                    </a>
-                  ),
-                )}
+          {workspace.key === "admin" && (
+            <button
+              type="button"
+              className="btn btn-primary"
+              onClick={() => setShowAdminApplicationNotice(true)}
+            >
+              Apply for Admin Access
+            </button>
+          )}
+
+          <Link
+            to="/account"
+            className="btn btn-outline"
+          >
+            Return to Customer Dashboard
+          </Link>
+        </div>
+      </>
+    )}
+  </section>
+)}
 
                 <Link
                   to="/account/applications"
