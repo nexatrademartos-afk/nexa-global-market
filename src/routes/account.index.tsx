@@ -344,7 +344,13 @@ function CustomerDashboard() {
 
         {filteredServices.length === 0 && (
           <div className="surface rounded-xl p-5 text-center">
-            <p className="font-semibold">No matching services</p>
+            <a
+  href="/account/secure-access"
+  className="inline-flex items-center justify-center rounded-md font-semibold transition-colors hover:text-gold hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold"
+  aria-label="Continue to the secure access gateway"
+>
+  No matching services
+</a>
             <p className="mt-1 text-sm text-muted-foreground">
               Try another search term to find a service.
             </p>
