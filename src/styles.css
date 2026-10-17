@@ -162,9 +162,9 @@
       url("/nexa-global-mart-background-mobile.png");
 
     background-position: center top;
-    background-repeat: no-repeat;
-    background-size: 100% auto;
-    background-attachment: fixed;
+background-repeat: repeat-y;
+background-size: 100% auto;
+background-attachment: scroll;
   }
 }
 
