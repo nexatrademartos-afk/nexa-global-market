@@ -91,7 +91,7 @@ export function Logo() {
         src="/nexa-global-mart-logo.png"
         alt=""
         aria-hidden="true"
-        className="block h-[120px] w-full object-cover object-center sm:h-[140px] lg:h-[160px]"
+        className="block h-[24px] w-full object-cover object-center sm:h-[28px] lg:h-[32px]"
         fetchPriority="high"
       />
       
