@@ -44,29 +44,29 @@
 
 :root {
   color-scheme: dark;
-
   --radius: 0.75rem;
 
-  /* NEXA GLOBAL MART: obsidian black, metallic gold, platinum silver */
-  --background: oklch(0.105 0.003 80);
+  /* NEXA GLOBAL MART: translucent obsidian, gold and silver */
+  --background: oklch(0.105 0.003 80 / 42%);
   --foreground: oklch(0.96 0.006 85);
 
-  --card: oklch(0.145 0.004 80);
+  --card: oklch(0.145 0.004 80 / 38%);
   --card-foreground: oklch(0.96 0.006 85);
 
-  --popover: oklch(0.16 0.004 80);
+  /* Keep overlays readable while allowing a subtle glass effect */
+  --popover: oklch(0.16 0.004 80 / 88%);
   --popover-foreground: oklch(0.96 0.006 85);
 
   --primary: oklch(0.78 0.13 82);
   --primary-foreground: oklch(0.13 0.01 75);
 
-  --secondary: oklch(0.205 0.006 80);
+  --secondary: oklch(0.205 0.006 80 / 42%);
   --secondary-foreground: oklch(0.92 0.008 85);
 
-  --muted: oklch(0.19 0.005 80);
-  --muted-foreground: oklch(0.73 0.008 85);
+  --muted: oklch(0.19 0.005 80 / 35%);
+  --muted-foreground: oklch(0.80 0.008 85);
 
-  --accent: oklch(0.25 0.025 78);
+  --accent: oklch(0.25 0.025 78 / 48%);
   --accent-foreground: oklch(0.88 0.09 82);
 
   /* Red is reserved for destructive actions and critical errors */
@@ -74,14 +74,14 @@
   --destructive-foreground: oklch(0.99 0 0);
 
   --border: oklch(0.31 0.018 78);
-  --input: oklch(0.29 0.012 80);
+  --input: oklch(0.45 0.012 80 / 65%);
   --ring: oklch(0.78 0.13 82);
 
   --gold: oklch(0.78 0.13 82);
   --gold-foreground: oklch(0.13 0.01 75);
-  --gold-soft: oklch(0.24 0.035 78);
+  --gold-soft: oklch(0.24 0.035 78 / 48%);
 
-  --ink: oklch(0.075 0.002 80);
+  --ink: oklch(0.075 0.002 80 / 32%);
   --ink-foreground: oklch(0.96 0.006 85);
 
   /* Status colours stay within the luxury palette */
@@ -89,8 +89,8 @@
   --success: oklch(0.78 0.13 82);
 
   --shadow-card:
-    0 2px 6px oklch(0 0 0 / 25%),
-    0 12px 32px -16px oklch(0 0 0 / 55%);
+    0 2px 6px oklch(0 0 0 / 20%),
+    0 12px 32px -16px oklch(0 0 0 / 38%);
 }
 
 @layer base {
@@ -100,7 +100,7 @@
 
   html {
     color-scheme: dark;
-    background: var(--color-background);
+    background: #080808;
     -webkit-tap-highlight-color: transparent;
   }
 
@@ -108,12 +108,12 @@
     min-height: 100vh;
     background-color: #080808;
 
-    /* Default background: desktop image */
+    /* Desktop background */
     background-image:
       linear-gradient(
         180deg,
-        rgb(0 0 0 / 38%) 0%,
-        rgb(0 0 0 / 52%) 100%
+        rgb(0 0 0 / 28%) 0%,
+        rgb(0 0 0 / 38%) 100%
       ),
       url("/nexa-global-mart-background.png");
 
@@ -150,14 +150,14 @@
   }
 }
 
-/* Mobile: use the dedicated mobile image without cropping its sides. */
+/* Mobile: use the dedicated mobile background */
 @media (max-width: 767px) {
   body {
     background-image:
       linear-gradient(
         180deg,
-        rgb(0 0 0 / 38%) 0%,
-        rgb(0 0 0 / 52%) 100%
+        rgb(0 0 0 / 28%) 0%,
+        rgb(0 0 0 / 38%) 100%
       ),
       url("/nexa-global-mart-background-mobile.png");
 
@@ -168,14 +168,14 @@
   }
 }
 
-/* Desktop: preserve the existing background treatment. */
+/* Desktop: retain the existing desktop background treatment */
 @media (min-width: 768px) {
   body {
     background-image:
       linear-gradient(
         180deg,
-        rgb(0 0 0 / 38%) 0%,
-        rgb(0 0 0 / 52%) 100%
+        rgb(0 0 0 / 28%) 0%,
+        rgb(0 0 0 / 38%) 100%
       ),
       url("/nexa-global-mart-background.png");
 
@@ -251,6 +251,7 @@
 @utility btn-on-ink {
   border: 1px solid oklch(0.78 0.13 82 / 40%);
   color: var(--color-ink-foreground);
+  background: oklch(0.075 0.002 80 / 20%);
 
   &:hover {
     border-color: var(--color-gold);
@@ -264,6 +265,8 @@
   border: 1px solid var(--color-border);
   border-radius: var(--radius-xl);
   box-shadow: var(--shadow-card);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
 }
 
 @utility field {
@@ -272,9 +275,11 @@
   padding: 0 0.9rem;
   border-radius: var(--radius-md);
   border: 1px solid var(--color-input);
-  background: var(--color-card);
+  background: oklch(0.12 0.003 80 / 38%);
   color: var(--color-foreground);
   font-size: 1rem;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
 
   &::placeholder {
     color: var(--color-muted-foreground);
@@ -287,7 +292,7 @@
   }
 
   &:disabled {
-    background: var(--color-muted);
+    background: oklch(0.19 0.005 80 / 48%);
     color: var(--color-muted-foreground);
   }
 }
