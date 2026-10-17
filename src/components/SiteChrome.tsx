@@ -79,26 +79,24 @@ function useCustomerSignOut() {
   return { signOut, signingOut };
 }
 
+
 export function Logo() {
   return (
     <Link
       to="/"
-      aria-label="NEXA Global Mart home"
-      className="flex min-w-0 flex-col items-start gap-0 whitespace-nowrap"
+      aria-label="NEXA GLOBAL MART home"
+      className="flex shrink-0 items-center"
     >
-      <span className="inline-flex items-baseline gap-1 font-display text-lg font-extrabold tracking-tight">
-        <span className="text-gold">NEXA</span>
-        <span className="text-gold">•</span>
-        <span className="text-sm font-bold tracking-wide text-slate-300 sm:text-base">
-          Global Mart
-        </span>
-      </span>
-      <span className="mt-0.5 text-[9px] font-medium tracking-wide text-slate-300 sm:text-[10px]">
-        Shop More. Save More. Get Rewarded.
-      </span>
+      <img
+        src="/nexa-global-mart-logo.png"
+        alt="NEXA GLOBAL MART — Shop More. Save More. Get Rewarded."
+        className="h-auto w-[190px] max-w-[55vw] object-contain sm:w-[230px]"
+        fetchPriority="high"
+      />
     </Link>
   );
 }
+
 
 export function SiteHeader() {
   const cart = useLocalList("nexa-cart");
@@ -483,16 +481,20 @@ export function SiteFooter() {
   return (
     <footer className="mt-16 border-t border-gold/30 bg-ink pb-24 text-ink-foreground md:pb-0">
       <div className="mx-auto max-w-6xl px-4 py-10">
-        <p className="font-display text-xl font-extrabold tracking-tight">
-          <span className="text-gold">NEXA</span>
-          <span className="text-gold">•</span>
-          <span className="text-slate-300">Global Mart</span>
-        </p>
-
-        <p className="mt-2 text-sm text-slate-300">
-          Shop More. Save More. Get Rewarded.
-        </p>
-
+        
+        <Link
+          to="/"
+          aria-label="NEXA GLOBAL MART home"
+          className="inline-flex"
+        >
+          <img
+            src="/nexa-global-mart-logo.png"
+            alt="NEXA GLOBAL MART — Shop More. Save More. Get Rewarded."
+            className="h-auto w-[230px] max-w-full object-contain"
+            loading="lazy"
+          />
+        </Link>
+        
         <div className="gold-rule my-6" />
 
         <nav
