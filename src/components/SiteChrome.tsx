@@ -89,10 +89,12 @@ export function Logo() {
     >
       <img
         src="/nexa-global-mart-logo.png"
-        alt="NEXA GLOBAL MART — Shop More. Save More. Get Rewarded."
-        className="h-auto w-[190px] max-w-[55vw] object-contain sm:w-[230px]"
+        alt=""
+        aria-hidden="true"
+        className="block h-[88px] w-full object-cover object-center sm:h-[104px] lg:h-[116px]"
         fetchPriority="high"
       />
+      
     </Link>
   );
 }
