@@ -211,6 +211,176 @@ const [savingCategory, setSavingCategory] = useState(false);
     setForm((current) => ({ ...current, [key]: value }));
   }
 
+  function updateCategoryForm<K extends keyof CategoryForm>(
+  key: K,
+  value: CategoryForm[K],
+) {
+  setCategoryForm((current) => ({ ...current, [key]: value }));
+}
+
+function resetCategoryForm() {
+  setEditingCategoryId(null);
+  setCategoryForm(emptyCategoryForm);
+  setMessage("");
+  setErrorMessage("");
+}
+
+function startEditingCategory(category: Category) {
+  setEditingCategoryId(category.id);
+  setCategoryForm({
+    name: category.name,
+    slug: category.slug,
+    description: category.description ?? "",
+    image_url: category.image_url ?? "",
+    is_active: category.is_active,
+    sort_order: String(category.sort_order),
+  });
+  setMessage("");
+  setErrorMessage("");
+}
+
+async function saveCategory(event: React.FormEvent<HTMLFormElement>) {
+  event.preventDefault();
+  setSavingCategory(true);
+  setMessage("");
+  setErrorMessage("");
+
+  const name = categoryForm.name.trim();
+  const slug = makeSlug(categoryForm.slug || name);
+  const sortOrder = Number(categoryForm.sort_order);
+
+  if (!name || !slug) {
+    setErrorMessage("Enter a category name and valid URL slug.");
+    setSavingCategory(false);
+    return;
+  }
+
+  if (!Number.isInteger(sortOrder) || sortOrder < 0) {
+    setErrorMessage(
+      "Category display order must be a whole number of zero or more.",
+    );
+    setSavingCategory(false);
+    return;
+  }
+
+  const values = {
+    name,
+    slug,
+    description: categoryForm.description.trim() || null,
+    image_url: categoryForm.image_url.trim() || null,
+    is_active: categoryForm.is_active,
+    sort_order: sortOrder,
+    updated_at: new Date().toISOString(),
+  };
+
+  const result = editingCategoryId
+    ? await supabase
+        .from("categories")
+        .update(values)
+        .eq("id", editingCategoryId)
+    : await supabase.from("categories").insert(values);
+
+  if (result.error) {
+    setErrorMessage(
+      result.error.code === "23505"
+        ? "That category URL slug already exists. Choose another."
+        : "Could not save category: " + result.error.message,
+    );
+    setSavingCategory(false);
+    return;
+  }
+
+  setMessage(
+    editingCategoryId
+      ? "Category updated successfully."
+      : "Category created successfully.",
+  );
+
+  setEditingCategoryId(null);
+  setCategoryForm(emptyCategoryForm);
+  await loadProducts();
+  setSavingCategory(false);
+}
+
+async function toggleCategory(category: Category) {
+  setMessage("");
+  setErrorMessage("");
+
+  const nextValue = !category.is_active;
+
+  const { error } = await supabase
+    .from("categories")
+    .update({
+      is_active: nextValue,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", category.id);
+
+  if (error) {
+    setErrorMessage("Could not update category: " + error.message);
+    return;
+  }
+
+  setCategories((current) =>
+    current.map((item) =>
+      item.id === category.id
+        ? { ...item, is_active: nextValue }
+        : item,
+    ),
+  );
+
+  setMessage(nextValue ? "Category activated." : "Category deactivated.");
+}
+
+async function deleteCategory(category: Category) {
+  const assignedProducts = products.filter(
+    (product) => product.category_id === category.id,
+  ).length;
+
+  if (assignedProducts > 0) {
+    setErrorMessage(
+      'Cannot delete "' +
+        category.name +
+        '" because ' +
+        assignedProducts +
+        " product(s) are assigned to it. Reassign those products first.",
+    );
+    setMessage("");
+    return;
+  }
+
+  const confirmed = window.confirm(
+    'Delete the category "' +
+      category.name +
+      '"? This is only allowed when no products are assigned to it.',
+  );
+
+  if (!confirmed) return;
+
+  setMessage("");
+  setErrorMessage("");
+
+  const { error } = await supabase
+    .from("categories")
+    .delete()
+    .eq("id", category.id);
+
+  if (error) {
+    setErrorMessage("Could not delete category: " + error.message);
+    return;
+  }
+
+  setCategories((current) =>
+    current.filter((item) => item.id !== category.id),
+  );
+
+  if (editingCategoryId === category.id) {
+    resetCategoryForm();
+  }
+
+  setMessage("Category deleted.");
+      }
+  
   function startEditing(product: Product) {
     setEditingId(product.id);
     setForm({
