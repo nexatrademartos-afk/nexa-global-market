@@ -112,11 +112,20 @@ export function SiteHeader() {
     setMenuOpen(false);
   }
 
+ 
   return (
-    <header className="sticky top-0 z-40 border-b border-gold/30 bg-background/95 shadow-[0_2px_18px_rgba(212,175,55,0.08)] backdrop-blur">
-      <div className="mx-auto flex min-h-16 max-w-6xl items-center justify-between gap-3 px-3 sm:px-4">
+    <header className="sticky top-0 z-40 relative overflow-hidden border-b border-gold/30 bg-background shadow-[0_2px_18px_rgba(212,175,55,0.08)]">
+      <img
+        src="/nexa-global-mart-logo.png"
+        alt=""
+        aria-hidden="true"
+        className="block h-auto w-full"
+        fetchPriority="high"
+      />
+
+      <div className="absolute inset-0 z-10 flex items-start justify-between gap-3 px-3 pt-3 sm:px-6 sm:pt-5">
         <div className="flex min-w-0 items-center gap-5">
-          <Logo />
+          
 
           <nav
             aria-label="Main navigation"
