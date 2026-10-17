@@ -42,6 +42,23 @@ const MERCHANDISING_OPTIONS = [
 ] as const;
 
 type MerchandisingTag = (typeof MERCHANDISING_OPTIONS)[number]["value"];
+type CategoryForm = {
+  name: string;
+  slug: string;
+  description: string;
+  image_url: string;
+  is_active: boolean;
+  sort_order: string;
+};
+
+const emptyCategoryForm: CategoryForm = {
+  name: "",
+  slug: "",
+  description: "",
+  image_url: "",
+  is_active: true,
+  sort_order: "10",
+};
 
 type ProductForm = {
   name: string;
