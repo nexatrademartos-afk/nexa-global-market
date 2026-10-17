@@ -1,3 +1,4 @@
+
 @import "tailwindcss" source(none);
 @source "../src";
 @import "tw-animate-css";
@@ -107,7 +108,7 @@
     min-height: 100vh;
     background-color: #080808;
 
-    /* Shared NEXA GLOBAL MART background with a dark readability overlay */
+    /* Default background: desktop image */
     background-image:
       linear-gradient(
         180deg,
@@ -149,9 +150,38 @@
   }
 }
 
-/* Keep the background visually steady on larger screens. */
+/* Mobile: use the dedicated mobile image without cropping its sides. */
+@media (max-width: 767px) {
+  body {
+    background-image:
+      linear-gradient(
+        180deg,
+        rgb(0 0 0 / 38%) 0%,
+        rgb(0 0 0 / 52%) 100%
+      ),
+      url("/nexa-global-mart-background-mobile.png");
+
+    background-position: center top;
+    background-repeat: no-repeat;
+    background-size: 100% auto;
+    background-attachment: scroll;
+  }
+}
+
+/* Desktop: preserve the existing background treatment. */
 @media (min-width: 768px) {
   body {
+    background-image:
+      linear-gradient(
+        180deg,
+        rgb(0 0 0 / 38%) 0%,
+        rgb(0 0 0 / 52%) 100%
+      ),
+      url("/nexa-global-mart-background.png");
+
+    background-position: center top;
+    background-repeat: no-repeat;
+    background-size: cover;
     background-attachment: fixed;
   }
 }
