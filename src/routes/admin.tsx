@@ -119,6 +119,11 @@ function AdminProductsPage() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
+  const [categoryForm, setCategoryForm] =
+  useState<CategoryForm>(emptyCategoryForm);
+const [editingCategoryId, setEditingCategoryId] =
+  useState<string | null>(null);
+const [savingCategory, setSavingCategory] = useState(false);
   const [form, setForm] = useState<ProductForm>(emptyForm);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [loadingProducts, setLoadingProducts] = useState(false);
