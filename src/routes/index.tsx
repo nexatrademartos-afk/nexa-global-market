@@ -14,6 +14,7 @@ type Category = {
 };
 
 type Product = {
+  merchandising_tags: string[];
   id: string;
   name: string;
   slug: string;
@@ -183,7 +184,8 @@ function Home() {
     async function loadStorefront() {
       setLoading(true);
       setLoadError(false);
-
+"id,name,slug,price,compare_at_price,discount_pct,image_url,category_id,is_featured,stock,merchandising_tags"
+      
       const [productResult, categoryResult, bannerResult] = await Promise.all([
         supabase
           .from("products")
@@ -265,7 +267,29 @@ function Home() {
   const featuredProducts = visibleProducts.filter(
     (product) => product.is_featured,
   );
-
+  
+const merchandisingSections = [
+  {
+    tag: "hot",
+    title: "Hot right now",
+    subtitle: "Products selected by our team as hot picks.",
+  },
+  {
+    tag: "promotion",
+    title: "Promotions",
+    subtitle: "Special offers selected for the shop.",
+  },
+  {
+    tag: "luxury",
+    title: "Luxury & premium",
+    subtitle: "Premium products selected for this collection.",
+  },
+  {
+    tag: "affordable",
+    title: "Affordable finds",
+    subtitle: "Products selected for the affordable collection.",
+  },
+] as const;
   const orderedCategories = useMemo(() => {
     const rank = (name: string) => {
       const index = CATEGORY_ORDER.findIndex(
