@@ -85,7 +85,10 @@ export const Route =
   createRootRouteWithContext<{ queryClient: QueryClient }>()({
     head: () => ({
       meta: [
-         <meta name="google-site-verification" content="BrFKEnazAF67NNLjqZrSGuDn7xu9lgDGamgqxnsrnxc" />
+         {
+  name: "google-site-verification",
+  content: "BrFKEnazAF67NNLjqZrSGuDn7xu9lgDGamgqxnsrnxc",
+},
         { charSet: "utf-8" },
         {
           name: "viewport",
