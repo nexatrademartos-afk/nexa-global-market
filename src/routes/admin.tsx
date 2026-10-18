@@ -1104,33 +1104,82 @@ async function deleteCategory(category: Category) {
               </label>
             </div>
 
-            <label className="grid gap-2 text-sm font-medium">
-              Product image URL
-              <span className="flex items-center gap-2 text-xs font-normal text-[#A6A6A6]">
-                <ImagePlus className="h-4 w-4" />
-                Use a direct, publicly accessible image URL.
-              </span>
-              <input
-                type="url"
-                value={form.image_url}
-                onChange={(event) => updateForm("image_url", event.target.value)}
-                placeholder="https://example.com/product-image.jpg"
-                className="field w-full"
-              />
-            </label>
+            <div className="space-y-3">
+  <div>
+    <h3 className="text-sm font-semibold">Product images</h3>
+    <p className="mt-1 text-xs text-[#A6A6A6]">
+      Upload up to five images. Images are compressed before they are sent
+      to storage. Select a main image for product cards.
+    </p>
+  </div>
 
-            {form.image_url && (
-              <div className="max-w-xs overflow-hidden rounded-xl border border-white/10 p-2">
-                <img
-                  src={form.image_url}
-                  alt="Product preview"
-                  className="aspect-square w-full rounded-lg bg-white object-contain"
-                  onError={(event) => {
-                    event.currentTarget.style.display = "none";
-                  }}
-                />
-              </div>
-            )}
+  <label className="flex cursor-pointer flex-col items-center gap-2 rounded-xl border border-dashed border-[#C9A227]/50 p-6 text-center hover:bg-white/[0.03]">
+    <ImagePlus className="h-8 w-8 text-[#E4C15A]" />
+    <span className="font-semibold">
+      {uploadingImages ? "Compressing and uploading..." : "Choose product images"}
+    </span>
+    <span className="text-xs text-[#A6A6A6]">
+      {form.gallery_urls.length} of {MAX_PRODUCT_IMAGES} images selected
+    </span>
+    <input
+      type="file"
+      accept="image/jpeg,image/png,image/webp"
+      multiple
+      disabled={uploadingImages || form.gallery_urls.length >= MAX_PRODUCT_IMAGES}
+      className="sr-only"
+      onChange={(event) => {
+        void uploadProductImages(event.target.files);
+        event.currentTarget.value = "";
+      }}
+    />
+  </label>
+
+  {form.gallery_urls.length > 0 && (
+    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-5">
+      {form.gallery_urls.map((path) => (
+        <div key={path} className="space-y-2 rounded-xl border border-white/10 p-2">
+          <img
+            src={getProductImageUrl(path)}
+            alt="Product preview"
+            className="aspect-square w-full rounded-lg bg-white object-contain"
+          />
+          <button
+            type="button"
+            onClick={() =>
+              updateForm("image_url", path)
+            }
+            className={`w-full rounded-lg border px-2 py-2 text-xs ${
+              form.image_url === path
+                ? "border-[#E4C15A] text-[#E4C15A]"
+                : "border-white/15"
+            }`}
+          >
+            {form.image_url === path ? "Main image" : "Set as main"}
+          </button>
+          <button
+            type="button"
+            disabled={uploadingImages}
+            onClick={() => removeProductImage(path)}
+            className="w-full rounded-lg border border-red-500/30 px-2 py-2 text-xs text-red-300"
+          >
+            Remove
+          </button>
+        </div>
+      ))}
+    </div>
+  )}
+
+  <label className="grid gap-2 text-sm font-medium">
+    Or use an existing image URL
+    <input
+      type="url"
+      value={/^https?:\/\//i.test(form.image_url) ? form.image_url : ""}
+      onChange={(event) => updateForm("image_url", event.target.value)}
+      placeholder="https://example.com/product-image.jpg"
+      className="field w-full"
+    />
+  </label>
+</div>
 
             <label className="grid gap-2 text-sm font-medium">
               Description
