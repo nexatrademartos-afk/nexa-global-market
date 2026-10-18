@@ -10,6 +10,50 @@ import {
   type ErrorComponentProps,
 } from "@tanstack/react-router";
 import { useEffect, useState, type ReactNode } from "react";
+
+function MobileParallaxBackground() {
+  useEffect(() => {
+    let frameId: number | null = null;
+
+    const updateBackground = () => {
+      if (frameId !== null) return;
+
+      frameId = window.requestAnimationFrame(() => {
+        const offset = -window.scrollY * 0.35;
+
+        document.documentElement.style.setProperty(
+          "--nexa-parallax-y",
+          `${offset}px`,
+        );
+
+        frameId = null;
+      });
+    };
+
+    updateBackground();
+
+    window.addEventListener("scroll", updateBackground, {
+      passive: true,
+    });
+    window.addEventListener("resize", updateBackground);
+
+    return () => {
+      window.removeEventListener("scroll", updateBackground);
+      window.removeEventListener("resize", updateBackground);
+
+      if (frameId !== null) {
+        window.cancelAnimationFrame(frameId);
+      }
+
+      document.documentElement.style.removeProperty(
+        "--nexa-parallax-y",
+      );
+    };
+  }, []);
+
+  return null;
+}
+
 import {
   ClipboardCheck,
   Home,
@@ -289,7 +333,8 @@ function RootComponent() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <SiteHeader />
+  <MobileParallaxBackground />
+  <SiteHeader />
       <WelcomeBanner />
 
       <main
