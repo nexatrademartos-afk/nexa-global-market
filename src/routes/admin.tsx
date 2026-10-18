@@ -527,6 +527,13 @@ async function deleteCategory(category: Category) {
   function startEditing(product: Product) {
     setEditingId(product.id);
     setForm({
+      gallery_urls: Array.isArray(product.gallery)
+  ? product.gallery.filter(
+      (item): item is string => typeof item === "string",
+    )
+  : product.image_url
+    ? [product.image_url]
+    : [],
       name: product.name,
       slug: product.slug,
       description: product.description ?? "",
