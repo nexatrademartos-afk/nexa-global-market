@@ -209,6 +209,9 @@ const [savingCategory, setSavingCategory] = useState(false);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
+  const [showProductForm, setShowProductForm] = useState(false);
+const [showCategoryPanel, setShowCategoryPanel] = useState(false);
+const [activeProductFilter, setActiveProductFilter] = useState("all");
 
   const loadProducts = useCallback(async () => {
     setLoadingProducts(true);
