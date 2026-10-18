@@ -150,9 +150,22 @@
   }
 }
 
-/* Mobile: use the dedicated mobile background */
+
+/* Mobile: slower parallax background */
 @media (max-width: 767px) {
   body {
+    background-image: none;
+    background-color: #080808;
+    isolation: isolate;
+  }
+
+  body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+
     background-image:
       linear-gradient(
         180deg,
@@ -161,10 +174,19 @@
       ),
       url("/nexa-global-mart-background-mobile.png");
 
-    background-position: center top;
-background-repeat: repeat-y;
-background-size: 100% auto;
-background-attachment: fixed;
+    background-position:
+      center top,
+      center var(--nexa-parallax-y, 0px);
+
+    background-repeat:
+      no-repeat,
+      repeat-y;
+
+    background-size:
+      100% 100%,
+      100% auto;
+
+    background-attachment: scroll;
   }
 }
 
