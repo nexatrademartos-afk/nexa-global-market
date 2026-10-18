@@ -116,7 +116,84 @@ function safeTags(value: unknown): MerchandisingTag[] {
   );
 }
 
+const MAX_PRODUCT_IMAGES = 5;
+const MAX_ORIGINAL_IMAGE_BYTES = 20 * 1024 * 1024;
+const TARGET_IMAGE_BYTES = 90 * 1024;
+const MAX_IMAGE_DIMENSION = 1400;
+
+async function compressProductImage(file: File): Promise<Blob> {
+  if (!file.type.startsWith("image/")) {
+    throw new Error("Please choose an image file.");
+  }
+
+  if (file.size > MAX_ORIGINAL_IMAGE_BYTES) {
+    throw new Error("Each original image must be 20 MB or smaller.");
+  }
+
+  const bitmap = await createImageBitmap(file);
+
+  try {
+    let width = bitmap.width;
+    let height = bitmap.height;
+    const scale = Math.min(
+      1,
+      MAX_IMAGE_DIMENSION / Math.max(width, height),
+    );
+
+    width = Math.max(1, Math.round(width * scale));
+    height = Math.max(1, Math.round(height * scale));
+
+    for (let resizeAttempt = 0; resizeAttempt < 6; resizeAttempt++) {
+      const canvas = document.createElement("canvas");
+      canvas.width = width;
+      canvas.height = height;
+
+      const context = canvas.getContext("2d");
+
+      if (!context) {
+        throw new Error("Your browser could not process this image.");
+      }
+
+      context.drawImage(bitmap, 0, 0, width, height);
+
+      for (const quality of [0.88, 0.80, 0.72, 0.64, 0.56, 0.48]) {
+        const blob = await new Promise<Blob>((resolve, reject) => {
+          canvas.toBlob(
+            (result) => {
+              if (result) resolve(result);
+              else reject(new Error("Image compression failed."));
+            },
+            "image/webp",
+            quality,
+          );
+        });
+
+        if (blob.size <= TARGET_IMAGE_BYTES) return blob;
+      }
+
+      width = Math.max(1, Math.round(width * 0.8));
+      height = Math.max(1, Math.round(height * 0.8));
+    }
+
+    throw new Error(
+      "This image could not be reduced enough. Please choose a simpler or smaller image.",
+    );
+  } finally {
+    bitmap.close();
+  }
+}
+
+function getProductImageUrl(path: string): string {
+  if (/^https?:\/\//i.test(path)) return path;
+
+  return supabase.storage
+    .from("store-media")
+    .getPublicUrl(path.replace(/^\/+/, "").replace(/^store-media\//, ""))
+    .data.publicUrl;
+            }
+
 function AdminProductsPage() {
+  const [uploadingImages, setUploadingImages] = useState(false);
   const [checking, setChecking] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
   const [products, setProducts] = useState<Product[]>([]);
