@@ -84,6 +84,7 @@ const emptyForm: ProductForm = {
   compare_at_price: "",
   stock: "0",
   sku: "",
+  gallery_urls: [],
   image_url: "",
   category_id: "",
   is_active: false,
