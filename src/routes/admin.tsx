@@ -862,25 +862,17 @@ const visibleProducts = products.filter((product) => {
 return (
     <main className="min-h-screen bg-[#050505] px-3 py-5 text-white sm:px-4">
       <div className="mx-auto max-w-6xl space-y-5">
-        <header className="flex flex-wrap items-end justify-between gap-4 border-b border-white/10 pb-5">
+        >
+        <header className="flex flex-wrap items-end justify-between gap-4 border-b border-border pb-5">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#E4C15A]">
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-gold">
               NEXA GLOBAL MART
             </p>
             <h1 className="mt-2 text-3xl font-bold">Products</h1>
-            <p className="mt-2 max-w-2xl text-sm text-[#A6A6A6]">
+            <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
               Add products, manage catalogue details, and choose the shop sections
               where customers discover each product.
             </p>
-          </div>
-            <div className="rounded-xl border border-white/10 bg-[#090909] px-4 py-3">
-              <p className="text-xs text-[#A6A6A6]">All products</p>
-              <p className="mt-1 text-xl font-bold">{products.length}</p>
-            </div>
-            <div className="rounded-xl border border-white/10 bg-[#090909] px-4 py-3">
-              <p className="text-xs text-[#A6A6A6]">Published</p>
-              <p className="mt-1 text-xl font-bold">{publishedCount}</p>
-            </div>
           </div>
         </header>
 
