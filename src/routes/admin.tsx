@@ -572,11 +572,17 @@ async function deleteCategory(category: Category) {
   }
 
   async function saveProduct(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    setSaving(true);
-    setMessage("");
-    setErrorMessage("");
+  event.preventDefault();
 
+  if (uploadingImages) {
+    setErrorMessage("Please wait for the image upload to finish.");
+    return;
+  }
+
+  setSaving(true);
+  setMessage("");
+  setErrorMessage("");
+    
     const name = form.name.trim();
     const slug = makeSlug(form.slug || name);
     const price = Number(form.price);
