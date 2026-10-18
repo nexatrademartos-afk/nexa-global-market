@@ -308,6 +308,7 @@ function resetCategoryForm() {
 }
 
 function startEditingCategory(category: Category) {
+  setShowCategoryPanel(true);
   setEditingCategoryId(category.id);
   setCategoryForm({
     name: category.name,
@@ -528,6 +529,7 @@ async function deleteCategory(category: Category) {
       }
   
   function startEditing(product: Product) {
+    setShowProductForm(true);
     setEditingId(product.id);
     setForm({
       gallery_urls: Array.isArray(product.gallery)
@@ -559,6 +561,7 @@ async function deleteCategory(category: Category) {
   }
 
   function resetForm() {
+    setShowProductForm(false);
     setEditingId(null);
     setForm(emptyForm);
     setMessage("");
@@ -656,6 +659,7 @@ gallery: form.gallery_urls.length ? form.gallery_urls : null,
     setMessage(editingId ? "Product updated successfully." : "Product added successfully.");
     setEditingId(null);
     setForm(emptyForm);
+    setShowProductForm(false);
     await loadProducts();
     setSaving(false);
   }
@@ -755,7 +759,107 @@ gallery: form.gallery_urls.length ? form.gallery_urls : null,
 
   const publishedCount = products.filter((product) => product.is_active).length;
 
-  return (
+const inStockCount = products.filter(
+  (product) => Number(product.stock) > 0,
+).length;
+
+const outOfStockCount = products.filter(
+  (product) => Number(product.stock) <= 0,
+).length;
+
+const luxuryCount = products.filter((product) =>
+  safeTags(product.merchandising_tags).includes("luxury"),
+).length;
+
+const affordableCount = products.filter((product) =>
+  safeTags(product.merchandising_tags).includes("affordable"),
+).length;
+
+const featuredCount = products.filter(
+  (product) => product.is_featured,
+).length;
+
+const productMetrics = [
+  {
+    label: "Total products",
+    count: products.length,
+    filter: "all",
+    note: "Entire catalogue",
+  },
+  {
+    label: "Published",
+    count: publishedCount,
+    filter: "published",
+    note: "Published listings",
+  },
+  {
+    label: "In stock",
+    count: inStockCount,
+    filter: "in-stock",
+    note: "Products with stock available",
+  },
+  {
+    label: "Out of stock",
+    count: outOfStockCount,
+    filter: "out-of-stock",
+    note: "Products with no stock",
+  },
+  {
+    label: "Luxury / Premium",
+    count: luxuryCount,
+    filter: "tag:luxury",
+    note: "Luxury collection",
+  },
+  {
+    label: "Affordable",
+    count: affordableCount,
+    filter: "tag:affordable",
+    note: "Affordable collection",
+  },
+  {
+    label: "Featured",
+    count: featuredCount,
+    filter: "featured",
+    note: "Featured listings",
+  },
+];
+
+const visibleProducts = products.filter((product) => {
+  if (activeProductFilter === "published") {
+    return product.is_active;
+  }
+
+  if (activeProductFilter === "featured") {
+    return product.is_featured;
+  }
+
+  if (activeProductFilter === "in-stock") {
+    return Number(product.stock) > 0;
+  }
+
+  if (activeProductFilter === "out-of-stock") {
+    return Number(product.stock) <= 0;
+  }
+
+  if (activeProductFilter === "tag:luxury") {
+    return safeTags(product.merchandising_tags).includes("luxury");
+  }
+
+  if (activeProductFilter === "tag:affordable") {
+    return safeTags(product.merchandising_tags).includes("affordable");
+  }
+
+  if (activeProductFilter.startsWith("category:")) {
+    return (
+      product.category_id ===
+      activeProductFilter.slice("category:".length)
+    );
+  }
+
+  return true;
+});
+
+return (
     <main className="min-h-screen bg-[#050505] px-3 py-5 text-white sm:px-4">
       <div className="mx-auto max-w-6xl space-y-5">
         <header className="flex flex-wrap items-end justify-between gap-4 border-b border-white/10 pb-5">
@@ -769,7 +873,6 @@ gallery: form.gallery_urls.length ? form.gallery_urls : null,
               where customers discover each product.
             </p>
           </div>
-          <div className="flex gap-3">
             <div className="rounded-xl border border-white/10 bg-[#090909] px-4 py-3">
               <p className="text-xs text-[#A6A6A6]">All products</p>
               <p className="mt-1 text-xl font-bold">{products.length}</p>
@@ -794,7 +897,140 @@ gallery: form.gallery_urls.length ? form.gallery_urls : null,
           </div>
         )}
 
-        <section className="rounded-2xl border border-white/10 bg-[#090909] p-4 sm:p-6">
+      <section
+  aria-label="Product actions"
+  className="grid grid-cols-2 gap-3 sm:gap-4"
+>
+  <button
+    type="button"
+    aria-expanded={showProductForm}
+    onClick={() => setShowProductForm((open) => !open)}
+    className="surface group flex min-h-32 w-full flex-col justify-between gap-3 p-4 text-left transition hover:border-gold/70 sm:p-5"
+  >
+    <span className="grid h-11 w-11 place-items-center rounded-xl border border-gold/30 bg-gold/10 text-gold">
+      <Plus className="h-5 w-5" />
+    </span>
+
+    <span>
+      <span className="block font-semibold">
+        {showProductForm ? "Close Product Form" : "Add Products"}
+      </span>
+      <span className="mt-1 block text-xs text-muted-foreground">
+        Add product details and upload images.
+      </span>
+    </span>
+  </button>
+
+  <button
+    type="button"
+    aria-expanded={showCategoryPanel}
+    onClick={() => setShowCategoryPanel((open) => !open)}
+    className="surface group flex min-h-32 w-full flex-col justify-between gap-3 p-4 text-left transition hover:border-gold/70 sm:p-5"
+  >
+    <span className="grid h-11 w-11 place-items-center rounded-xl border border-gold/30 bg-gold/10 text-gold">
+      <Tag className="h-5 w-5" />
+    </span>
+
+    <span>
+      <span className="block font-semibold">
+        {showCategoryPanel ? "Close Category Panel" : "Add Category"}
+      </span>
+      <span className="mt-1 block text-xs text-muted-foreground">
+        Create and manage product categories.
+      </span>
+    </span>
+  </button>
+</section>
+
+<section
+  aria-label="Product statistics and filters"
+  className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3 xl:grid-cols-4"
+>
+  {productMetrics.map((metric) => {
+    const selected = activeProductFilter === metric.filter;
+
+    return (
+      <button
+        key={metric.filter}
+        type="button"
+        aria-pressed={selected}
+        onClick={() => setActiveProductFilter(metric.filter)}
+        className={`surface flex min-h-32 flex-col justify-between p-4 text-left transition sm:p-5 ${
+          selected
+            ? "border-gold/70 bg-gold-soft"
+            : "hover:border-gold/70"
+        }`}
+      >
+        <span className="text-sm text-muted-foreground">
+          {metric.label}
+        </span>
+
+        <span className="mt-3 block text-3xl font-bold text-gold">
+          {metric.count}
+        </span>
+
+        <span className="mt-1 block text-xs text-muted-foreground">
+          {metric.note}
+        </span>
+      </button>
+    );
+  })}
+</section>
+
+<section aria-label="Product categories" className="space-y-4">
+  <div>
+    <h2 className="text-xl font-bold">Your categories</h2>
+    <p className="mt-1 text-sm text-muted-foreground">
+      Select a category to filter the catalogue. Counts update when
+      products are added, edited, or deleted.
+    </p>
+  </div>
+
+  {categories.length === 0 ? (
+    <div className="surface rounded-xl p-4 text-sm text-muted-foreground">
+      No categories exist yet. Use Add Category to create one.
+    </div>
+  ) : (
+    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+      {categories.map((category) => {
+        const filter = `category:${category.id}`;
+        const selected = activeProductFilter === filter;
+        const count = products.filter(
+          (product) => product.category_id === category.id,
+        ).length;
+
+        return (
+          <button
+            key={category.id}
+            type="button"
+            aria-pressed={selected}
+            onClick={() => setActiveProductFilter(selected ? "all" : filter)}
+            className={`surface min-h-28 p-4 text-left transition sm:p-5 ${
+              selected
+                ? "border-gold/70 bg-gold-soft"
+                : "hover:border-gold/70"
+            }`}
+          >
+            <span className="block font-semibold">{category.name}</span>
+
+            <span className="mt-3 block text-sm text-gold">
+              {count} {count === 1 ? "product" : "products"}
+            </span>
+
+            {!category.is_active && (
+              <span className="mt-2 block text-xs text-muted-foreground">
+                Inactive category
+              </span>
+            )}
+          </button>
+        );
+      })}
+    </div>
+  )}
+</section>
+      
+      {showCategoryPanel && (
+  <section className="surface rounded-2xl p-4 sm:p-6">  
   <div className="mb-5">
     <h2 className="text-xl font-bold">Category management</h2>
     <p className="mt-1 text-sm text-[#A6A6A6]">
@@ -996,9 +1232,11 @@ gallery: form.gallery_urls.length ? form.gallery_urls : null,
       </div>
     )}
   </div>
-</section>
+  </section>
+)}
         
-        <section className="rounded-2xl border border-white/10 bg-[#090909] p-4 sm:p-6">
+        {showProductForm && (
+  <section className="surface rounded-2xl p-4 sm:p-6">
           <div className="mb-5 flex items-center gap-3">
             <div className="grid h-10 w-10 place-items-center rounded-lg bg-[#15120A] text-[#E4C15A]">
               {editingId ? <Package className="h-5 w-5" /> : <Plus className="h-5 w-5" />}
@@ -1277,7 +1515,8 @@ gallery: form.gallery_urls.length ? form.gallery_urls : null,
               )}
             </div>
           </form>
-        </section>
+          </section>
+)}
 
         <section className="rounded-2xl border border-white/10 bg-[#090909] p-4 sm:p-6">
           <div className="flex flex-wrap items-center justify-between gap-3">
@@ -1305,8 +1544,24 @@ gallery: form.gallery_urls.length ? form.gallery_urls : null,
               No products found. Add your first product above.
             </p>
           ) : (
+
+    ) : visibleProducts.length === 0 ? (
+  <div className="surface rounded-xl p-5 text-center">
+    <p className="text-sm text-muted-foreground">
+      No products match this filter.
+    </p>
+
+    <button
+      type="button"
+      onClick={() => setActiveProductFilter("all")}
+      className="btn btn-outline mt-4"
+    >
+      Show all products
+    </button>
+  </div>
+      
             <div className="mt-5 space-y-3">
-              {products.map((product) => {
+              {visibleProducts.map((product) => {
                 const category = categories.find(
                   (item) => item.id === product.category_id,
                 );
@@ -1319,7 +1574,7 @@ gallery: form.gallery_urls.length ? form.gallery_urls : null,
                   >
                     {product.image_url ? (
                       <img
-                        src={product.image_url}
+                        src={getProductImageUrl(product.image_url)}
                         alt={product.name}
                         className="h-20 w-20 shrink-0 rounded-lg bg-white object-contain"
                         onError={(event) => {
@@ -1327,7 +1582,7 @@ gallery: form.gallery_urls.length ? form.gallery_urls : null,
                         }}
                       />
                     ) : (
-                      <div className="grid h-20 w-20 shrink-0 place-items-center rounded-lg bg-[#15120A] text-[#E4C15A]">
+           <div className="grid h-20 w-20 shrink-0 place-items-center rounded-lg bg-[#15120A] text-[#E4C15A]">
                         <Package className="h-7 w-7" />
                       </div>
                     )}
