@@ -889,8 +889,8 @@ return (
             role={errorMessage ? "alert" : "status"}
             className={`rounded-xl border p-4 text-sm ${
               errorMessage
-                ? "border-red-500/40 bg-red-950/20 text-red-200"
-                : "border-emerald-500/30 bg-emerald-950/20 text-emerald-200"
+                ? "border-destructive/40 bg-destructive/10 text-destructive"
+                : "border-success/30 bg-success/10 text-success"
             }`}
           >
             {errorMessage || message}
