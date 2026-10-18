@@ -1529,29 +1529,30 @@ return (
             </button>
           </div>
 
+          
           {loadingProducts ? (
-            <p className="py-8 text-sm text-[#A6A6A6]">Loading products...</p>
+            <p className="py-8 text-sm text-muted-foreground">
+              Loading products...
+            </p>
           ) : products.length === 0 ? (
-            <p className="py-8 text-sm text-[#A6A6A6]">
+            <p className="py-8 text-sm text-muted-foreground">
               No products found. Add your first product above.
             </p>
+          ) : visibleProducts.length === 0 ? (
+            <div className="surface rounded-xl p-5 text-center">
+              <p className="text-sm text-muted-foreground">
+                No products match this filter.
+              </p>
+
+              <button
+                type="button"
+                onClick={() => setActiveProductFilter("all")}
+                className="btn btn-outline mt-4"
+              >
+                Show all products
+              </button>
+            </div>
           ) : (
-
-    ) : visibleProducts.length === 0 ? (
-  <div className="surface rounded-xl p-5 text-center">
-    <p className="text-sm text-muted-foreground">
-      No products match this filter.
-    </p>
-
-    <button
-      type="button"
-      onClick={() => setActiveProductFilter("all")}
-      className="btn btn-outline mt-4"
-    >
-      Show all products
-    </button>
-  </div>
-      
             <div className="mt-5 space-y-3">
               {visibleProducts.map((product) => {
                 const category = categories.find(
