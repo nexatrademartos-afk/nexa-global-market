@@ -68,6 +68,7 @@ type ProductForm = {
   compare_at_price: string;
   stock: string;
   sku: string;
+  gallery_urls: string[];
   image_url: string;
   category_id: string;
   is_active: boolean;
