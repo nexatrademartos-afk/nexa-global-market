@@ -318,6 +318,70 @@ function startEditingCategory(category: Category) {
   setErrorMessage("");
 }
 
+  async function uploadProductImages(files: FileList | null) {
+  if (!files?.length) return;
+
+  const selected = Array.from(files);
+  const remaining = MAX_PRODUCT_IMAGES - form.gallery_urls.length;
+
+  if (selected.length > remaining) {
+    setErrorMessage(
+      `You can add only ${remaining} more image(s). The limit is five per product.`,
+    );
+    return;
+  }
+
+  setUploadingImages(true);
+  setErrorMessage("");
+  setMessage("");
+
+  try {
+    for (const file of selected) {
+      const compressed = await compressProductImage(file);
+      const path = `products/${crypto.randomUUID()}.webp`;
+
+      const { error } = await supabase.storage
+        .from("store-media")
+        .upload(path, compressed, {
+          contentType: "image/webp",
+          cacheControl: "31536000",
+          upsert: false,
+        });
+
+      if (error) throw error;
+
+      setForm((current) => ({
+        ...current,
+        gallery_urls: [...current.gallery_urls, path],
+        image_url: current.image_url || path,
+      }));
+    }
+
+    setMessage("Image upload complete. Save the product to keep the changes.");
+  } catch (error) {
+    setErrorMessage(
+      error instanceof Error ? error.message : "Could not upload the image.",
+    );
+  } finally {
+    setUploadingImages(false);
+  }
+}
+
+function removeProductImage(path: string) {
+  setForm((current) => {
+    const gallery_urls = current.gallery_urls.filter((item) => item !== path);
+
+    return {
+      ...current,
+      gallery_urls,
+      image_url:
+        current.image_url === path
+          ? gallery_urls[0] ?? ""
+          : current.image_url,
+    };
+  });
+  }
+
 async function saveCategory(event: React.FormEvent<HTMLFormElement>) {
   event.preventDefault();
   setSavingCategory(true);
