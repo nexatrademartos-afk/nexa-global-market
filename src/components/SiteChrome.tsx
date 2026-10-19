@@ -151,6 +151,14 @@ export function SiteHeader() {
             >
               Account
             </Link>
+            
+            <Link
+              to="/about"
+              activeProps={{ className: "font-semibold text-gold" }}
+            >
+              About Us
+            </Link>
+            
             <Link
               to="/policies"
               activeProps={{ className: "font-semibold text-gold" }}
@@ -286,6 +294,14 @@ export function SiteHeader() {
             >
               Customer dashboard
             </Link>
+             <Link
+              to="/about"
+              onClick={closeMenu}
+              className="rounded-lg px-3 py-3 text-sm hover:bg-secondary"
+            >
+              About Us
+            </Link>
+            
             <Link
               to="/policies"
               onClick={closeMenu}
@@ -517,6 +533,14 @@ export function SiteFooter() {
             className="inline-flex items-center gap-2 underline underline-offset-4"
           >
             <ShieldCheck className="h-4 w-4" />
+            
+          <Link
+            to="/about"
+            className="inline-flex items-center underline underline-offset-4"
+          >
+            About Us
+          </Link>
+            
             Policy Centre
           </Link>
 
