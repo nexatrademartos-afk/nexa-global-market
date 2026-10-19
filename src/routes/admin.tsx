@@ -862,7 +862,6 @@ const visibleProducts = products.filter((product) => {
 return (
     <main className="min-h-screen bg-[#050505] px-3 py-5 text-white sm:px-4">
       <div className="mx-auto max-w-6xl space-y-5">
-        >
         <header className="flex flex-wrap items-end justify-between gap-4 border-b border-border pb-5">
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.2em] text-gold">
