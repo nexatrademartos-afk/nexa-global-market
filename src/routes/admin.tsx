@@ -729,10 +729,11 @@ gallery: form.gallery_urls.length ? form.gallery_urls : null,
     setMessage("Product deleted.");
   }
 
+  
   if (checking) {
     return (
-      <main className="min-h-[70vh] bg-[#050505] px-4 py-10 text-white">
-        <p className="mx-auto max-w-5xl rounded-xl border border-white/10 bg-[#090909] p-5">
+      <main className="min-h-[70vh] bg-transparent px-4 py-10 text-foreground">
+        <p className="mx-auto max-w-5xl rounded-xl border border-border bg-[var(--color-card)]/60 p-5 text-foreground shadow-lg backdrop-blur-xl">
           Checking administrator access...
         </p>
       </main>
@@ -741,14 +742,19 @@ gallery: form.gallery_urls.length ? form.gallery_urls : null,
 
   if (!isAdmin) {
     return (
-      <main className="min-h-[70vh] bg-[#050505] px-4 py-10 text-white">
-        <section className="mx-auto max-w-3xl rounded-2xl border border-white/10 bg-[#090909] p-6 md:p-10">
-          <ShieldCheck className="h-10 w-10 text-[#E4C15A]" />
-          <h1 className="mt-4 text-2xl font-bold">Admin access required</h1>
-          <p className="mt-3 text-sm leading-6 text-[#A6A6A6]">
+      <main className="min-h-[70vh] bg-transparent px-4 py-10 text-foreground">
+        <section className="mx-auto max-w-3xl rounded-2xl border border-gold/40 bg-[var(--color-card)]/60 p-6 shadow-xl backdrop-blur-xl md:p-10">
+          <ShieldCheck className="h-10 w-10 text-gold" />
+
+          <h1 className="mt-4 text-2xl font-bold text-foreground">
+            Admin access required
+          </h1>
+
+          <p className="mt-3 text-sm leading-6 text-muted-foreground">
             This area is for authorised administrators. Sign in with an account
             that has the admin role. A customer account alone does not grant access.
           </p>
+
           <a href="/sign-in" className="btn btn-primary mt-5 inline-flex">
             Go to sign in
           </a>
@@ -756,7 +762,7 @@ gallery: form.gallery_urls.length ? form.gallery_urls : null,
       </main>
     );
   }
-
+  
   const publishedCount = products.filter((product) => product.is_active).length;
 
 const inStockCount = products.filter(
