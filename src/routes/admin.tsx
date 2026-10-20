@@ -865,15 +865,16 @@ const visibleProducts = products.filter((product) => {
   return true;
 });
 
+
 return (
-    <main className="min-h-screen bg-[#050505] px-3 py-5 text-white sm:px-4">
+    <main className="min-h-screen bg-transparent px-3 py-5 text-foreground sm:px-4">
       <div className="mx-auto max-w-6xl space-y-5">
         <header className="flex flex-wrap items-end justify-between gap-4 border-b border-border pb-5">
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.2em] text-gold">
               NEXA GLOBAL MART
             </p>
-            <h1 className="mt-2 text-3xl font-bold">Products</h1>
+            <h1 className="mt-2 text-3xl font-bold text-foreground">Products</h1>
             <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
               Add products, manage catalogue details, and choose the shop sections
               where customers discover each product.
@@ -884,7 +885,7 @@ return (
         {(message || errorMessage) && (
           <div
             role={errorMessage ? "alert" : "status"}
-            className={`rounded-xl border p-4 text-sm ${
+            className={`rounded-xl border p-4 text-sm backdrop-blur-xl ${
               errorMessage
                 ? "border-destructive/40 bg-destructive/10 text-destructive"
                 : "border-success/30 bg-success/10 text-success"
@@ -893,7 +894,7 @@ return (
             {errorMessage || message}
           </div>
         )}
-
+        
       <section
   aria-label="Product actions"
   className="grid grid-cols-2 gap-3 sm:gap-4"
