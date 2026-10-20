@@ -1427,7 +1427,8 @@ return (
   </label>
 </div>
 
-            <label className="grid gap-2 text-sm font-medium">
+    
+            <label className="grid gap-2 text-sm font-medium text-foreground">
               Description
               <textarea
                 rows={4}
@@ -1439,17 +1440,17 @@ return (
             </label>
 
             <fieldset className="space-y-3">
-              <legend className="text-sm font-semibold">
+              <legend className="text-sm font-semibold text-foreground">
                 Shop placement and merchandising
               </legend>
-              <p className="text-xs text-[#A6A6A6]">
+              <p className="text-xs text-muted-foreground">
                 Select any combination. These labels are separate from the product category.
               </p>
               <div className="grid gap-3 sm:grid-cols-2">
                 {MERCHANDISING_OPTIONS.map((option) => (
                   <label
                     key={option.value}
-                    className="flex items-start gap-3 rounded-xl border border-white/10 p-4 transition-colors hover:border-[#C9A227]/60"
+                    className="flex items-start gap-3 rounded-xl border border-gold/25 bg-[var(--color-card)]/40 p-4 backdrop-blur-md transition-colors hover:border-gold/60 hover:bg-[var(--color-card)]/55"
                   >
                     <input
                       type="checkbox"
@@ -1457,11 +1458,13 @@ return (
                       onChange={(event) =>
                         toggleMerchandisingTag(option.value, event.target.checked)
                       }
-                      className="mt-1 accent-[#E4C15A]"
+                      className="mt-1 accent-gold"
                     />
                     <span>
-                      <span className="block text-sm font-semibold">{option.label}</span>
-                      <span className="mt-1 block text-xs text-[#A6A6A6]">
+                      <span className="block text-sm font-semibold text-foreground">
+                        {option.label}
+                      </span>
+                      <span className="mt-1 block text-xs text-muted-foreground">
                         {option.description}
                       </span>
                     </span>
@@ -1471,31 +1474,35 @@ return (
             </fieldset>
 
             <div className="grid gap-3 sm:grid-cols-2">
-              <label className="flex items-start gap-3 rounded-xl border border-white/10 p-4">
+              <label className="flex items-start gap-3 rounded-xl border border-gold/25 bg-[var(--color-card)]/40 p-4 backdrop-blur-md transition-colors hover:border-gold/50">
                 <input
                   type="checkbox"
                   checked={form.is_active}
                   onChange={(event) => updateForm("is_active", event.target.checked)}
-                  className="mt-1 accent-[#E4C15A]"
+                  className="mt-1 accent-gold"
                 />
                 <span>
-                  <span className="block text-sm font-semibold">Publish product</span>
-                  <span className="mt-1 block text-xs text-[#A6A6A6]">
+                  <span className="block text-sm font-semibold text-foreground">
+                    Publish product
+                  </span>
+                  <span className="mt-1 block text-xs text-muted-foreground">
                     Published products can appear in the customer shop.
                   </span>
                 </span>
               </label>
 
-              <label className="flex items-start gap-3 rounded-xl border border-white/10 p-4">
+              <label className="flex items-start gap-3 rounded-xl border border-gold/25 bg-[var(--color-card)]/40 p-4 backdrop-blur-md transition-colors hover:border-gold/50">
                 <input
                   type="checkbox"
                   checked={form.is_featured}
                   onChange={(event) => updateForm("is_featured", event.target.checked)}
-                  className="mt-1 accent-[#E4C15A]"
+                  className="mt-1 accent-gold"
                 />
                 <span>
-                  <span className="block text-sm font-semibold">Featured product</span>
-                  <span className="mt-1 block text-xs text-[#A6A6A6]">
+                  <span className="block text-sm font-semibold text-foreground">
+                    Featured product
+                  </span>
+                  <span className="mt-1 block text-xs text-muted-foreground">
                     Include in the existing Featured products section.
                   </span>
                 </span>
@@ -1516,11 +1523,11 @@ return (
           </section>
 )}
 
-        <section className="rounded-2xl border border-white/10 bg-[#090909] p-4 sm:p-6">
+        <section className="rounded-2xl border border-gold/30 bg-[var(--color-card)]/45 p-4 shadow-xl backdrop-blur-xl sm:p-6">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
-              <h2 className="text-xl font-bold">Product catalogue</h2>
-              <p className="mt-1 text-sm text-[#A6A6A6]">
+              <h2 className="text-xl font-bold text-foreground">Product catalogue</h2>
+              <p className="mt-1 text-sm text-muted-foreground">
                 Existing database products and their shop placement.
               </p>
             </div>
@@ -1535,7 +1542,6 @@ return (
             </button>
           </div>
 
-          
           {loadingProducts ? (
             <p className="py-8 text-sm text-muted-foreground">
               Loading products...
@@ -1569,39 +1575,39 @@ return (
                 return (
                   <article
                     key={product.id}
-                    className="flex flex-col gap-4 rounded-xl border border-white/10 bg-[#080808] p-4 sm:flex-row sm:items-center"
+                    className="flex flex-col gap-4 rounded-xl border border-gold/20 bg-[var(--color-card)]/35 p-4 backdrop-blur-lg transition-colors hover:border-gold/45 sm:flex-row sm:items-center"
                   >
                     {product.image_url ? (
                       <img
                         src={getProductImageUrl(product.image_url)}
                         alt={product.name}
-                        className="h-20 w-20 shrink-0 rounded-lg bg-white object-contain"
+                        className="h-20 w-20 shrink-0 rounded-lg border border-gold/20 bg-white object-contain"
                         onError={(event) => {
                           event.currentTarget.style.display = "none";
                         }}
                       />
                     ) : (
-           <div className="grid h-20 w-20 shrink-0 place-items-center rounded-lg bg-[#15120A] text-[#E4C15A]">
+                      <div className="grid h-20 w-20 shrink-0 place-items-center rounded-lg border border-gold/30 bg-[var(--color-card)]/50 text-gold">
                         <Package className="h-7 w-7" />
                       </div>
                     )}
 
                     <div className="min-w-0 flex-1">
-                      <h3 className="font-semibold">{product.name}</h3>
-                      <p className="mt-1 break-all text-xs text-[#A6A6A6]">
+                      <h3 className="font-semibold text-foreground">{product.name}</h3>
+                      <p className="mt-1 break-all text-xs text-muted-foreground">
                         {product.slug}
                         {product.sku ? ` · SKU: ${product.sku}` : ""}
                       </p>
-                      <p className="mt-1 text-sm text-[#D0D0D0]">
+                      <p className="mt-1 text-sm text-foreground">
                         R{Number(product.price).toFixed(2)} · Stock: {product.stock}
                         {category ? ` · ${category.name}` : ""}
                       </p>
                       <div className="mt-2 flex flex-wrap gap-2 text-xs">
-                        <span className="rounded-full border border-white/15 px-2 py-1">
+                        <span className="rounded-full border border-border bg-[var(--color-card)]/40 px-2 py-1 text-foreground">
                           {product.is_active ? "Published" : "Unpublished"}
                         </span>
                         {product.is_featured && (
-                          <span className="rounded-full border border-[#C9A227]/50 px-2 py-1 text-[#E4C15A]">
+                          <span className="rounded-full border border-gold/50 bg-[var(--color-card)]/30 px-2 py-1 text-gold">
                             Featured
                           </span>
                         )}
@@ -1612,7 +1618,7 @@ return (
                           return (
                             <span
                               key={tag}
-                              className="rounded-full border border-[#C9A227]/40 px-2 py-1 text-[#E4C15A]"
+                              className="rounded-full border border-gold/40 bg-[var(--color-card)]/30 px-2 py-1 text-gold"
                             >
                               {option?.label ?? tag}
                             </span>
@@ -1668,4 +1674,5 @@ return (
       </div>
     </main>
   );
-}
+    }
+              
