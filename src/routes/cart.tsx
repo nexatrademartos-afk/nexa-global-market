@@ -1,41 +1,213 @@
+
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { PREVIEW_PRODUCTS } from "@/lib/preview-data";
 import { useLocalList } from "@/lib/local-list";
-import { EmptyState, PlannedBadge, PreviewNotice, SkeletonGrid } from "@/components/states";
+import {
+  fetchStoreCatalogue,
+  formatStorePrice,
+} from "@/lib/preview-data";
+import {
+  EmptyState,
+  PreviewNotice,
+  SkeletonGrid,
+} from "@/components/states";
 import { ProductTile } from "@/components/ProductCard";
+import { WhatsAppIcon } from "@/components/WhatsAppIcon";
+import {
+  buildCartWhatsAppMessage,
+  openWhatsApp,
+} from "@/lib/whatsapp";
 
 export const Route = createFileRoute("/cart")({
-  head: () => ({ meta: [
-    { title: "Your cart — NEXA Trade Mart" }, { name: "description", content: "Review items in your NEXA cart." },
-    { property: "og:title", content: "Cart — NEXA Trade Mart" }, { property: "og:description", content: "Your NEXA shopping cart." },
-  ] }),
-  component: () => <div className="mx-auto max-w-3xl px-4 py-6"><CartView /></div>,
+  loader: () => fetchStoreCatalogue(),
+
+  head: () => ({
+    meta: [
+      { title: "Your cart — NEXA GLOBAL MART" },
+      {
+        name: "description",
+        content: "Review your NEXA cart and enquire about ordering on WhatsApp.",
+      },
+      {
+        property: "og:title",
+        content: "Cart — NEXA GLOBAL MART",
+      },
+      {
+        property: "og:description",
+        content: "Your NEXA shopping cart.",
+      },
+    ],
+  }),
+
+  component: () => (
+    <div className="mx-auto max-w-3xl px-4 py-6">
+      <CartView />
+    </div>
+  ),
 });
 
 export function CartView() {
+  const catalogue = Route.useLoaderData();
   const cart = useLocalList("nexa-cart");
-  const items = PREVIEW_PRODUCTS.filter((p) => cart.ids.includes(p.id));
-  if (!cart.ready) return <SkeletonGrid count={2} />;
+
+  if (!cart.ready) {
+    return <SkeletonGrid count={2} />;
+  }
+
+  const items = cart.ids.flatMap((id) => {
+    const product = catalogue.products.find((item) => item.id === id);
+
+    if (!product) return [];
+
+    return [{
+      product,
+      quantity: Math.max(1, cart.quantities[id] ?? 1),
+    }];
+  });
+
+  const missingCount = cart.ids.length - items.length;
+
+  const total = items.reduce(
+    (sum, item) => sum + item.product.price * item.quantity,
+    0,
+  );
+
+  function orderOnWhatsApp() {
+    openWhatsApp(buildCartWhatsAppMessage(items));
+  }
+
   return (
     <div className="space-y-4">
-      <h1 className="text-2xl font-bold">Cart</h1>
-      <PreviewNotice>Cart is saved on this device only until accounts are connected.</PreviewNotice>
+      <h1 className="text-2xl font-bold">Your Cart</h1>
+
+      <PreviewNotice>
+        Your cart is saved on this device. WhatsApp opens a message for
+        you to review and send; it does not automatically place or confirm
+        an order.
+      </PreviewNotice>
+
       {items.length === 0 ? (
-        <EmptyState title="Your cart is empty" body="Browse the shop and add items you love." action={<Link to="/shop" search={{ page: 1 }} className="btn btn-primary">Shop now</Link>} />
+        <EmptyState
+          title="Your cart is empty"
+          body="Browse the shop and add products you'd like to order."
+          action={
+            <Link
+              to="/shop"
+              search={{ page: 1 }}
+              className="btn btn-primary"
+            >
+              Shop now
+            </Link>
+          }
+        />
       ) : (
         <>
-          <ul className="space-y-2">
-            {items.map((p) => (
-              <li key={p.id} className="surface flex items-center gap-3 p-2">
-                <ProductTile p={p} className="h-16 w-16 shrink-0 rounded-lg" />
-                <div className="min-w-0 flex-1"><p className="truncate font-semibold">{p.name}</p><p className="text-sm text-muted-foreground">{p.priceLabel}</p></div>
-                <button onClick={() => cart.remove(p.id)} className="btn btn-outline">Remove</button>
+          <ul className="space-y-3">
+            {items.map(({ product, quantity }) => (
+              <li
+                key={product.id}
+                className="surface flex items-center gap-3 p-3"
+              >
+                <div className="h-16 w-16 shrink-0 overflow-hidden rounded-lg">
+                  <ProductTile
+                    p={product}
+                    className="h-16 w-16"
+                  />
+                </div>
+
+                <div className="min-w-0 flex-1">
+                  <p className="font-semibold">{product.name}</p>
+
+                  <p className="text-sm text-muted-foreground">
+                    {formatStorePrice(product.price)} each
+                  </p>
+
+                  <div className="mt-2 flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() =>
+                        cart.setQuantity(product.id, quantity - 1)
+                      }
+                      aria-label={`Decrease ${product.name} quantity`}
+                      className="grid h-8 w-8 place-items-center rounded-md border border-border hover:bg-muted"
+                    >
+                      −
+                    </button>
+
+                    <span className="min-w-5 text-center text-sm font-semibold">
+                      {quantity}
+                    </span>
+
+                    <button
+                      type="button"
+                      onClick={() =>
+                        cart.setQuantity(
+                          product.id,
+                          Math.min(quantity + 1, product.stock),
+                        )
+                      }
+                      disabled={quantity >= product.stock}
+                      aria-label={`Increase ${product.name} quantity`}
+                      className="grid h-8 w-8 place-items-center rounded-md border border-border hover:bg-muted disabled:opacity-40"
+                    >
+                      +
+                    </button>
+                  </div>
+                </div>
+
+                <div className="flex flex-col items-end gap-2">
+                  <p className="text-sm font-bold">
+                    {formatStorePrice(product.price * quantity)}
+                  </p>
+
+                  <button
+                    type="button"
+                    onClick={() => cart.remove(product.id)}
+                    className="text-xs font-medium text-destructive underline underline-offset-4"
+                  >
+                    Remove
+                  </button>
+                </div>
               </li>
             ))}
           </ul>
-          <div className="surface flex items-center justify-between gap-3 p-4">
-            <div><p className="font-semibold">Checkout</p><p className="text-xs text-muted-foreground">Payments are not live. No order will be placed.</p></div>
-            <PlannedBadge label="Coming soon" />
+
+          {missingCount > 0 && (
+            <p
+              role="status"
+              className="rounded-lg border border-border p-3 text-sm text-muted-foreground"
+            >
+              {missingCount} cart item(s) are no longer available in the
+              active catalogue. Remove those items and add current products
+              before ordering.
+            </p>
+          )}
+
+          <div className="surface space-y-3 p-4">
+            <div className="flex items-center justify-between gap-3">
+              <span className="font-semibold">Estimated item total</span>
+              <span className="text-lg font-bold">
+                {formatStorePrice(total)}
+              </span>
+            </div>
+
+            <p className="text-xs text-muted-foreground">
+              Delivery charges and final availability must be confirmed
+              with NEXA GLOBAL MART.
+            </p>
+
+            <button
+              type="button"
+              onClick={orderOnWhatsApp}
+              className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-lg bg-[#25D366] px-4 py-3 text-sm font-bold text-white transition-colors hover:bg-[#1DA851]"
+            >
+              <WhatsAppIcon className="h-5 w-5" />
+              Continue Order on WhatsApp
+            </button>
+
+            <p className="text-center text-xs text-muted-foreground">
+              WhatsApp will open with your items, quantities, and estimated
+              total. You must send the message to contact the business.
+            </p>
           </div>
         </>
       )}
