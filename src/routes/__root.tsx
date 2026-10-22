@@ -1,3 +1,4 @@
+import { FloatingSupportButtons } from "@/components/FloatingSupportButtons";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   Outlet,
@@ -346,9 +347,11 @@ function RootComponent() {
       </main>
 
       <SiteFooter />
-      <MobileTabBar />
+<MobileTabBar />
 
-      {showCustomerQuickNav && <CustomerQuickNav />}
+<FloatingSupportButtons />
+
+{showCustomerQuickNav && <CustomerQuickNav />}
 
       {showAdminQuickNav && (
         <AdminQuickNav onComingSoon={setAdminNotice} />
