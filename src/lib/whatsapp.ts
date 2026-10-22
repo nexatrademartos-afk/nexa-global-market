@@ -8,8 +8,6 @@ export const NEXA_WHATSAPP_NUMBER = "27684963972";
 import type { StoreProduct } from "@/lib/preview-data";
 import { formatStorePrice } from "@/lib/preview-data";
 
-export const NEXA_WHATSAPP_NUMBER = "27684963972";
-
 export function openWhatsApp(message: string): void {
   const url =
     `https://wa.me/${NEXA_WHATSAPP_NUMBER}?text=${encodeURIComponent(message)}`;
