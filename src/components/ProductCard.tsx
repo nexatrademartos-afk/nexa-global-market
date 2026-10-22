@@ -1,3 +1,8 @@
+import { WhatsAppIcon } from "@/components/WhatsAppIcon";
+import {
+  buildProductWhatsAppMessage,
+  openWhatsApp,
+} from "@/lib/whatsapp";
 import { useState } from "react";
 import { Link, useNavigate } from "@tanstack/react-router";
 import {
@@ -109,6 +114,14 @@ cart.add(p.id);
 void navigate({ to: "/cart" });
 }
 
+  function orderProductOnWhatsApp() {
+  if (!liveProduct || stock <= 0) return;
+
+  openWhatsApp(
+    buildProductWhatsAppMessage(p, Math.max(1, quantity || 1)),
+  );
+  }
+  
 function reduceQuantity() {
 if (quantity <= 1) {
 cart.remove(p.id);
@@ -273,6 +286,16 @@ aria-label={"View ${p.name}"}
         <Zap className="h-4 w-4 shrink-0" />
         {stock <= 0 ? "Out of Stock" : "Buy Now"}
       </button>
+
+      <button
+  type="button"
+  onClick={orderProductOnWhatsApp}
+  disabled={!liveProduct || stock <= 0}
+  className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-lg bg-[#25D366] px-3 py-2 text-sm font-bold text-white transition-colors hover:bg-[#1DA851] disabled:cursor-not-allowed disabled:opacity-50"
+>
+  <WhatsAppIcon className="h-5 w-5 shrink-0" />
+  WhatsApp
+</button>
     </div>
   ) : (
     <p className="px-3 pb-3 text-xs text-muted-foreground">
@@ -283,3 +306,4 @@ aria-label={"View ${p.name}"}
 
 );
 }
+
