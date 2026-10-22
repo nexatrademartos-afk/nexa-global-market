@@ -5,11 +5,18 @@ import {
 } from "@/lib/preview-data";
 
 export const NEXA_WHATSAPP_NUMBER = "27684963972";
+import type { StoreProduct } from "@/lib/preview-data";
+import { formatStorePrice } from "@/lib/preview-data";
+
+export const NEXA_WHATSAPP_NUMBER = "27684963972";
 
 export function openWhatsApp(message: string): void {
-  const url = `https://wa.me/${NEXA_WHATSAPP_NUMBER}?text=${encodeURIComponent(message)}`;
+  const url =
+    `https://wa.me/${NEXA_WHATSAPP_NUMBER}?text=${encodeURIComponent(message)}`;
 
-  window.open(url, "_blank", "noopener,noreferrer");
+  if (typeof window !== "undefined") {
+    window.open(url, "_blank", "noopener,noreferrer");
+  }
 }
 
 export function buildProductWhatsAppMessage(
@@ -17,7 +24,6 @@ export function buildProductWhatsAppMessage(
   quantity = 1,
 ): string {
   const safeQuantity = Math.max(1, Math.floor(quantity));
-  const subtotal = product.price * safeQuantity;
 
   return [
     "Hello NEXA GLOBAL MART!",
@@ -26,7 +32,7 @@ export function buildProductWhatsAppMessage(
     `Product: ${product.name}`,
     `Unit price: ${formatStorePrice(product.price)}`,
     `Quantity: ${safeQuantity}`,
-    `Subtotal: ${formatStorePrice(subtotal)}`,
+    `Subtotal: ${formatStorePrice(product.price * safeQuantity)}`,
     "",
     "Please confirm availability and delivery options.",
   ].join("\n");
@@ -70,22 +76,21 @@ export function buildCartWhatsAppMessage(
     "",
     ...validItems.flatMap(({ product, quantity }, index) => [
       `${index + 1}. ${product.name}`,
-      `   Unit price: ${formatStorePrice(product.price)}`,
-      `   Quantity: ${quantity}`,
-      `   Subtotal: ${formatStorePrice(product.price * quantity)}`,
+      `Unit price: ${formatStorePrice(product.price)}`,
+      `Quantity: ${quantity}`,
+      `Subtotal: ${formatStorePrice(product.price * quantity)}`,
       "",
     ]),
     `Estimated item total: ${formatStorePrice(total)}`,
     "",
     "Please confirm stock, delivery fees, final total, and payment instructions.",
     "",
-    "I understand that this message is an order enquiry and does not itself confirm an order.",
+    "This message is an order enquiry and does not itself confirm an order.",
   ].join("\n");
 }
 
 export const NEXA_QUICK_MESSAGE = [
   "Hello NEXA GLOBAL MART!",
   "",
-  "I'd like some help with your products and services.",
+  "I'd like help with your products and services.",
 ].join("\n");
-    
