@@ -1,3 +1,8 @@
+import { WhatsAppIcon } from "@/components/WhatsAppIcon";
+import {
+  buildProductWhatsAppMessage,
+  openWhatsApp,
+} from "@/lib/whatsapp";
 import { createFileRoute, Link, notFound, useNavigate } from "@tanstack/react-router";
 import { Heart, ShoppingCart, Zap } from "lucide-react";
 import { ProductTile } from "@/components/ProductCard";
@@ -95,6 +100,12 @@ cart.add(p.id);
 void navigate({ to: "/cart" });
 }
 
+  function orderProductOnWhatsApp() {
+  if (p.stock <= 0) return;
+
+  openWhatsApp(buildProductWhatsAppMessage(p, 1));
+  }
+
 return (
 <div className="mx-auto grid max-w-6xl gap-6 px-4 py-6 md:grid-cols-2">
 <ProductTile
@@ -128,41 +139,37 @@ className="aspect-square rounded-2xl"
         : "Currently unavailable"}
     </p>
 
-    <div className="grid grid-cols-2 gap-2">
-      <button
-        type="button"
-        onClick={addToCart}
-        disabled={p.stock <= 0}
-        className="inline-flex min-h-12 items-center justify-center gap-2 rounded-lg border border-gold/60 px-3 py-2 text-sm font-semibold transition-colors hover:bg-gold/10 disabled:cursor-not-allowed disabled:opacity-50"
-      >
-        <ShoppingCart className="h-4 w-4 shrink-0" />
-        Add to Cart
-      </button>
+ <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+  <button
+    type="button"
+    onClick={addToCart}
+    disabled={p.stock <= 0}
+    className="inline-flex min-h-12 items-center justify-center gap-2 rounded-lg border border-gold/60 px-3 py-2 text-sm font-semibold transition-colors hover:bg-gold/10 disabled:cursor-not-allowed disabled:opacity-50"
+  >
+    <ShoppingCart className="h-4 w-4 shrink-0" />
+    Add to Cart
+  </button>
 
-      <button
-        type="button"
-        onClick={buyNow}
-        disabled={p.stock <= 0}
-        className="inline-flex min-h-12 items-center justify-center gap-2 rounded-lg bg-gold px-3 py-2 text-sm font-bold text-black transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
-      >
-        <Zap className="h-4 w-4 shrink-0" />
-        Buy Now
-      </button>
-    </div>
+  <button
+    type="button"
+    onClick={buyNow}
+    disabled={p.stock <= 0}
+    className="inline-flex min-h-12 items-center justify-center gap-2 rounded-lg bg-gold px-3 py-2 text-sm font-bold text-black transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+  >
+    <Zap className="h-4 w-4 shrink-0" />
+    Buy Now
+  </button>
 
-    <button
-      type="button"
-      onClick={() => wish.toggle(p.id)}
-      aria-pressed={wish.has(p.id)}
-      className="inline-flex min-h-11 items-center gap-2 rounded-lg border border-border px-4 py-2 text-sm font-medium transition-colors hover:bg-muted"
-    >
-      <Heart
-        className={`h-4 w-4 ${
-          wish.has(p.id) ? "fill-gold text-gold" : ""
-        }`}
-      />
-      {wish.has(p.id) ? "Saved to wishlist" : "Save to wishlist"}
-    </button>
+  <button
+    type="button"
+    onClick={orderProductOnWhatsApp}
+    disabled={p.stock <= 0}
+    className="inline-flex min-h-12 items-center justify-center gap-2 rounded-lg bg-[#25D366] px-3 py-2 text-sm font-bold text-white transition-colors hover:bg-[#1DA851] disabled:cursor-not-allowed disabled:opacity-50"
+  >
+    <WhatsAppIcon className="h-5 w-5 shrink-0" />
+    WhatsApp
+  </button>
+</div>
 
     <div className="surface space-y-2 p-4 text-sm">
       <div className="flex items-center justify-between">
