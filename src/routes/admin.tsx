@@ -869,8 +869,7 @@ const visibleProducts = products.filter((product) => {
 return (
     <main className="min-h-screen bg-transparent px-3 py-5 text-foreground sm:px-4">
       <div className="mx-auto max-w-6xl space-y-5">
-        
-<header className="flex flex-wrap items-end justify-between gap-4 border-b border-border pb-5">
+        <header className="flex flex-wrap items-end justify-between gap-4 border-b border-border pb-5">
   <div>
     <p className="text-xs font-semibold uppercase tracking-[0.2em] text-gold">
       NEXA GLOBAL MART
@@ -933,7 +932,11 @@ return (
   <button
     type="button"
     aria-expanded={showProductForm}
-    onClick={() => setShowProductForm((open) => !open)}
+    onClick={() => {
+  resetForm();
+  setShowCategoryPanel(false);
+  setShowProductForm(true);
+}}
     className="surface group flex min-h-32 w-full flex-col justify-between gap-3 p-4 text-left transition hover:border-gold/70 sm:p-5"
   >
     <span className="grid h-11 w-11 place-items-center rounded-xl border border-gold/30 bg-gold/10 text-gold">
