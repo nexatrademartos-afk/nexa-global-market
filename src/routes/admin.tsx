@@ -869,19 +869,50 @@ const visibleProducts = products.filter((product) => {
 return (
     <main className="min-h-screen bg-transparent px-3 py-5 text-foreground sm:px-4">
       <div className="mx-auto max-w-6xl space-y-5">
-        <header className="flex flex-wrap items-end justify-between gap-4 border-b border-border pb-5">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-gold">
-              NEXA GLOBAL MART
-            </p>
-            <h1 className="mt-2 text-3xl font-bold text-foreground">Products</h1>
-            <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
-              Add products, manage catalogue details, and choose the shop sections
-              where customers discover each product.
-            </p>
-          </div>
-        </header>
+        
+<header className="flex flex-wrap items-end justify-between gap-4 border-b border-border pb-5">
+  <div>
+    <p className="text-xs font-semibold uppercase tracking-[0.2em] text-gold">
+      NEXA GLOBAL MART
+    </p>
 
+    <h1 className="mt-2 text-3xl font-bold text-foreground">
+      {showProductForm
+        ? editingId
+          ? "Edit Product"
+          : "Add New Product"
+        : showCategoryPanel
+          ? "Category Dashboard"
+          : "Products"}
+    </h1>
+
+    <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
+      {showProductForm
+        ? "Enter product details, pricing, stock, images, and shop placement."
+        : showCategoryPanel
+          ? "Create, edit, and manage your product categories."
+          : "Manage your product catalogue, inventory, and shop sections."}
+    </p>
+  </div>
+
+  {(showProductForm || showCategoryPanel) && (
+    <button
+      type="button"
+      onClick={() => {
+        if (showProductForm) {
+          resetForm();
+        } else {
+          setShowCategoryPanel(false);
+          resetCategoryForm();
+        }
+      }}
+      className="btn btn-outline"
+    >
+      Back to Products
+    </button>
+  )}
+</header>
+        
         {(message || errorMessage) && (
           <div
             role={errorMessage ? "alert" : "status"}
