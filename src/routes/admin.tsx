@@ -308,6 +308,7 @@ function resetCategoryForm() {
 }
 
 function startEditingCategory(category: Category) {
+  setShowProductForm(false);
   setShowCategoryPanel(true);
   setEditingCategoryId(category.id);
   setCategoryForm({
@@ -529,7 +530,8 @@ async function deleteCategory(category: Category) {
       }
   
   function startEditing(product: Product) {
-    setShowProductForm(true);
+  setShowCategoryPanel(false);
+  setShowProductForm(true);
     setEditingId(product.id);
     setForm({
       gallery_urls: Array.isArray(product.gallery)
@@ -925,6 +927,8 @@ return (
           </div>
         )}
         
+        {!showProductForm && !showCategoryPanel && (
+  <>
       <section
   aria-label="Product actions"
   className="grid grid-cols-2 gap-3 sm:gap-4"
@@ -945,7 +949,7 @@ return (
 
     <span>
       <span className="block font-semibold">
-        {showProductForm ? "Close Product Form" : "Add Products"}
+        Add Products
       </span>
       <span className="mt-1 block text-xs text-muted-foreground">
         Add product details and upload images.
@@ -956,7 +960,11 @@ return (
   <button
     type="button"
     aria-expanded={showCategoryPanel}
-    onClick={() => setShowCategoryPanel((open) => !open)}
+    onClick={() => {
+  resetCategoryForm();
+  setShowProductForm(false);
+  setShowCategoryPanel(true);
+}}
     className="surface group flex min-h-32 w-full flex-col justify-between gap-3 p-4 text-left transition hover:border-gold/70 sm:p-5"
   >
     <span className="grid h-11 w-11 place-items-center rounded-xl border border-gold/30 bg-gold/10 text-gold">
@@ -965,7 +973,7 @@ return (
 
     <span>
       <span className="block font-semibold">
-        {showCategoryPanel ? "Close Category Panel" : "Add Category"}
+        Add Category
       </span>
       <span className="mt-1 block text-xs text-muted-foreground">
         Create and manage product categories.
@@ -1060,6 +1068,8 @@ return (
     </div>
   )}
 </section>
+    </>
+)}  
       
       {showCategoryPanel && (
   <section className="surface rounded-2xl p-4 sm:p-6">  
@@ -1556,7 +1566,7 @@ return (
           </form>
           </section>
 )}
-
+        {!showProductForm && !showCategoryPanel && (
         <section className="rounded-2xl border border-gold/30 bg-[var(--color-card)]/45 p-4 shadow-xl backdrop-blur-xl sm:p-6">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
@@ -1709,4 +1719,4 @@ return (
     </main>
   );
     }
-              
+)}
