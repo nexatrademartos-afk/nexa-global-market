@@ -1,4 +1,4 @@
-import { WhatsAppIcon } from "@/components/WhatsAppIcone";
+import { WhatsAppIcon } from "@/components/WhatsAppIcon";
 export function WhatsAppIcon({
   className = "h-5 w-5",
 }: {
