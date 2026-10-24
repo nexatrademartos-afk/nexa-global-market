@@ -1,6 +1,6 @@
 import { BRAND } from "@/lib/brand";
 import { useEffect, useState, useRef } from "react";
-import { Bot, MessageCircle, Send, X, RotateCcw, Loader2 } from "lucide-react";
+import { Bot, MessageCircle, Send, X, RotateCcw, Loader2, Sparkles, ExternalLink, HelpCircle } from "lucide-react";
 import { useLocalList } from "@/lib/local-list";
 import { fetchStoreCatalogue } from "@/lib/preview-data";
 import {
@@ -16,21 +16,29 @@ interface ChatMessage {
   id: string;
   sender: "ai" | "user";
   text: string;
+  action?: {
+    type: "whatsapp" | "faq" | "retry";
+    label: string;
+  };
 }
 
-const FALLBACK_FAQ: Record<string, string> = {
+const STORE_FAQS: Record<string, string> = {
   whatsapp:
-    "You can order directly via WhatsApp or chat with our team at +27 68 496 3972. Use the WhatsApp button on the bottom right to send your cart or quick enquiry!",
+    "You can chat with our South African team directly on WhatsApp at +27 68 496 3972 for instant order assistance, tracking, and custom inquiries.",
   order:
-    "To order, browse products, add them to your cart, and either checkout online or tap 'Order My Cart' from the WhatsApp floating button!",
+    "To place an order, simply add products to your cart and tap 'Order My Cart' via WhatsApp, or proceed through our secure online checkout.",
   delivery:
-    "We offer reliable nationwide shipping across South Africa. Standard delivery takes 2-5 business days.",
+    "We provide nationwide door-to-door courier delivery across South Africa. Standard delivery takes 2 to 5 business days.",
   shipping:
-    "We offer reliable nationwide shipping across South Africa. Standard delivery takes 2-5 business days.",
+    "Standard shipping takes 2-5 business days across South Africa. Tracking information is provided once your parcel is dispatched.",
   return:
-    "We accept returns on eligible items within 7 days of receipt in original condition and packaging.",
+    "We offer a 7-day hassle-free return window for items in their original condition and packaging. Reach out on WhatsApp to initiate a return.",
+  payment:
+    "We support secure online payments as well as direct EFT / WhatsApp order confirmation.",
   contact:
-    "You can reach Nexa Global Market directly on WhatsApp at +27 68 496 3972.",
+    "You can contact NEXA GLOBAL MART directly on WhatsApp (+27 68 496 3972) or via our Contact Us page.",
+  price:
+    "All prices shown on NEXA GLOBAL MART are in South African Rands (ZAR / R) including all applicable taxes.",
 };
 
 export function FloatingSupportButtons() {
@@ -45,79 +53,62 @@ export function FloatingSupportButtons() {
     {
       id: "welcome",
       sender: "ai",
-      text: `Hello! Welcome to ${BRAND.name}. I am your 24/7 shopping concierge. How can I help you today? Ask me about products, orders, delivery, or ordering via WhatsApp!`,
+      text: `Hello! Welcome to ${BRAND.name}. I am your 24/7 shopping concierge. Ask me about products, pricing in Rands, shipping across South Africa, or ordering via WhatsApp!`,
     },
   ]);
   const [input, setInput] = useState("");
   const [isThinking, setIsThinking] = useState(false);
-  const chatBottomRef = useRef<HTMLDivElement>(null);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    let active = true;
-
-    void fetchStoreCatalogue()
-      .then((catalogue) => {
-        if (active) setProducts(catalogue.products);
+    fetchStoreCatalogue()
+      .then((data) => {
+        setProducts(data.products || []);
       })
       .catch((error) => {
-        console.error("Unable to load WhatsApp cart catalogue:", error);
+        console.warn("Unable to load catalogue context:", error);
       });
-
-    return () => {
-      active = false;
-    };
   }, []);
 
   useEffect(() => {
     if (aiOpen) {
-      chatBottomRef.current?.scrollIntoView({ behavior: "smooth" });
+      messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
     }
   }, [messages, aiOpen, isThinking]);
 
-  function orderCartOnWhatsApp() {
-    const items = cart.ids.flatMap((id) => {
-      const product = products.find((item) => item.id === id);
-      if (!product) return [];
-
-      return [
-        {
-          product,
-          quantity: cart.quantities[id] ?? 1,
-        },
-      ];
-    });
-
-    openWhatsApp(buildCartWhatsAppMessage(items));
-    setMenuOpen(false);
+  function findFaqAnswer(queryText: string): string | null {
+    const lower = queryText.toLowerCase();
+    for (const [keyword, answer] of Object.entries(STORE_FAQS)) {
+      if (lower.includes(keyword)) {
+        return answer;
+      }
+    }
+    // Check if asking about products in store
+    const matchedProduct = products.find((p) =>
+      lower.includes(p.name.toLowerCase())
+    );
+    if (matchedProduct) {
+      return `We carry ${matchedProduct.name} for R${matchedProduct.price}! You can add it to your cart or order it directly through WhatsApp at +27 68 496 3972.`;
+    }
+    return null;
   }
 
-  function handleResetChat() {
-    setMessages([
-      {
-        id: "welcome",
-        sender: "ai",
-        text: `Hello! Welcome to ${BRAND.name}. How can I assist you with your shopping or order today?`,
-      },
-    ]);
-  }
-
-  async function handleSend(userText?: string) {
-    const query = (userText ?? input).trim();
+  async function handleSend(customText?: string) {
+    const query = (customText || input).trim();
     if (!query || isThinking) return;
 
-    const userMsg: ChatMessage = {
+    const userMessage: ChatMessage = {
       id: String(Date.now()),
       sender: "user",
       text: query,
     };
 
-    const nextMessages = [...messages, userMsg];
+    const nextMessages = [...messages, userMessage];
     setMessages(nextMessages);
-    if (!userText) setInput("");
+    if (!customText) setInput("");
     setIsThinking(true);
 
     try {
-      // Build lightweight conversation history for the server function
       const historyPayload: AiChatMessage[] = nextMessages
         .slice(-6)
         .map((m) => ({
@@ -125,15 +116,14 @@ export function FloatingSupportButtons() {
           content: m.text,
         }));
 
-      // Build catalog context so AI knows currently active items
       const productSample = products
         .slice(0, 10)
         .map((p) => `${p.name} (R${p.price})`)
         .join(", ");
 
       const contextData = productSample
-        ? `Featured Store Products: ${productSample}. Total catalogue items: ${products.length}. Support WhatsApp: +27 68 496 3972.`
-        : `Support WhatsApp: +27 68 496 3972. Nationwide delivery across South Africa.`;
+        ? `Featured Store Products: ${productSample}. Total catalogue items: ${products.length}. WhatsApp: +27 68 496 3972.`
+        : `WhatsApp: +27 68 496 3972. Nationwide delivery across South Africa (2-5 business days).`;
 
       const response = await sendAiChatMessage({
         data: {
@@ -143,40 +133,78 @@ export function FloatingSupportButtons() {
         },
       });
 
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: String(Date.now() + 1),
-          sender: "ai",
-          text: response.text,
-        },
-      ]);
+      // Handle response gracefully according to status
+      if (response.status === "rate_limited") {
+        const faqAnswer = findFaqAnswer(query);
+        const replyText = faqAnswer
+          ? `${faqAnswer}\n\n(Our AI is experiencing high demand right now, but our team is also standing by on WhatsApp!)`
+          : "We are currently experiencing a brief surge in AI traffic! For immediate one-on-one help, please chat with our customer team directly on WhatsApp (+27 68 496 3972).";
+
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: String(Date.now() + 1),
+            sender: "ai",
+            text: replyText,
+            action: { type: "whatsapp", label: "Message on WhatsApp" },
+          },
+        ]);
+      } else if (response.status === "unconfigured" || response.status === "invalid_key") {
+        // Transparent fallback to store knowledge
+        const faqAnswer = findFaqAnswer(query);
+        const replyText =
+          faqAnswer ||
+          `Thank you for asking! For custom orders, product sizing, or instant quotes, our South African customer support team is available 24/7 directly on WhatsApp at +27 68 496 3972.`;
+
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: String(Date.now() + 1),
+            sender: "ai",
+            text: replyText,
+            action: { type: "whatsapp", label: "Chat on WhatsApp (+27 68 496 3972)" },
+          },
+        ]);
+      } else {
+        // Successful generation
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: String(Date.now() + 1),
+            sender: "ai",
+            text: response.text,
+          },
+        ]);
+      }
     } catch (error) {
       console.warn("AI generation fallback:", error);
-
-      // Graceful rule-based fallback if offline or API key pending
-      const lower = query.toLowerCase();
-      let fallbackText =
-        "Thank you for asking! For immediate support, custom product orders, or direct quotes, our customer care team is available directly on WhatsApp at +27 68 496 3972.";
-
-      for (const [key, val] of Object.entries(FALLBACK_FAQ)) {
-        if (lower.includes(key)) {
-          fallbackText = val;
-          break;
-        }
-      }
+      const faqAnswer = findFaqAnswer(query);
+      const replyText =
+        faqAnswer ||
+        "Thank you for contacting NEXA GLOBAL MART. Our team is available on WhatsApp (+27 68 496 3972) to assist you immediately with pricing, orders, and delivery.";
 
       setMessages((prev) => [
         ...prev,
         {
           id: String(Date.now() + 1),
           sender: "ai",
-          text: fallbackText,
+          text: replyText,
+          action: { type: "whatsapp", label: "Open WhatsApp Chat" },
         },
       ]);
     } finally {
       setIsThinking(false);
     }
+  }
+
+  function handleReset() {
+    setMessages([
+      {
+        id: "welcome-reset",
+        sender: "ai",
+        text: `Conversation restarted! How can I help you today with ${BRAND.name}? Ask me about products, shipping across South Africa, or ordering via WhatsApp!`,
+      },
+    ]);
   }
 
   return (
@@ -193,200 +221,207 @@ export function FloatingSupportButtons() {
             aria-expanded={menuOpen}
             className="grid h-12 w-12 place-items-center rounded-full bg-[#25D366] text-white shadow-lg ring-1 ring-white/30 transition-transform hover:scale-105 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#25D366]/40"
           >
-            {menuOpen ? (
-              <X className="h-5 w-5" />
-            ) : (
-              <WhatsAppIcon className="h-6 w-6" />
-            )}
+            <WhatsAppIcon className="h-6 w-6 fill-current" />
           </button>
 
           {menuOpen && (
-            <div className="absolute bottom-0 right-14 w-52 rounded-xl border border-border bg-background p-2 shadow-xl">
-              <p className="px-2 py-1 text-xs font-semibold text-muted-foreground">
-                WHATSAPP SUPPORT
-              </p>
+            <div className="absolute bottom-14 right-0 w-64 rounded-2xl border border-border bg-card p-3 shadow-2xl animate-in fade-in slide-in-from-bottom-2">
+              <div className="flex items-center justify-between pb-2 border-b border-border">
+                <p className="text-xs font-semibold text-foreground">WhatsApp Support</p>
+                <button
+                  type="button"
+                  onClick={() => setMenuOpen(false)}
+                  className="rounded p-1 text-muted-foreground hover:bg-muted"
+                  aria-label="Close menu"
+                >
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              </div>
+              <div className="mt-2 space-y-1.5">
+                <button
+                  type="button"
+                  onClick={() => {
+                    openWhatsApp(NEXA_QUICK_MESSAGE);
+                    setMenuOpen(false);
+                  }}
+                  className="w-full rounded-xl bg-muted/60 px-3 py-2 text-left text-xs font-medium text-foreground transition-colors hover:bg-[#25D366]/15 hover:text-[#128C7E]"
+                >
+                  Chat with Customer Support
+                </button>
 
-              <button
-                type="button"
-                onClick={() => {
-                  openWhatsApp(NEXA_QUICK_MESSAGE);
-                  setMenuOpen(false);
-                }}
-                className="w-full rounded-lg px-3 py-2 text-left text-sm font-medium hover:bg-muted"
-              >
-                Quick Message
-              </button>
-
-              <button
-                type="button"
-                onClick={orderCartOnWhatsApp}
-                className="w-full rounded-lg px-3 py-2 text-left text-sm font-medium hover:bg-muted"
-              >
-                Order My Cart
-              </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const message = buildCartWhatsAppMessage(cart.items);
+                    openWhatsApp(message);
+                    setMenuOpen(false);
+                  }}
+                  className="w-full rounded-xl bg-[#25D366]/15 px-3 py-2 text-left text-xs font-semibold text-[#128C7E] transition-colors hover:bg-[#25D366]/25"
+                >
+                  Order My Cart ({cart.items.length}{" "}
+                  {cart.items.length === 1 ? "item" : "items"})
+                </button>
+              </div>
             </div>
           )}
         </div>
 
+        {/* Floating AI Button */}
         <button
           type="button"
           onClick={() => {
+            setAiOpen((prev) => !prev);
             setMenuOpen(false);
-            setAiOpen(true);
           }}
-          aria-label={`${BRAND.shortName} AI assistant`}
-          className="grid h-12 w-12 place-items-center rounded-full border border-gold/40 bg-background text-foreground shadow-lg transition-transform hover:scale-105 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-gold/30"
+          aria-label="Open AI customer concierge"
+          aria-expanded={aiOpen}
+          className="relative grid h-12 w-12 place-items-center rounded-full bg-gradient-to-tr from-amber-600 via-gold to-yellow-300 text-stone-950 shadow-lg ring-1 ring-white/30 transition-transform hover:scale-105 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-gold/40"
         >
-          <Bot className="h-6 w-6 text-gold" />
+          <Bot className="h-6 w-6" />
+          <span className="absolute -top-1 -right-1 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-emerald-500 ring-2 ring-background">
+            <span className="h-1.5 w-1.5 rounded-full bg-white animate-pulse" />
+          </span>
         </button>
-        <span className="sr-only">{BRAND.shortName} AI Support Assistant</span>
       </div>
 
+      {/* AI Customer Concierge Drawer / Modal */}
       {aiOpen && (
         <div
-          className="fixed inset-0 z-[80] flex items-center justify-center bg-black/60 p-4"
-          role="presentation"
-          onClick={(event) => {
-            if (event.target === event.currentTarget) {
-              setAiOpen(false);
-            }
-          }}
+          role="dialog"
+          aria-modal="true"
+          aria-label={`${BRAND.shortName} AI Concierge`}
+          className="fixed bottom-24 right-3 z-[70] flex w-[calc(100vw-24px)] max-w-sm flex-col overflow-hidden rounded-2xl border border-gold/40 bg-card shadow-2xl animate-in fade-in slide-in-from-bottom-4 sm:bottom-6 sm:right-20"
         >
-          <section
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="nexa-ai-title"
-            className="flex max-h-[85vh] w-full max-w-md flex-col rounded-2xl border border-gold/30 bg-background shadow-2xl overflow-hidden"
-          >
-            {/* Header */}
-            <div className="flex items-center justify-between border-b border-border p-4 bg-muted/20">
-              <div className="flex items-center gap-3">
-                <div className="grid h-10 w-10 place-items-center rounded-full border border-gold/30 bg-gold/10">
-                  <Bot className="h-5 w-5 text-gold" />
-                </div>
-                <div>
-                  <h2 id="nexa-ai-title" className="text-base font-bold leading-tight">
-                    {BRAND.shortName} AI Concierge
-                  </h2>
-                  <p className="text-xs text-muted-foreground flex items-center gap-1.5">
-                    <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
-                    Online • 24/7 Intelligent Shopping
-                  </p>
-                </div>
+          {/* Header */}
+          <div className="flex items-center justify-between border-b border-border bg-gradient-to-r from-card via-card to-gold/10 px-4 py-3">
+            <div className="flex items-center gap-2.5">
+              <div className="grid h-8 w-8 place-items-center rounded-xl bg-gold/20 text-gold shadow-sm">
+                <Sparkles className="h-4 w-4" />
               </div>
-
-              <div className="flex items-center gap-1">
-                <button
-                  type="button"
-                  onClick={handleResetChat}
-                  title="Reset conversation"
-                  aria-label="Reset conversation"
-                  className="grid h-8 w-8 place-items-center rounded-full hover:bg-muted text-muted-foreground"
-                >
-                  <RotateCcw className="h-3.5 w-3.5" />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setAiOpen(false)}
-                  aria-label={`Close ${BRAND.shortName} AI`}
-                  className="grid h-8 w-8 place-items-center rounded-full hover:bg-muted text-muted-foreground"
-                >
-                  <X className="h-4 w-4" />
-                </button>
+              <div>
+                <p className="text-sm font-bold text-foreground flex items-center gap-1.5">
+                  {BRAND.name} Concierge
+                  <span className="rounded-full bg-emerald-500/15 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-400">
+                    24/7 Live
+                  </span>
+                </p>
+                <p className="text-[11px] text-muted-foreground">
+                  Shop assistance, tracking & FAQs
+                </p>
               </div>
             </div>
-
-            {/* Quick action chips */}
-            <div className="flex gap-1.5 overflow-x-auto p-3 border-b border-border/50 text-xs">
-              {[
-                "How to order on WhatsApp?",
-                "Delivery & Shipping times",
-                "What products are on sale?",
-                "Return & refund policy",
-              ].map((chip) => (
-                <button
-                  key={chip}
-                  type="button"
-                  disabled={isThinking}
-                  onClick={() => handleSend(chip)}
-                  className="shrink-0 rounded-full border border-gold/30 bg-gold/5 px-2.5 py-1 text-foreground hover:bg-gold/15 transition-colors disabled:opacity-50"
-                >
-                  {chip}
-                </button>
-              ))}
-            </div>
-
-            {/* Chat message list */}
-            <div className="flex-1 overflow-y-auto p-4 space-y-3 min-h-[240px] max-h-[360px]">
-              {messages.map((m) => (
-                <div
-                  key={m.id}
-                  className={`flex ${m.sender === "user" ? "justify-end" : "justify-start"}`}
-                >
-                  <div
-                    className={`max-w-[85%] rounded-2xl px-3.5 py-2.5 text-sm leading-relaxed whitespace-pre-wrap ${
-                      m.sender === "user"
-                        ? "bg-primary text-primary-foreground rounded-tr-none"
-                        : "bg-muted text-foreground border border-border/60 rounded-tl-none"
-                    }`}
-                  >
-                    {m.text}
-                  </div>
-                </div>
-              ))}
-
-              {isThinking && (
-                <div className="flex justify-start">
-                  <div className="flex items-center gap-2 rounded-2xl rounded-tl-none border border-border/60 bg-muted px-3.5 py-2.5 text-xs text-muted-foreground">
-                    <Loader2 className="h-3.5 w-3.5 animate-spin text-gold" />
-                    <span>Nexa AI is typing...</span>
-                  </div>
-                </div>
-              )}
-
-              <div ref={chatBottomRef} />
-            </div>
-
-            {/* Bottom Input & Quick WhatsApp button */}
-            <div className="border-t border-border p-3 space-y-2 bg-muted/10">
-              <form
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  void handleSend();
-                }}
-                className="flex items-center gap-2"
-              >
-                <input
-                  type="text"
-                  value={input}
-                  disabled={isThinking}
-                  onChange={(e) => setInput(e.target.value)}
-                  placeholder="Ask about products, orders, delivery..."
-                  className="flex-1 rounded-xl border border-border bg-muted/50 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gold/40 disabled:opacity-60"
-                />
-                <button
-                  type="submit"
-                  disabled={isThinking || !input.trim()}
-                  aria-label="Send message"
-                  className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-gold text-black hover:opacity-90 transition-opacity font-semibold disabled:opacity-50"
-                >
-                  <Send className="h-4 w-4" />
-                </button>
-              </form>
-
+            <div className="flex items-center gap-1">
               <button
                 type="button"
-                onClick={() => {
-                  openWhatsApp(NEXA_QUICK_MESSAGE);
-                  setAiOpen(false);
-                }}
-                className="flex w-full items-center justify-center gap-2 rounded-xl border border-[#25D366]/40 bg-[#25D366]/10 py-1.5 text-xs font-semibold text-[#25D366] hover:bg-[#25D366]/20 transition-colors"
+                onClick={handleReset}
+                title="Restart conversation"
+                className="rounded-lg p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
               >
-                <MessageCircle className="h-3.5 w-3.5" />
-                Need Human Support? Chat on WhatsApp
+                <RotateCcw className="h-3.5 w-3.5" />
+              </button>
+              <button
+                type="button"
+                onClick={() => setAiOpen(false)}
+                title="Close chat"
+                className="rounded-lg p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+              >
+                <X className="h-4 w-4" />
               </button>
             </div>
-          </section>
+          </div>
+
+          {/* Quick Guidance Chips */}
+          <div className="flex items-center gap-1.5 overflow-x-auto border-b border-border/60 bg-muted/20 px-3 py-2 text-xs no-scrollbar">
+            <button
+              type="button"
+              onClick={() => handleSend("What are your delivery times across South Africa?")}
+              className="shrink-0 rounded-full border border-border bg-background px-2.5 py-1 text-[11px] text-muted-foreground hover:border-gold hover:text-foreground transition-colors"
+            >
+              📦 Delivery Times
+            </button>
+            <button
+              type="button"
+              onClick={() => handleSend("How can I place an order via WhatsApp?")}
+              className="shrink-0 rounded-full border border-border bg-background px-2.5 py-1 text-[11px] text-muted-foreground hover:border-gold hover:text-foreground transition-colors"
+            >
+              🛒 Order via WhatsApp
+            </button>
+            <button
+              type="button"
+              onClick={() => handleSend("What is your returns policy?")}
+              className="shrink-0 rounded-full border border-border bg-background px-2.5 py-1 text-[11px] text-muted-foreground hover:border-gold hover:text-foreground transition-colors"
+            >
+              🔄 Returns
+            </button>
+          </div>
+
+          {/* Messages */}
+          <div className="flex h-80 flex-col gap-3 overflow-y-auto p-4 text-xs">
+            {messages.map((m) => (
+              <div
+                key={m.id}
+                className={`flex flex-col ${
+                  m.sender === "user" ? "items-end" : "items-start"
+                }`}
+              >
+                <div
+                  className={`max-w-[85%] rounded-2xl px-3.5 py-2.5 leading-relaxed shadow-sm whitespace-pre-wrap ${
+                    m.sender === "user"
+                      ? "bg-gold text-stone-950 font-medium rounded-br-xs"
+                      : "bg-muted/80 text-foreground border border-border/80 rounded-bl-xs"
+                  }`}
+                >
+                  {m.text}
+                </div>
+
+                {m.action?.type === "whatsapp" && (
+                  <button
+                    type="button"
+                    onClick={() => openWhatsApp(NEXA_QUICK_MESSAGE)}
+                    className="mt-2 inline-flex items-center gap-1.5 rounded-xl bg-[#25D366]/15 px-3 py-1.5 text-[11px] font-semibold text-[#128C7E] transition-colors hover:bg-[#25D366]/25"
+                  >
+                    <WhatsAppIcon className="h-3.5 w-3.5 fill-current" />
+                    {m.action.label}
+                    <ExternalLink className="h-3 w-3" />
+                  </button>
+                )}
+              </div>
+            ))}
+
+            {isThinking && (
+              <div className="flex items-center gap-2 self-start rounded-2xl border border-border/80 bg-muted/60 px-3.5 py-2 text-muted-foreground">
+                <Loader2 className="h-3.5 w-3.5 animate-spin text-gold" />
+                <span className="text-[11px]">Nexa Concierge is thinking...</span>
+              </div>
+            )}
+            <div ref={messagesEndRef} />
+          </div>
+
+          {/* Input form */}
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              void handleSend();
+            }}
+            className="flex items-center gap-2 border-t border-border bg-card p-2.5"
+          >
+            <input
+              type="text"
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              placeholder="Ask anything about our products or orders..."
+              disabled={isThinking}
+              className="flex-1 rounded-xl border border-border bg-background px-3 py-2 text-xs text-foreground placeholder:text-muted-foreground focus:border-gold focus:outline-none focus:ring-1 focus:ring-gold"
+            />
+            <button
+              type="submit"
+              disabled={!input.trim() || isThinking}
+              className="grid h-8 w-8 place-items-center rounded-xl bg-gold text-stone-950 disabled:opacity-40 transition-transform active:scale-95"
+              aria-label="Send message"
+            >
+              <Send className="h-3.5 w-3.5" />
+            </button>
+          </form>
         </div>
       )}
     </>
