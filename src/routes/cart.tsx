@@ -15,7 +15,7 @@ import { WhatsAppIcon } from "@/components/WhatsAppIcon";
 import {
   buildCartWhatsAppMessage,
   openWhatsApp,
-} from "@/lib/whatsapp";
+} from "@/lib/Whatsapp";
 
 export const Route = createFileRoute("/cart")({
   loader: () => fetchStoreCatalogue(),
