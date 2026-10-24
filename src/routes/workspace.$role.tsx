@@ -81,79 +81,88 @@ const ADMIN_SERVICES = [
     icon: Package,
     live: true,
     keywords: "product items edit add publish price images feature",
-    href: "/admin",
+    tab: "products",
   },
   {
     id: "catalogue",
     name: "Catalogue & Categories",
     description: "Organise categories and product collections.",
     icon: Tags,
-    live: false,
+    live: true,
     keywords: "catalogue catalog categories collections organise",
+    tab: "catalogue",
   },
   {
     id: "orders",
     name: "Orders & Returns",
     description: "Customer orders, returns and order issues.",
     icon: ShoppingBag,
-    live: false,
+    live: true,
     keywords: "orders returns cancellations refunds customers",
+    tab: "orders",
   },
   {
     id: "inventory",
     name: "Inventory & Warehouses",
     description: "Stock visibility and warehouse operations.",
     icon: Warehouse,
-    live: false,
+    live: true,
     keywords: "inventory stock warehouse warehouses applicants",
+    tab: "inventory",
   },
   {
     id: "staff",
     name: "Staff & Approvals",
     description: "Eligible staff accounts, applications and access.",
     icon: Users,
-    live: false,
+    live: true,
     keywords: "staff accounts roles permissions applications approvals suspend",
+    tab: "staff",
   },
   {
     id: "suppliers",
     name: "Suppliers & Partners",
     description: "Supplier onboarding and partner relationships.",
     icon: Truck,
-    live: false,
+    live: true,
     keywords: "suppliers partners businesses onboarding connections",
+    tab: "suppliers",
   },
   {
     id: "marketing",
     name: "Marketing & Campaigns",
     description: "Promotions, banners, discounts and campaigns.",
     icon: BadgePercent,
-    live: false,
+    live: true,
     keywords: "marketing promotions campaigns banners discounts offers",
+    tab: "marketing",
   },
   {
     id: "support",
     name: "Support & Policies",
     description: "Customer care, support requests and policies.",
     icon: Headset,
-    live: false,
+    live: true,
     keywords: "support customer care policies legal help complaints",
+    tab: "support",
   },
   {
     id: "finance",
     name: "Finance & Wallets",
     description: "Wallets, commissions and financial oversight.",
     icon: Wallet,
-    live: false,
+    live: true,
     keywords: "finance wallet wallets money balances commissions transactions",
+    tab: "finance",
   },
   {
     id: "intelligence",
     name: "AI & Intelligence",
     description: "Future AI assistance, alerts and operational insights.",
     icon: BrainCircuit,
-    live: false,
+    live: true,
     keywords: "AI artificial intelligence assistant insights analytics alerts",
+    tab: "intelligence",
   },
 ] as const;
 
@@ -538,11 +547,12 @@ function AdminDashboard({
               const cardClass =
                 "group flex min-h-28 w-full flex-col items-center justify-center gap-3 rounded-2xl border border-border bg-card p-4 text-center transition hover:border-gold/70 hover:shadow-[0_4px_20px_rgba(212,175,55,0.08)]";
 
-              return service.live ? (
+              return (
                 <Link
                   key={service.id}
                   to="/admin"
-                  aria-label="Open Products"
+                  search={{ tab: service.tab } as any}
+                  aria-label={`Open ${service.name}`}
                   className={cardClass}
                 >
                   <span className="grid h-11 w-11 place-items-center rounded-xl border border-gold/25 bg-gold/10 text-gold">
@@ -550,26 +560,11 @@ function AdminDashboard({
                   </span>
                   <span className="text-sm font-semibold sm:text-base">
                     {service.name}
+                  </span>
+                  <span className="text-[10px] font-medium text-emerald-400">
+                    Live module
                   </span>
                 </Link>
-              ) : (
-                <button
-                  key={service.id}
-                  type="button"
-                  onClick={() => setNotice(service.name)}
-                  className={cardClass}
-                  aria-label={service.name + ", coming soon"}
-                >
-                  <span className="grid h-11 w-11 place-items-center rounded-xl border border-gold/25 bg-gold/10 text-gold">
-                    <Icon className="h-5 w-5" aria-hidden="true" />
-                  </span>
-                  <span className="text-sm font-semibold sm:text-base">
-                    {service.name}
-                  </span>
-                  <span className="text-[10px] font-medium text-muted-foreground">
-                    Coming soon
-                  </span>
-                </button>
               );
             })}
           </div>
