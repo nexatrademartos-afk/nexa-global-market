@@ -1,3 +1,4 @@
+
 import type {
   AiAdapter,
   AiProviderType,
@@ -20,20 +21,24 @@ export function getActiveAiAdapter(): AiAdapter {
   if (envProvider === "openai" || envProvider === "chatgpt") {
     return adapters.openai;
   }
+
   if (envProvider === "claude" || envProvider === "anthropic") {
     return adapters.claude;
   }
+
   if (envProvider === "gemini" || envProvider === "google") {
     return adapters.gemini;
   }
 
-  // Automatic fallback
-  if (process.env.GEMINI_API_KEY || process.env.VITE_GEMINI_API_KEY) {
+  // Automatic selection uses server-side credentials only.
+  if (process.env.GEMINI_API_KEY) {
     return adapters.gemini;
   }
+
   if (process.env.OPENAI_API_KEY) {
     return adapters.openai;
   }
+
   if (process.env.ANTHROPIC_API_KEY || process.env.CLAUDE_API_KEY) {
     return adapters.claude;
   }
@@ -42,7 +47,7 @@ export function getActiveAiAdapter(): AiAdapter {
 }
 
 export async function generateAiResponse(
-  options: ChatCompletionOptions
+  options: ChatCompletionOptions,
 ): Promise<ChatCompletionResult> {
   const adapter = getActiveAiAdapter();
   return await adapter.generateContent(options);
