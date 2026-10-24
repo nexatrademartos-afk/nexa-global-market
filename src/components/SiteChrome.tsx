@@ -86,20 +86,17 @@ export function Logo() {
     <Link
       to="/"
       aria-label={`${BRAND.name} home`}
-      className="flex shrink-0 items-center"
+      className="flex shrink-0 items-center transition-opacity hover:opacity-90"
     >
       <img
         src={BRAND.logoPath}
-        alt=""
-        aria-hidden="true"
-        className="block h-[24px] w-full object-cover object-center sm:h-[28px] lg:h-[32px]"
+        alt={BRAND.name}
+        className="h-8 w-auto max-w-[180px] object-contain sm:h-9 sm:max-w-[220px]"
         fetchPriority="high"
       />
-      
     </Link>
   );
 }
-
 
 export function SiteHeader() {
   const cart = useLocalList("nexa-cart");
@@ -115,20 +112,11 @@ export function SiteHeader() {
     setMenuOpen(false);
   }
 
- 
   return (
-    <header className="sticky top-0 z-40 relative overflow-hidden border-b border-gold/30 bg-background shadow-[0_2px_18px_rgba(212,175,55,0.08)]">
-      <img
-        src={BRAND.logoPath}
-        alt=""
-        aria-hidden="true"
-        className="block h-auto w-full"
-        fetchPriority="high"
-      />
-
-      <div className="absolute inset-0 z-10 flex items-start justify-between gap-3 px-3 pt-3 sm:px-6 sm:pt-5">
-        <div className="flex min-w-0 items-center gap-5">
-          
+    <header className="sticky top-0 z-40 border-b border-gold/30 bg-background/95 backdrop-blur-md shadow-[0_2px_18px_rgba(212,175,55,0.08)]">
+      <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-3 py-3 sm:px-6">
+        <div className="flex min-w-0 items-center gap-6">
+          <Logo />
 
           <nav
             aria-label="Main navigation"
@@ -137,39 +125,42 @@ export function SiteHeader() {
             <Link
               to="/shop"
               activeProps={{ className: "font-semibold text-gold" }}
+              className="text-muted-foreground transition-colors hover:text-gold"
             >
               Shop
             </Link>
             <Link
               to="/sell"
               activeProps={{ className: "font-semibold text-gold" }}
+              className="text-muted-foreground transition-colors hover:text-gold"
             >
               Sell on {BRAND.shortName}
             </Link>
             <Link
               to="/account"
               activeProps={{ className: "font-semibold text-gold" }}
+              className="text-muted-foreground transition-colors hover:text-gold"
             >
               Account
             </Link>
-            
             <Link
               to="/about"
               activeProps={{ className: "font-semibold text-gold" }}
+              className="text-muted-foreground transition-colors hover:text-gold"
             >
               About Us
             </Link>
-            
             <Link
               to="/policies"
               activeProps={{ className: "font-semibold text-gold" }}
+              className="text-muted-foreground transition-colors hover:text-gold"
             >
               Policy Centre
             </Link>
           </nav>
         </div>
 
-        <div className="flex shrink-0 items-center gap-1">
+        <div className="flex shrink-0 items-center gap-2">
           <Link
             to="/wishlist"
             aria-label="Wishlist"
@@ -187,7 +178,7 @@ export function SiteHeader() {
           >
             <ShoppingBag className="h-5 w-5" />
             {cart.ids.length > 0 && (
-              <span className="absolute right-0 top-0 grid h-5 min-w-5 place-items-center rounded-full bg-gold px-1 text-[10px] font-bold text-gold-foreground">
+              <span className="absolute -right-0.5 -top-0.5 grid h-5 min-w-5 place-items-center rounded-full bg-gold px-1 text-[10px] font-bold text-gold-foreground">
                 {cart.ids.length}
               </span>
             )}
@@ -236,7 +227,7 @@ export function SiteHeader() {
             className="grid h-10 w-10 place-items-center rounded-full border border-gold/30 transition hover:bg-secondary lg:hidden"
           >
             {menuOpen ? (
-              <X className="h-5 w-5" />
+              <X className="h-5 w-5 text-gold" />
             ) : (
               <Menu className="h-5 w-5" />
             )}
@@ -247,7 +238,7 @@ export function SiteHeader() {
       {menuOpen && (
         <div
           id="nexa-mobile-menu"
-          className="border-t border-gold/20 bg-background px-4 py-4 shadow-xl lg:hidden"
+          className="max-h-[80vh] overflow-y-auto border-t border-gold/20 bg-background/98 px-4 py-4 shadow-xl backdrop-blur-xl lg:hidden"
         >
           <nav
             aria-label="Mobile menu"
@@ -256,81 +247,103 @@ export function SiteHeader() {
             <Link
               to="/"
               onClick={closeMenu}
-              className="rounded-lg px-3 py-3 text-sm hover:bg-secondary"
+              className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium hover:bg-secondary"
             >
+              <Home className="h-4 w-4 text-gold" />
               Home
             </Link>
             <Link
               to="/shop"
               onClick={closeMenu}
-              className="rounded-lg px-3 py-3 text-sm hover:bg-secondary"
+              className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium hover:bg-secondary"
             >
+              <ShoppingBag className="h-4 w-4 text-gold" />
               Shop products
             </Link>
             <Link
               to="/sell"
               onClick={closeMenu}
-              className="rounded-lg px-3 py-3 text-sm hover:bg-secondary"
+              className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium hover:bg-secondary"
             >
               Sell on {BRAND.shortName}
             </Link>
             <Link
               to="/wishlist"
               onClick={closeMenu}
-              className="rounded-lg px-3 py-3 text-sm hover:bg-secondary"
+              className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium hover:bg-secondary"
             >
+              <Heart className="h-4 w-4 text-gold" />
               Wishlist
             </Link>
             <Link
               to="/cart"
               onClick={closeMenu}
-              className="rounded-lg px-3 py-3 text-sm hover:bg-secondary"
+              className="flex items-center justify-between rounded-lg px-3 py-2.5 text-sm font-medium hover:bg-secondary"
             >
-              Shopping cart
+              <span className="flex items-center gap-3">
+                <ShoppingBag className="h-4 w-4 text-gold" />
+                Shopping cart
+              </span>
+              {cart.ids.length > 0 && (
+                <span className="rounded-full bg-gold px-2 py-0.5 text-xs font-bold text-gold-foreground">
+                  {cart.ids.length}
+                </span>
+              )}
             </Link>
             <Link
               to="/account"
               onClick={closeMenu}
-              className="rounded-lg px-3 py-3 text-sm hover:bg-secondary"
+              className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium hover:bg-secondary"
             >
+              <User className="h-4 w-4 text-gold" />
               Customer dashboard
             </Link>
-             <Link
+            <Link
               to="/about"
               onClick={closeMenu}
-              className="rounded-lg px-3 py-3 text-sm hover:bg-secondary"
+              className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium hover:bg-secondary"
             >
               About Us
             </Link>
-            
             <Link
               to="/policies"
               onClick={closeMenu}
-              className="rounded-lg px-3 py-3 text-sm hover:bg-secondary"
+              className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium hover:bg-secondary"
             >
+              <ShieldCheck className="h-4 w-4 text-gold" />
               Policy Centre
             </Link>
 
-            <div className="my-2 gold-rule" />
+            <div className="my-2 border-t border-gold/20" />
 
             {sessionReady && signedIn ? (
-              <button
-                type="button"
-                onClick={() => {
-                  closeMenu();
-                  void signOut();
-                }}
-                disabled={signingOut}
-                className="btn btn-gold mt-2 w-full disabled:opacity-60"
-              >
-                {signingOut ? "Signing out..." : "Sign out"}
-              </button>
+              <div className="space-y-2 pt-1">
+                <Link
+                  to="/account"
+                  onClick={closeMenu}
+                  className="btn btn-outline flex w-full items-center justify-center gap-2 py-3 font-semibold"
+                >
+                  <User className="h-4 w-4" />
+                  My dashboard
+                </Link>
+                <button
+                  type="button"
+                  onClick={() => {
+                    closeMenu();
+                    void signOut();
+                  }}
+                  disabled={signingOut}
+                  className="btn btn-gold flex w-full items-center justify-center gap-2 py-3 font-bold disabled:opacity-60"
+                >
+                  {signingOut ? "Signing out..." : "Sign out"}
+                </button>
+              </div>
             ) : (
-              <>
+              <div className="space-y-2 pt-1">
                 <Link
                   to="/sign-in"
                   onClick={closeMenu}
-                  className="btn btn-outline w-full"
+                  className="btn btn-outline flex w-full items-center justify-center gap-2 py-3 font-semibold"
                 >
                   <LogIn className="h-4 w-4" />
                   Sign in
@@ -338,12 +351,12 @@ export function SiteHeader() {
                 <Link
                   to="/sign-up"
                   onClick={closeMenu}
-                  className="btn btn-gold mt-2 w-full"
+                  className="btn btn-gold flex w-full items-center justify-center gap-2 py-3 font-bold"
                 >
                   <UserPlus className="h-4 w-4" />
                   Create account
                 </Link>
-              </>
+              </div>
             )}
 
             <div className="mt-3 flex items-center gap-3 rounded-lg border border-border p-3 sm:hidden">
@@ -509,62 +522,69 @@ export function SiteFooter() {
   return (
     <footer className="mt-16 border-t border-gold/30 bg-ink pb-24 text-ink-foreground md:pb-0">
       <div className="mx-auto max-w-6xl px-4 py-10">
-        
         <Link
           to="/"
           aria-label={`${BRAND.name} home`}
-          className="inline-flex"
+          className="inline-flex transition-opacity hover:opacity-90"
         >
           <img
             src={BRAND.logoPath}
             alt={`${BRAND.name} — ${BRAND.tagline}`}
-            className="h-auto w-[230px] max-w-full object-contain"
+            className="h-8 w-auto max-w-full object-contain sm:h-9"
             loading="lazy"
           />
         </Link>
-        
+
         <div className="gold-rule my-6" />
 
         <nav
           aria-label="Footer navigation"
-          className="mb-6 flex flex-wrap gap-x-5 gap-y-3 text-sm"
+          className="mb-6 flex flex-wrap items-center gap-x-6 gap-y-3 text-sm font-medium"
         >
           <Link
-            to="/policies"
-            className="inline-flex items-center gap-2 underline underline-offset-4"
-          >
-            <ShieldCheck className="h-4 w-4" />
-            
-          <Link
             to="/about"
-            className="inline-flex items-center underline underline-offset-4"
+            className="underline underline-offset-4 hover:text-gold transition-colors"
           >
             About Us
           </Link>
-            
+
+          <Link
+            to="/policies"
+            className="inline-flex items-center gap-1.5 underline underline-offset-4 hover:text-gold transition-colors"
+          >
+            <ShieldCheck className="h-4 w-4 text-gold" />
             Policy Centre
           </Link>
 
           {sessionReady && signedIn ? (
             <>
-              <Link to="/account" className="underline underline-offset-4">
+              <Link
+                to="/account"
+                className="underline underline-offset-4 hover:text-gold transition-colors"
+              >
                 My dashboard
               </Link>
               <button
                 type="button"
                 onClick={() => void signOut()}
                 disabled={signingOut}
-                className="underline underline-offset-4 disabled:opacity-60"
+                className="underline underline-offset-4 hover:text-gold transition-colors disabled:opacity-60"
               >
                 {signingOut ? "Signing out..." : "Sign out"}
               </button>
             </>
           ) : (
             <>
-              <Link to="/sign-in" className="underline underline-offset-4">
+              <Link
+                to="/sign-in"
+                className="underline underline-offset-4 hover:text-gold transition-colors"
+              >
                 Sign in
               </Link>
-              <Link to="/sign-up" className="underline underline-offset-4">
+              <Link
+                to="/sign-up"
+                className="underline underline-offset-4 hover:text-gold transition-colors"
+              >
                 Create account
               </Link>
             </>
@@ -578,7 +598,7 @@ export function SiteFooter() {
 
         <div className="mt-6 border-t border-gold/20 pt-4 text-center">
           <p className="text-sm font-semibold tracking-wide text-slate-300">
-            Powered by <span className="text-gold">TJC-OS</span>
+            Powered by <span className="text-gold">{BRAND.poweredBy}</span>
           </p>
         </div>
       </div>

@@ -3,6 +3,8 @@ import { useCallback, useEffect, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import {
   CheckCircle2,
+  ChevronLeft,
+  ChevronRight,
   ImagePlus,
   Package,
   Plus,
@@ -11,6 +13,7 @@ import {
   Star,
   Tag,
   Trash2,
+  X,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import type { Tables } from "@/integrations/supabase/types";
@@ -212,6 +215,8 @@ const [savingCategory, setSavingCategory] = useState(false);
   const [showProductForm, setShowProductForm] = useState(false);
 const [showCategoryPanel, setShowCategoryPanel] = useState(false);
 const [activeProductFilter, setActiveProductFilter] = useState("all");
+const [previewProduct, setPreviewProduct] = useState<Product | null>(null);
+const [previewImageIndex, setPreviewImageIndex] = useState(0);
 
   const loadProducts = useCallback(async () => {
     setLoadingProducts(true);
@@ -1609,105 +1614,96 @@ return (
               </button>
             </div>
           ) : (
-            <div className="mt-5 space-y-3">
+            <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-2 lg:grid-cols-3">
               {visibleProducts.map((product) => {
                 const category = categories.find(
                   (item) => item.id === product.category_id,
                 );
                 const tags = safeTags(product.merchandising_tags);
+                const gallery = Array.isArray(product.gallery)
+                  ? product.gallery.filter((item): item is string => typeof item === "string")
+                  : [];
+                const image = product.image_url || gallery[0] || null;
 
                 return (
                   <article
                     key={product.id}
-                    className="flex flex-col gap-4 rounded-xl border border-gold/20 bg-[var(--color-card)]/35 p-4 backdrop-blur-lg transition-colors hover:border-gold/45 sm:flex-row sm:items-center"
+                    className="group flex min-w-0 flex-col overflow-hidden rounded-xl border border-gold/20 bg-[var(--color-card)]/45 shadow-sm transition hover:border-gold/60 hover:shadow-lg"
                   >
-                    {product.image_url ? (
-                      <img
-                        src={getProductImageUrl(product.image_url)}
-                        alt={product.name}
-                        className="h-20 w-20 shrink-0 rounded-lg border border-gold/20 bg-white object-contain"
-                        onError={(event) => {
-                          event.currentTarget.style.display = "none";
-                        }}
-                      />
-                    ) : (
-                      <div className="grid h-20 w-20 shrink-0 place-items-center rounded-lg border border-gold/30 bg-[var(--color-card)]/50 text-gold">
-                        <Package className="h-7 w-7" />
-                      </div>
-                    )}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setPreviewProduct(product);
+                        setPreviewImageIndex(0);
+                      }}
+                      aria-label={`View ${product.name} details and images`}
+                      className="relative block aspect-square w-full overflow-hidden bg-white/5 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-gold"
+                    >
+                      {image ? (
+                        <img
+                          src={getProductImageUrl(image)}
+                          alt={product.name}
+                          className="h-full w-full object-contain p-3 transition-transform duration-300 group-hover:scale-[1.03]"
+                          onError={(event) => {
+                            event.currentTarget.style.display = "none";
+                          }}
+                        />
+                      ) : (
+                        <div className="grid h-full place-items-center text-gold">
+                          <Package className="h-12 w-12" />
+                        </div>
+                      )}
+                      {gallery.length > 1 && (
+                        <span className="absolute bottom-2 right-2 rounded-full border border-gold/30 bg-background/90 px-2 py-1 text-[10px] font-semibold">
+                          {Math.min(gallery.length, MAX_PRODUCT_IMAGES)} photos
+                        </span>
+                      )}
+                    </button>
 
-                    <div className="min-w-0 flex-1">
-                      <h3 className="font-semibold text-foreground">{product.name}</h3>
-                      <p className="mt-1 break-all text-xs text-muted-foreground">
-                        {product.slug}
-                        {product.sku ? ` · SKU: ${product.sku}` : ""}
+                    <div className="flex flex-1 flex-col gap-2 p-3 sm:p-4">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setPreviewProduct(product);
+                          setPreviewImageIndex(0);
+                        }}
+                        className="line-clamp-2 min-h-10 text-left text-sm font-semibold hover:text-gold sm:text-base"
+                      >
+                        {product.name}
+                      </button>
+                      <p className="truncate text-[11px] text-muted-foreground">
+                        {product.slug}{product.sku ? ` · SKU: ${product.sku}` : ""}
                       </p>
-                      <p className="mt-1 text-sm text-foreground">
-                        R{Number(product.price).toFixed(2)} · Stock: {product.stock}
-                        {category ? ` · ${category.name}` : ""}
+                      <p className="text-sm font-semibold">
+                        R{Number(product.price).toFixed(2)}
                       </p>
-                      <div className="mt-2 flex flex-wrap gap-2 text-xs">
-                        <span className="rounded-full border border-border bg-[var(--color-card)]/40 px-2 py-1 text-foreground">
+                      <p className="text-xs text-muted-foreground">
+                        Stock: {product.stock}{category ? ` · ${category.name}` : ""}
+                      </p>
+                      <div className="flex flex-wrap gap-1.5 text-[10px]">
+                        <span className="rounded-full border border-border px-2 py-1">
                           {product.is_active ? "Published" : "Unpublished"}
                         </span>
                         {product.is_featured && (
-                          <span className="rounded-full border border-gold/50 bg-[var(--color-card)]/30 px-2 py-1 text-gold">
-                            Featured
-                          </span>
+                          <span className="rounded-full border border-gold/50 px-2 py-1 text-gold">Featured</span>
                         )}
                         {tags.map((tag) => {
-                          const option = MERCHANDISING_OPTIONS.find(
-                            (item) => item.value === tag,
-                          );
-                          return (
-                            <span
-                              key={tag}
-                              className="rounded-full border border-gold/40 bg-[var(--color-card)]/30 px-2 py-1 text-gold"
-                            >
-                              {option?.label ?? tag}
-                            </span>
-                          );
+                          const option = MERCHANDISING_OPTIONS.find((item) => item.value === tag);
+                          return <span key={tag} className="rounded-full border border-gold/40 px-2 py-1 text-gold">{option?.label ?? tag}</span>;
                         })}
                       </div>
-                    </div>
-
-                    <div className="flex flex-wrap gap-2 sm:justify-end">
-                      <button
-                        type="button"
-                        onClick={() => startEditing(product)}
-                        className="btn btn-outline"
-                      >
-                        Edit
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => void toggleProduct(product, "is_active")}
-                        className="btn btn-outline"
-                      >
-                        {product.is_active ? "Unpublish" : "Publish"}
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => void toggleProduct(product, "is_featured")}
-                        className="btn btn-outline"
-                        aria-label={
-                          product.is_featured
-                            ? `Remove ${product.name} from featured products`
-                            : `Feature ${product.name}`
-                        }
-                      >
-                        <Star className="mr-1 inline h-4 w-4" />
-                        {product.is_featured ? "Unfeature" : "Feature"}
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => void deleteProduct(product)}
-                        className="btn btn-outline"
-                        aria-label={`Delete ${product.name}`}
-                      >
-                        <Trash2 className="mr-1 inline h-4 w-4" />
-                        Delete
-                      </button>
+                      <div className="mt-auto grid grid-cols-2 gap-2 pt-2">
+                        <button type="button" onClick={() => startEditing(product)} className="btn btn-outline min-h-10 px-2 text-xs">Edit</button>
+                        <button type="button" onClick={() => void toggleProduct(product, "is_active")} className="btn btn-outline min-h-10 px-2 text-xs">
+                          {product.is_active ? "Unpublish" : "Publish"}
+                        </button>
+                        <button type="button" onClick={() => void toggleProduct(product, "is_featured")} className="btn btn-outline min-h-10 px-2 text-xs" aria-label={product.is_featured ? `Remove ${product.name} from featured products` : `Feature ${product.name}`}>
+                          <Star className="mr-1 inline h-3.5 w-3.5" />{product.is_featured ? "Unfeature" : "Feature"}
+                        </button>
+                        <button type="button" onClick={() => void deleteProduct(product)} className="btn btn-outline min-h-10 px-2 text-xs text-red-400" aria-label={`Delete ${product.name}`}>
+                          <Trash2 className="mr-1 inline h-3.5 w-3.5" />Delete
+                        </button>
+                      </div>
                     </div>
                   </article>
                 );
@@ -1717,6 +1713,69 @@ return (
         
         </section>
         )}
+      {previewProduct && (() => {
+        const product = previewProduct;
+        const rawGallery = Array.isArray(product.gallery)
+          ? product.gallery.filter((item): item is string => typeof item === "string")
+          : [];
+        const imagePaths = Array.from(new Set([
+          ...(product.image_url ? [product.image_url] : []),
+          ...rawGallery,
+        ])).slice(0, MAX_PRODUCT_IMAGES);
+        const safeIndex = Math.min(previewImageIndex, Math.max(0, imagePaths.length - 1));
+        const activeImage = imagePaths[safeIndex];
+        const showImage = (index: number) => setPreviewImageIndex((index + imagePaths.length) % imagePaths.length);
+
+        return (
+          <div className="fixed inset-0 z-[100] overflow-y-auto bg-background" role="dialog" aria-modal="true" aria-labelledby="admin-product-preview-title">
+            <div className="sticky top-0 z-10 flex items-center justify-between border-b border-gold/25 bg-background/95 px-4 py-3 backdrop-blur sm:px-6">
+              <div className="min-w-0">
+                <p className="text-xs uppercase tracking-wider text-gold">Product preview</p>
+                <h2 id="admin-product-preview-title" className="truncate text-lg font-bold">{product.name}</h2>
+              </div>
+              <button type="button" onClick={() => setPreviewProduct(null)} className="grid h-11 w-11 shrink-0 place-items-center rounded-full border border-border hover:border-gold" aria-label="Close product preview">
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <div className="mx-auto grid min-h-[calc(100vh-4rem)] max-w-7xl gap-6 p-4 sm:p-6 lg:grid-cols-2 lg:items-center">
+              <div className="space-y-3">
+                <div className="relative grid aspect-square max-h-[75vh] place-items-center overflow-hidden rounded-2xl border border-gold/30 bg-white/5">
+                  {activeImage ? (
+                    <img src={getProductImageUrl(activeImage)} alt={`${product.name} image ${safeIndex + 1}`} className="h-full w-full object-contain p-4" />
+                  ) : (
+                    <Package className="h-20 w-20 text-gold/60" />
+                  )}
+                  {imagePaths.length > 1 && <>
+                    <button type="button" onClick={() => showImage(safeIndex - 1)} aria-label="Previous image" className="absolute left-3 top-1/2 grid h-11 w-11 -translate-y-1/2 place-items-center rounded-full bg-background/90 hover:bg-gold hover:text-black"><ChevronLeft /></button>
+                    <button type="button" onClick={() => showImage(safeIndex + 1)} aria-label="Next image" className="absolute right-3 top-1/2 grid h-11 w-11 -translate-y-1/2 place-items-center rounded-full bg-background/90 hover:bg-gold hover:text-black"><ChevronRight /></button>
+                    <span className="absolute bottom-3 right-3 rounded-full bg-background/90 px-3 py-1 text-xs font-semibold">{safeIndex + 1} / {imagePaths.length}</span>
+                  </>}
+                </div>
+                {imagePaths.length > 1 && <div className="flex justify-center gap-2 overflow-x-auto py-1">
+                  {imagePaths.map((path, index) => <button key={`${path}-${index}`} type="button" onClick={() => setPreviewImageIndex(index)} aria-label={`Show image ${index + 1}`} aria-pressed={index === safeIndex} className={`h-16 w-16 shrink-0 overflow-hidden rounded-lg border p-1 ${index === safeIndex ? "border-gold ring-2 ring-gold/40" : "border-border"}`}>
+                    <img src={getProductImageUrl(path)} alt="" className="h-full w-full object-contain" />
+                  </button>)}
+                </div>}
+              </div>
+              <section className="space-y-4 lg:px-5">
+                <div className="flex flex-wrap gap-2">
+                  <span className="rounded-full border border-border px-3 py-1 text-xs">{product.is_active ? "Published" : "Unpublished"}</span>
+                  <span className="rounded-full border border-gold/40 px-3 py-1 text-xs text-gold">Stock: {product.stock}</span>
+                </div>
+                <h1 className="text-3xl font-bold sm:text-4xl">{product.name}</h1>
+                <p className="text-2xl font-bold text-gold">R{Number(product.price).toFixed(2)}</p>
+                {product.compare_at_price != null && <p className="text-sm text-muted-foreground line-through">Was R{Number(product.compare_at_price).toFixed(2)}</p>}
+                <p className="break-all text-sm text-muted-foreground">{product.slug}{product.sku ? ` · SKU: ${product.sku}` : ""}</p>
+                {product.description && <div className="surface whitespace-pre-line rounded-xl border border-gold/20 p-4 text-sm leading-relaxed">{product.description}</div>}
+                <div className="flex flex-wrap gap-2 pt-2">
+                  <button type="button" onClick={() => { startEditing(product); setPreviewProduct(null); }} className="btn btn-primary">Edit product</button>
+                  <button type="button" onClick={() => setPreviewProduct(null)} className="btn btn-outline">Close preview</button>
+                </div>
+              </section>
+            </div>
+          </div>
+        );
+      })()}
       </div>
     </main>
   );

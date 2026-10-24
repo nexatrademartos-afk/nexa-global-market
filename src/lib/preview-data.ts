@@ -24,6 +24,8 @@ export interface StoreProduct {
   compare_at_price: number | null;
   discount_pct: number | null;
   image_url: string | null;
+  gallery?: string[] | null;
+  description?: string | null;
   category_id: string | null;
   is_featured: boolean;
   stock: number;
@@ -159,7 +161,7 @@ export async function fetchStoreCatalogue(): Promise<StoreCatalogue> {
     supabase
       .from("products")
       .select(
-        "id,name,slug,price,compare_at_price,discount_pct,image_url,category_id,is_featured,stock",
+        "id,name,slug,price,compare_at_price,discount_pct,image_url,gallery,description,category_id,is_featured,stock",
       )
       .eq("is_active", true)
       .gt("price", 0)
@@ -200,8 +202,15 @@ export async function fetchStoreCatalogue(): Promise<StoreCatalogue> {
     );
   }
 
+  const mappedProducts: StoreProduct[] = ((productResult.data ?? []) as Array<Record<string, unknown>>).map((item) => ({
+    ...(item as unknown as StoreProduct),
+    gallery: Array.isArray(item["gallery"])
+      ? (item["gallery"] as unknown[]).filter((url): url is string => typeof url === "string")
+      : null,
+  }));
+
   return {
-    products: (productResult.data ?? []) as StoreProduct[],
+    products: mappedProducts,
     categories: (categoryResult.data ?? []) as StoreCategory[],
     banners: (bannerResult.data ?? []) as StoreBanner[],
   };
