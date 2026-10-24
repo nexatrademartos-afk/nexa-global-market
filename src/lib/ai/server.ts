@@ -1,3 +1,4 @@
+
 import { createServerFn } from "@tanstack/react-start";
 import { generateAiResponse } from "./index";
 import type { ChatMessage, ChatCompletionResult } from "./types";
@@ -17,6 +18,7 @@ export const sendAiChatMessage = createServerFn({ method: "POST" })
     if (!raw || typeof raw !== "object") {
       throw new Error("Invalid payload: expected object");
     }
+
     const data = raw as Record<string, unknown>;
     const mode = data.mode === "admin" ? "admin" : "customer";
 
@@ -29,8 +31,9 @@ export const sendAiChatMessage = createServerFn({ method: "POST" })
         item.role === "assistant"
           ? "assistant"
           : item.role === "system"
-          ? "system"
-          : "user";
+            ? "system"
+            : "user";
+
       const content = String(item.content || "").slice(0, 4000);
       return { role, content };
     });
@@ -61,13 +64,14 @@ export const sendAiChatMessage = createServerFn({ method: "POST" })
       });
     } catch (err: unknown) {
       const errMsg = err instanceof Error ? err.message : String(err);
+
       return {
         text:
           data.mode === "admin"
             ? `Admin Notice: AI generation hit a service issue (${errMsg}). Offline operational checks remain active.`
             : "Welcome to Nexa Global Market! Our automated assistant is currently refreshing. You can check our FAQs or contact our team directly on WhatsApp (+27 68 496 3972) for instant support.",
         provider: "gemini",
-        model: "gemini-3.5-flash",
+        model: "gemini-3.8-flash",
         status: "service_unavailable",
         errorDetails: errMsg,
         suggestedAction: "whatsapp",
