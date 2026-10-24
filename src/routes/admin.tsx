@@ -39,6 +39,7 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import type { Tables } from "@/integrations/supabase/types";
 import { BRAND } from "@/lib/brand";
+import { AdminAiCopilot } from "@/components/admin/AdminAiCopilot";
 
 type Product = Tables<"products">;
 type Category = Tables<"categories">;
@@ -747,7 +748,44 @@ export function AdminPage({
   }
 
   function renderIntelligence() {
-    return <div className="space-y-5"><div><h2 className="text-xl font-bold">Operational intelligence</h2><p className="mt-1 text-sm text-muted-foreground">Live rule-based checks from your catalogue and orders. Generative AI is not connected in the current repository.</p></div><div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4"><StatCard label="Low / out of stock" value={String(lowStockProducts.length)} note={`Threshold: ${lowStockThreshold} units`} /><StatCard label="Pending orders" value={String(pendingOrders)} note="Pending, processing or paid" /><StatCard label="Applications pending" value={String(pendingApplications)} note="Awaiting review" /><StatCard label="Potential order revenue" value={currency(totalRevenue)} note="Based on non-cancelled/returned records" /></div><section className={panelClass}><h3 className="font-semibold">Suggested actions</h3><ul className="mt-3 space-y-3">{lowStockProducts.length > 0 && <li className="flex gap-2 text-sm"><AlertTriangle className="h-5 w-5 shrink-0 text-amber-400" /><span>{lowStockProducts.length} product(s) are at or below the low-stock threshold. Review Inventory before accepting more orders.</span></li>}{pendingOrders > 0 && <li className="flex gap-2 text-sm"><Clock className="h-5 w-5 shrink-0 text-amber-400" /><span>{pendingOrders} order(s) may need fulfilment or payment review.</span></li>}{pendingApplications > 0 && <li className="flex gap-2 text-sm"><UserCheck className="h-5 w-5 shrink-0 text-gold" /><span>{pendingApplications} role application(s) are awaiting an administrator decision.</span></li>}{lowStockProducts.length === 0 && pendingOrders === 0 && pendingApplications === 0 && <li className="flex gap-2 text-sm"><CheckCircle2 className="h-5 w-5 text-emerald-400" /><span>No rule-based alerts from the records loaded.</span></li>}</ul></section><section className={`${panelClass} border-gold/30`}><div className="flex items-start gap-3"><Sparkles className="h-5 w-5 text-gold" /><div><h3 className="font-semibold">AI assistant status</h3><p className="mt-1 text-sm text-muted-foreground">Live AI analysis is not enabled. The current suggestions above are deterministic checks, not AI-generated recommendations.</p></div></div></section></div>;
+    return (
+      <div className="space-y-6">
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          <StatCard
+            label="Low / out of stock"
+            value={String(lowStockProducts.length)}
+            note={`Threshold: ${lowStockThreshold} units`}
+          />
+          <StatCard
+            label="Pending orders"
+            value={String(pendingOrders)}
+            note="Pending, processing or paid"
+          />
+          <StatCard
+            label="Applications pending"
+            value={String(pendingApplications)}
+            note="Awaiting review"
+          />
+          <StatCard
+            label="Potential order revenue"
+            value={currency(totalRevenue)}
+            note="Based on non-cancelled/returned records"
+          />
+        </div>
+
+        <AdminAiCopilot
+          products={products}
+          orders={orders}
+          applications={applications}
+          messages={messages}
+          totalRevenue={totalRevenue}
+          paidRevenue={paidRevenue}
+          pendingOrders={pendingOrders}
+          lowStockProducts={lowStockProducts}
+          currency={currency}
+        />
+      </div>
+    );
   }
 
   function renderProducts() {
