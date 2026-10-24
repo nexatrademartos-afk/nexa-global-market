@@ -3,86 +3,76 @@ import {
   BrainCircuit,
   Sparkles,
   Send,
-  RotateCcw,
   Loader2,
+  AlertTriangle,
+  RotateCcw,
   Copy,
   Check,
-  AlertTriangle,
+  TrendingUp,
   Package,
-  ShoppingBag,
-  Users,
-  Headset,
+  Clock,
+  UserCheck,
+  Mail,
+  ShieldCheck,
+  Info,
+  Terminal,
 } from "lucide-react";
 import { sendAiChatMessage } from "@/lib/ai/server";
 import type { ChatMessage as AiChatMessage } from "@/lib/ai/types";
-import type { Tables } from "@/integrations/supabase/types";
 
-type Product = Tables<"products">;
-type Order = Tables<"orders">;
-type RoleApplication = Tables<"role_applications">;
-type ContactMessage = Tables<"contact_messages">;
+interface Product {
+  id: string;
+  name: string;
+  stock: number;
+  sku?: string | null;
+  price?: number;
+}
+
+interface Order {
+  id: string;
+  customer_name?: string | null;
+  total: number;
+  status: string;
+  payment_status?: string | null;
+  created_at?: string;
+}
+
+interface Application {
+  id: string;
+  status: string;
+  requested_role: string;
+  applicant_id?: string | null;
+  created_at?: string;
+}
+
+interface ContactMessage {
+  id: string;
+  is_read: boolean;
+  name: string;
+  email: string;
+  subject?: string | null;
+  message: string;
+}
 
 interface AdminAiCopilotProps {
   products: Product[];
   orders: Order[];
-  applications: RoleApplication[];
+  applications: Application[];
   messages: ContactMessage[];
   totalRevenue: number;
   paidRevenue: number;
   pendingOrders: number;
   lowStockProducts: Product[];
-  currency: (val: number) => string;
+  currency: (amount: number) => string;
 }
 
-interface ChatMessage {
+interface CopilotMessage {
   id: string;
   sender: "ai" | "user";
   text: string;
   timestamp: string;
+  isDeterministicFallback?: boolean;
 }
-
-const QUICK_ACTIONS = [
-  {
-    id: "briefing",
-    icon: Sparkles,
-    label: "CEO Daily Briefing",
-    description: "Summarize today's revenue, order health, and priorities",
-    prompt:
-      "Please generate a concise executive daily briefing for the CEO. Highlight current revenue metrics, pending orders needing attention, inventory risks, and top 3 immediate action items for today.",
-  },
-  {
-    id: "inventory",
-    icon: Package,
-    label: "Restock & Inventory Audit",
-    description: "Analyze out-of-stock and low-stock items",
-    prompt:
-      "Audit our current inventory health. Identify products that are at or below stock threshold, calculate estimated restock urgency, and draft a procurement note for our warehouse supplier.",
-  },
-  {
-    id: "orders",
-    icon: ShoppingBag,
-    label: "Fulfilment & Order Health",
-    description: "Check pending, processing, and unpaid orders",
-    prompt:
-      "Analyze all pending and processing orders. Flag any orders requiring fulfillment action, payment verification, or customer follow-up, and recommend operational steps to expedite delivery.",
-  },
-  {
-    id: "applications",
-    icon: Users,
-    label: "Review Role Applications",
-    description: "Evaluate pending staff and partner submissions",
-    prompt:
-      "Review the pending staff, supplier, and partner applications. Provide a quick summary of each candidate, evaluating their fit and giving a recommendation (Approve/Reject/Request more info).",
-  },
-  {
-    id: "support",
-    icon: Headset,
-    label: "Draft Customer Support Replies",
-    description: "Auto-draft replies for unread customer inquiries",
-    prompt:
-      "Review our latest unread customer contact messages. Draft professional, empathetic, and store-accurate replies for each customer enquiry so I can review and send them quickly.",
-  },
-];
 
 export function AdminAiCopilot({
   products,
@@ -95,67 +85,161 @@ export function AdminAiCopilot({
   lowStockProducts,
   currency,
 }: AdminAiCopilotProps) {
-  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([
+  const [chatMessages, setChatMessages] = useState<CopilotMessage[]>([
     {
       id: "init",
       sender: "ai",
-      text: "Greetings, Administrator. I am Nexa Intelligence, your operational copilot. I have loaded live records for your products, orders, role applications, and customer messages. Select a quick executive workflow below or ask any operational question.",
+      text: "NEXA Intelligence Copilot initialized. I have live access to your catalogue, orders, applications, and customer messages. Choose an operational action below or type a query to automate executive tasks.",
       timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
     },
   ]);
+
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
-  const chatEndRef = useRef<HTMLDivElement>(null);
+  const [apiStatusBanner, setApiStatusBanner] = useState<{
+    type: "info" | "warning" | "error" | "rate_limited";
+    message: string;
+  } | null>(null);
+
+  const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [chatMessages, loading]);
 
-  function buildLiveContext(): string {
-    const topLowStock = lowStockProducts
-      .slice(0, 10)
-      .map((p) => `${p.name} (Stock: ${p.stock}, SKU: ${p.sku || "N/A"})`)
-      .join("; ");
+  // Deterministic rule-based engines for 100% offline uptime
+  function generateRuleBasedBriefing(type: string): string {
+    const unreadMessages = messages.filter((m) => !m.is_read).length;
+    const pendingApps = applications.filter((a) => a.status === "pending").length;
 
-    const recentOrders = orders
-      .slice(0, 10)
-      .map(
-        (o) =>
-          `ID: ${o.id.slice(0, 8)} | Customer: ${o.customer_name} | Amount: R${o.total} | Status: ${o.status} | Pay: ${o.payment_status}`
-      )
-      .join("\n");
+    switch (type) {
+      case "ceo_briefing":
+        return `### 📊 CEO Daily Operational Briefing (Live Records)
 
-    const pendingApps = applications
-      .filter((a) => a.status === "pending")
-      .slice(0, 5)
-      .map((a) => `Role: ${a.requested_role} | Applicant ID: ${a.applicant_id.slice(0, 8)}`)
-      .join("; ");
+**1. Revenue & Cash Flow**
+- Total potential marketplace revenue: **${currency(totalRevenue)}**
+- Verified paid revenue: **${currency(paidRevenue)}**
+- Active pipeline orders: **${pendingOrders}** pending fulfilment or payment review.
 
-    const unreadMsgs = messages
-      .filter((m) => !m.is_read)
-      .slice(0, 5)
-      .map((m) => `From: ${m.name} (${m.email}) | Subject: ${m.subject || "No subject"} | Msg: ${m.message}`)
-      .join("\n");
+**2. Supply Chain & Inventory**
+- Total catalogue lines: **${products.length}**
+- Low / Out of stock items requiring restock: **${lowStockProducts.length}**
 
-    return [
-      `Total Catalog Products: ${products.length}`,
-      `Low / Out of stock Products (${lowStockProducts.length}): ${topLowStock || "None"}`,
-      `Total Orders Recorded: ${orders.length}`,
-      `Pending Fulfilment / Processing Orders: ${pendingOrders}`,
-      `Total Non-cancelled Revenue: ${currency(totalRevenue)}`,
-      `Verified Paid Revenue: ${currency(paidRevenue)}`,
-      `Pending Role Applications (${applications.filter((a) => a.status === "pending").length}): ${pendingApps || "None"}`,
-      `Unread Customer Inquiries (${messages.filter((m) => !m.is_read).length}):\n${unreadMsgs || "None"}`,
-      `Recent Orders Sample:\n${recentOrders || "None"}`,
-    ].join("\n\n");
+**3. Workforce & Growth**
+- Role applications awaiting administrative decision: **${pendingApps}**
+
+**4. Customer Care & Sentiment**
+- Unread customer inquiries: **${unreadMessages}**
+
+**🎯 Priority Administrative Directive:**
+${
+  lowStockProducts.length > 0
+    ? `• Restock immediate: ${lowStockProducts.slice(0, 3).map((p) => p.name).join(", ")}.\n`
+    : "• Stock levels are healthy across primary lines.\n"
+}${
+  pendingOrders > 0
+    ? `• Dispatch or verify payment on ${pendingOrders} awaiting order(s).\n`
+    : ""
+}${
+  pendingApps > 0
+    ? `• Review ${pendingApps} pending team / partner application(s).\n`
+    : ""
+}`;
+
+      case "restock_audit":
+        if (lowStockProducts.length === 0) {
+          return `### 📦 Restock & Inventory Audit
+All ${products.length} products in the catalogue currently meet or exceed minimum stock thresholds. No urgent supplier orders required today.`;
+        }
+        return `### 📦 Restock & Inventory Audit
+
+The following **${lowStockProducts.length}** item(s) are critically low or out of stock:
+
+${lowStockProducts
+  .map(
+    (p, i) =>
+      `${i + 1}. **${p.name}** (SKU: ${p.sku || "N/A"}) — **${p.stock} units remaining**`
+  )
+  .join("\n")}
+
+**Recommended Action:**
+Contact regional suppliers to place restocking orders for these lines to prevent lost cart conversions.`;
+
+      case "fulfilment_health":
+        return `### 🚚 Fulfilment & Order Health Audit
+
+- **Active Pending Orders:** ${pendingOrders}
+- **Pipeline Value:** ${currency(totalRevenue - paidRevenue)}
+- **Fulfillment Status:**
+  ${
+    pendingOrders === 0
+      ? "All orders have been fulfilled or settled. Zero pending backlog."
+      : `Orders require fulfilment team dispatch. Prioritize orders with verified payment status.`
+  }`;
+
+      case "review_applications":
+        const pendingList = applications.filter((a) => a.status === "pending");
+        if (pendingList.length === 0) {
+          return `### 👥 Role Applications Audit
+There are currently no pending role applications awaiting review. All partner, supplier, and staff applications are settled.`;
+        }
+        return `### 👥 Role Applications Audit
+
+Found **${pendingList.length}** application(s) awaiting administrative review:
+
+${pendingList
+  .slice(0, 5)
+  .map(
+    (app, i) =>
+      `${i + 1}. Role: **${app.requested_role.toUpperCase()}** — ID: \`${app.id.slice(0, 8)}...\` (Submitted: ${app.created_at ? new Date(app.created_at).toLocaleDateString() : "Recent"})`
+  )
+  .join("\n")}
+
+**Recommendation:**
+Open the **Applications** tab to review credentials and approve or decline applicant access.`;
+
+      case "support_replies":
+        const unread = messages.filter((m) => !m.is_read);
+        if (unread.length === 0) {
+          return `### ✉️ Support Inquiries Audit
+Zero unread customer messages in the inbox. Customer satisfaction is up to date!`;
+        }
+        return `### ✉️ Draft Support Replies
+
+Found **${unread.length}** unread message(s):
+
+${unread
+  .slice(0, 3)
+  .map(
+    (msg, i) =>
+      `**Customer:** ${msg.name} (${msg.email})\n**Subject:** ${msg.subject || "Order/General enquiry"}\n**Message:** "${msg.message}"\n\n*Suggested Reply:*\n"Dear ${msg.name},\n\nThank you for reaching out to NEXA GLOBAL MART. We have received your inquiry regarding '${msg.subject || "your message"}' and our operations team is reviewing it immediately. You can also reach us directly on WhatsApp at +27 68 496 3972 with your reference number.\n\nWarm regards,\nNEXA Global Mart Care Team"\n`
+  )
+  .join("\n---\n")}`;
+
+      default:
+        return `### Operational Summary
+- Catalogue Items: ${products.length}
+- Low Stock: ${lowStockProducts.length}
+- Pending Orders: ${pendingOrders}
+- Total Revenue Potential: ${currency(totalRevenue)}`;
+    }
   }
 
-  async function handleSend(promptText?: string) {
-    const textToSend = (promptText ?? input).trim();
+  function buildLiveContext() {
+    return [
+      `CATALOGUE: Total ${products.length} products. Low stock count (${lowStockProducts.length}): ${lowStockProducts.map((p) => `${p.name} (stock: ${p.stock})`).join(", ") || "None"}.`,
+      `ORDERS: Total ${orders.length} orders. Pending orders: ${pendingOrders}. Total pipeline revenue: ${currency(totalRevenue)}. Paid revenue: ${currency(paidRevenue)}.`,
+      `APPLICATIONS: Total ${applications.length} applications. Pending review: ${applications.filter((a) => a.status === "pending").length}.`,
+      `SUPPORT MESSAGES: Total ${messages.length} messages. Unread count: ${messages.filter((m) => !m.is_read).length}.`,
+    ].join("\n");
+  }
+
+  async function handleSend(promptText?: string, automationKey?: string) {
+    const textToSend = (promptText || input).trim();
     if (!textToSend || loading) return;
 
-    const userMessage: ChatMessage = {
+    const userMessage: CopilotMessage = {
       id: String(Date.now()),
       sender: "user",
       text: textToSend,
@@ -183,24 +267,92 @@ export function AdminAiCopilot({
         },
       });
 
+      // Handle unconfigured or rate limited gracefully with deterministic fallback
+      if (response.status === "unconfigured") {
+        setApiStatusBanner({
+          type: "warning",
+          message:
+            "GEMINI_API_KEY is not configured in server environment variables. Deterministic rule-based analysis is active.",
+        });
+        const fallbackText = automationKey
+          ? generateRuleBasedBriefing(automationKey)
+          : `${generateRuleBasedBriefing("general")}\n\n*(Note: To enable custom conversational AI answers, add GEMINI_API_KEY to your server environment variables)*`;
+
+        setChatMessages((prev) => [
+          ...prev,
+          {
+            id: String(Date.now() + 1),
+            sender: "ai",
+            text: fallbackText,
+            timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+            isDeterministicFallback: true,
+          },
+        ]);
+      } else if (response.status === "rate_limited") {
+        setApiStatusBanner({
+          type: "rate_limited",
+          message: "Google Gemini rate limit (HTTP 429) reached. Running automated rule-based analysis.",
+        });
+        const fallbackText = automationKey
+          ? generateRuleBasedBriefing(automationKey)
+          : `⚠️ **Rate Limit Notice**: Google Gemini quota is momentarily exhausted.\n\n${generateRuleBasedBriefing("general")}`;
+
+        setChatMessages((prev) => [
+          ...prev,
+          {
+            id: String(Date.now() + 1),
+            sender: "ai",
+            text: fallbackText,
+            timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+            isDeterministicFallback: true,
+          },
+        ]);
+      } else if (response.status === "invalid_key") {
+        setApiStatusBanner({
+          type: "error",
+          message: "The configured GEMINI_API_KEY is invalid or rejected by Google AI Studio.",
+        });
+        const fallbackText = automationKey
+          ? generateRuleBasedBriefing(automationKey)
+          : generateRuleBasedBriefing("general");
+
+        setChatMessages((prev) => [
+          ...prev,
+          {
+            id: String(Date.now() + 1),
+            sender: "ai",
+            text: `❌ **Authentication Notice**: Your Gemini API key was rejected by Google.\n\n${fallbackText}`,
+            timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+            isDeterministicFallback: true,
+          },
+        ]);
+      } else {
+        // Successful generation
+        setApiStatusBanner(null);
+        setChatMessages((prev) => [
+          ...prev,
+          {
+            id: String(Date.now() + 1),
+            sender: "ai",
+            text: response.text,
+            timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+          },
+        ]);
+      }
+    } catch (err: unknown) {
+      console.warn("Copilot execution notice:", err);
+      const fallbackText = automationKey
+        ? generateRuleBasedBriefing(automationKey)
+        : generateRuleBasedBriefing("general");
+
       setChatMessages((prev) => [
         ...prev,
         {
           id: String(Date.now() + 1),
           sender: "ai",
-          text: response.text,
+          text: fallbackText,
           timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-        },
-      ]);
-    } catch (err: any) {
-      console.error("Copilot error:", err);
-      setChatMessages((prev) => [
-        ...prev,
-        {
-          id: String(Date.now() + 1),
-          sender: "ai",
-          text: `Operational note: ${err?.message || "Could not generate AI report. Please check that GEMINI_API_KEY is configured in your server environment."}`,
-          timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+          isDeterministicFallback: true,
         },
       ]);
     } finally {
@@ -234,98 +386,184 @@ export function AdminAiCopilot({
             <BrainCircuit className="h-6 w-6" />
           </div>
           <div>
-            <h2 className="text-xl font-bold flex items-center gap-2">
-              Nexa Intelligence
-              <span className="rounded-full bg-emerald-500/10 px-2.5 py-0.5 text-xs font-semibold text-emerald-400 border border-emerald-500/20">
-                Operational Copilot Active
+            <div className="flex items-center gap-2">
+              <h2 className="text-xl font-bold tracking-tight">NEXA Intelligence Copilot</h2>
+              <span className="rounded-full bg-gold/20 px-2 py-0.5 text-xs font-semibold text-gold">
+                Operations & Executive
               </span>
-            </h2>
-            <p className="mt-0.5 text-xs text-muted-foreground">
-              Empowering administrators and executives by automating 80% of routine management, analysis, and correspondence.
+            </div>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              Live marketplace automation for inventory, orders, partner approvals, and executive decisions.
             </p>
           </div>
         </div>
 
-        <button
-          type="button"
-          onClick={handleReset}
-          className="btn btn-outline text-xs flex items-center gap-1.5"
-        >
-          <RotateCcw className="h-3.5 w-3.5" />
-          Reset session
-        </button>
-      </div>
-
-      {/* Quick 1-Click Executive Action Cards */}
-      <div>
-        <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground mb-3">
-          Quick Operational Automations
-        </h3>
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {QUICK_ACTIONS.map((action) => {
-            const Icon = action.icon;
-            return (
-              <button
-                key={action.id}
-                type="button"
-                disabled={loading}
-                onClick={() => void handleSend(action.prompt)}
-                className="group flex flex-col items-start rounded-xl border border-border bg-card p-4 text-left transition-all hover:border-gold hover:bg-gold/5 disabled:opacity-50"
-              >
-                <div className="flex w-full items-center justify-between">
-                  <div className="grid h-8 w-8 place-items-center rounded-lg border border-gold/30 bg-gold/10 text-gold group-hover:scale-105 transition-transform">
-                    <Icon className="h-4 w-4" />
-                  </div>
-                  <span className="text-[11px] font-medium text-gold opacity-0 group-hover:opacity-100 transition-opacity">
-                    Run →
-                  </span>
-                </div>
-                <h4 className="mt-3 text-sm font-semibold text-foreground group-hover:text-gold transition-colors">
-                  {action.label}
-                </h4>
-                <p className="mt-1 text-xs text-muted-foreground leading-relaxed">
-                  {action.description}
-                </p>
-              </button>
-            );
-          })}
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={handleReset}
+            className="inline-flex items-center gap-1.5 rounded-xl border border-border bg-background px-3 py-1.5 text-xs font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+          >
+            <RotateCcw className="h-3.5 w-3.5" />
+            Reset Session
+          </button>
         </div>
       </div>
 
-      {/* Interactive AI Chat & Report Terminal */}
-      <div className="rounded-2xl border border-border bg-card shadow-sm flex flex-col overflow-hidden">
-        {/* Terminal top bar */}
-        <div className="flex items-center justify-between border-b border-border bg-muted/20 px-4 py-3">
-          <div className="flex items-center gap-2">
-            <span className="h-2.5 w-2.5 rounded-full bg-emerald-400 animate-pulse" />
-            <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-              Live Copilot Dialogue
-            </span>
+      {/* Diagnostics / Status Notice */}
+      {apiStatusBanner && (
+        <div
+          className={`flex items-start gap-3 rounded-2xl border p-4 text-xs ${
+            apiStatusBanner.type === "error"
+              ? "border-red-500/40 bg-red-500/10 text-red-200"
+              : apiStatusBanner.type === "rate_limited"
+              ? "border-amber-500/40 bg-amber-500/10 text-amber-200"
+              : "border-gold/40 bg-gold/10 text-gold"
+          }`}
+        >
+          <Info className="h-4 w-4 shrink-0 mt-0.5" />
+          <div className="flex-1">
+            <p className="font-semibold">System Diagnostics</p>
+            <p className="mt-0.5 opacity-90">{apiStatusBanner.message}</p>
           </div>
-          <span className="text-xs text-muted-foreground">
-            Model: Provider-Agnostic Engine
+        </div>
+      )}
+
+      {/* 1-Click Executive Action Grid */}
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+        <button
+          type="button"
+          disabled={loading}
+          onClick={() =>
+            handleSend(
+              "Generate an executive CEO daily briefing analyzing our revenue pipeline, inventory risks, pending orders, and immediate priorities.",
+              "ceo_briefing"
+            )
+          }
+          className="flex flex-col text-left rounded-2xl border border-border bg-card p-4 transition-all hover:border-gold hover:shadow-md disabled:opacity-50"
+        >
+          <div className="flex items-center justify-between text-gold">
+            <TrendingUp className="h-5 w-5" />
+            <span className="text-[10px] uppercase font-bold tracking-wider text-muted-foreground">Executive</span>
+          </div>
+          <p className="mt-2.5 font-bold text-sm text-foreground">CEO Daily Briefing</p>
+          <p className="mt-1 text-xs text-muted-foreground">Revenue, order backlog & daily directives.</p>
+        </button>
+
+        <button
+          type="button"
+          disabled={loading}
+          onClick={() =>
+            handleSend(
+              "Perform a comprehensive restock and inventory audit. List items at or below safety stock threshold and calculate restock priority.",
+              "restock_audit"
+            )
+          }
+          className="flex flex-col text-left rounded-2xl border border-border bg-card p-4 transition-all hover:border-gold hover:shadow-md disabled:opacity-50"
+        >
+          <div className="flex items-center justify-between text-amber-400">
+            <Package className="h-5 w-5" />
+            <span className="text-[10px] uppercase font-bold tracking-wider text-muted-foreground">Catalogue</span>
+          </div>
+          <p className="mt-2.5 font-bold text-sm text-foreground">Restock & Inventory Audit</p>
+          <p className="mt-1 text-xs text-muted-foreground">Audit {lowStockProducts.length} low-stock lines.</p>
+        </button>
+
+        <button
+          type="button"
+          disabled={loading}
+          onClick={() =>
+            handleSend(
+              "Audit all pending and processing orders. Flag fulfilment bottlenecks, unpaid orders, and priority dispatches.",
+              "fulfilment_health"
+            )
+          }
+          className="flex flex-col text-left rounded-2xl border border-border bg-card p-4 transition-all hover:border-gold hover:shadow-md disabled:opacity-50"
+        >
+          <div className="flex items-center justify-between text-blue-400">
+            <Clock className="h-5 w-5" />
+            <span className="text-[10px] uppercase font-bold tracking-wider text-muted-foreground">Operations</span>
+          </div>
+          <p className="mt-2.5 font-bold text-sm text-foreground">Fulfilment Health</p>
+          <p className="mt-1 text-xs text-muted-foreground">Check {pendingOrders} pending order(s).</p>
+        </button>
+
+        <button
+          type="button"
+          disabled={loading}
+          onClick={() =>
+            handleSend(
+              "Summarize all pending partner and staff role applications. Provide candidate verification recommendations.",
+              "review_applications"
+            )
+          }
+          className="flex flex-col text-left rounded-2xl border border-border bg-card p-4 transition-all hover:border-gold hover:shadow-md disabled:opacity-50"
+        >
+          <div className="flex items-center justify-between text-purple-400">
+            <UserCheck className="h-5 w-5" />
+            <span className="text-[10px] uppercase font-bold tracking-wider text-muted-foreground">HR / Roles</span>
+          </div>
+          <p className="mt-2.5 font-bold text-sm text-foreground">Review Applications</p>
+          <p className="mt-1 text-xs text-muted-foreground">Summarize pending applicant reviews.</p>
+        </button>
+
+        <button
+          type="button"
+          disabled={loading}
+          onClick={() =>
+            handleSend(
+              "Review customer contact messages. Draft professional, helpful replies referencing our South African WhatsApp helpline.",
+              "support_replies"
+            )
+          }
+          className="flex flex-col text-left rounded-2xl border border-border bg-card p-4 transition-all hover:border-gold hover:shadow-md disabled:opacity-50"
+        >
+          <div className="flex items-center justify-between text-emerald-400">
+            <Mail className="h-5 w-5" />
+            <span className="text-[10px] uppercase font-bold tracking-wider text-muted-foreground">Support</span>
+          </div>
+          <p className="mt-2.5 font-bold text-sm text-foreground">Draft Support Replies</p>
+          <p className="mt-1 text-xs text-muted-foreground">Draft replies to customer queries.</p>
+        </button>
+      </div>
+
+      {/* Main Conversation Canvas */}
+      <div className="rounded-2xl border border-border bg-card shadow-sm overflow-hidden">
+        <div className="flex items-center justify-between border-b border-border bg-muted/30 px-5 py-3">
+          <div className="flex items-center gap-2">
+            <Sparkles className="h-4 w-4 text-gold" />
+            <span className="text-xs font-semibold text-foreground">Copilot Workspace</span>
+          </div>
+          <span className="text-[11px] text-muted-foreground">
+            Synchronized with Supabase Database
           </span>
         </div>
 
         {/* Message feed */}
-        <div className="p-4 space-y-4 max-h-[500px] min-h-[300px] overflow-y-auto">
+        <div className="flex h-[420px] flex-col gap-4 overflow-y-auto p-5 text-sm">
           {chatMessages.map((msg) => (
             <div
               key={msg.id}
-              className={`flex flex-col ${msg.sender === "user" ? "items-end" : "items-start"}`}
+              className={`flex flex-col ${
+                msg.sender === "user" ? "items-end" : "items-start"
+              }`}
             >
-              <div className="flex items-center gap-2 mb-1 px-1">
-                <span className="text-[11px] font-semibold text-muted-foreground">
-                  {msg.sender === "user" ? "Administrator" : "Nexa Intelligence"}
-                </span>
-                <span className="text-[10px] text-muted-foreground/60">{msg.timestamp}</span>
+              <div className="flex items-center gap-2 text-[11px] text-muted-foreground mb-1 px-1">
+                <span>{msg.sender === "user" ? "Administrator" : "NEXA Copilot"}</span>
+                <span>•</span>
+                <span>{msg.timestamp}</span>
+                {msg.isDeterministicFallback && (
+                  <span className="rounded bg-amber-500/15 px-1 py-0.2 text-[10px] font-semibold text-amber-400">
+                    Rule-Based Verification
+                  </span>
+                )}
               </div>
 
               <div
-                className={`relative group max-w-[90%] rounded-2xl p-4 text-sm leading-relaxed whitespace-pre-wrap ${
+                className={`group relative max-w-[90%] rounded-2xl px-4 py-3 leading-relaxed shadow-sm whitespace-pre-wrap ${
                   msg.sender === "user"
-                    ? "bg-primary text-primary-foreground rounded-tr-none"
-                    : "bg-muted/60 text-foreground border border-border/80 rounded-tl-none font-sans"
+                    ? "bg-gold text-stone-950 font-medium rounded-br-xs"
+                    : "bg-muted/60 text-foreground border border-border/80 rounded-bl-xs"
                 }`}
               >
                 {msg.text}
@@ -334,8 +572,8 @@ export function AdminAiCopilot({
                   <button
                     type="button"
                     onClick={() => copyToClipboard(msg.id, msg.text)}
-                    title="Copy response"
-                    className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity rounded-md bg-background/80 p-1.5 text-muted-foreground hover:text-foreground border border-border"
+                    className="absolute top-2 right-2 rounded-lg border border-border/60 bg-background/80 p-1.5 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity hover:text-foreground"
+                    title="Copy report to clipboard"
                   >
                     {copiedId === msg.id ? (
                       <Check className="h-3.5 w-3.5 text-emerald-400" />
@@ -349,38 +587,37 @@ export function AdminAiCopilot({
           ))}
 
           {loading && (
-            <div className="flex items-center gap-3 rounded-2xl rounded-tl-none border border-border bg-muted/40 p-4 text-xs text-muted-foreground">
+            <div className="flex items-center gap-2.5 self-start rounded-2xl border border-border/80 bg-muted/40 px-4 py-3 text-muted-foreground">
               <Loader2 className="h-4 w-4 animate-spin text-gold" />
-              <span>Nexa Intelligence is analyzing operational records and drafting brief...</span>
+              <span className="text-xs">Analyzing live records and compiling executive briefing...</span>
             </div>
           )}
-
-          <div ref={chatEndRef} />
+          <div ref={messagesEndRef} />
         </div>
 
-        {/* Input Form */}
+        {/* Input Bar */}
         <form
           onSubmit={(e) => {
             e.preventDefault();
             void handleSend();
           }}
-          className="border-t border-border bg-muted/10 p-3 flex gap-2 items-center"
+          className="flex items-center gap-2 border-t border-border bg-card p-3 sm:p-4"
         >
           <input
             type="text"
             value={input}
-            disabled={loading}
             onChange={(e) => setInput(e.target.value)}
-            placeholder="Ask about inventory, supplier vetting, order trends, revenue analysis, or draft a memo..."
-            className="flex-1 rounded-xl border border-border bg-background px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-gold/40 disabled:opacity-60"
+            placeholder="Ask the copilot: e.g. 'Draft an order fulfilment memo' or 'Which category generates highest revenue?'..."
+            disabled={loading}
+            className="flex-1 rounded-xl border border-border bg-background px-4 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:border-gold focus:outline-none focus:ring-1 focus:ring-gold"
           />
           <button
             type="submit"
-            disabled={loading || !input.trim()}
-            className="btn btn-primary px-4 py-2.5 flex items-center gap-1.5 disabled:opacity-50"
+            disabled={!input.trim() || loading}
+            className="inline-flex items-center gap-1.5 rounded-xl bg-gold px-4 py-2.5 text-xs font-semibold text-stone-950 disabled:opacity-40 transition-transform active:scale-95"
           >
-            <Send className="h-4 w-4" />
-            <span>Send</span>
+            <Send className="h-3.5 w-3.5" />
+            Send
           </button>
         </form>
       </div>
