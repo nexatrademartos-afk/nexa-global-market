@@ -23,6 +23,7 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { getWorkspace, type WorkspaceKey } from "@/lib/workspaces";
 import { PlannedBadge } from "@/components/states";
+import { AdminPage, type AdminTab } from "@/routes/admin";
 
 type AccessState =
   | { status: "checking" }
@@ -167,6 +168,9 @@ const ADMIN_SERVICES = [
 ] as const;
 
 export const Route = createFileRoute("/workspace/$role")({
+  validateSearch: (search: Record<string, unknown>): { tab?: string } => ({
+    ...(typeof search["tab"] === "string" ? { tab: search["tab"] } : {}),
+  }),
   loader: ({ params }) => {
     const workspace = getWorkspace(params.role);
 
@@ -215,6 +219,7 @@ export const Route = createFileRoute("/workspace/$role")({
 
 function WorkspacePage() {
   const workspace = getWorkspace(Route.useLoaderData().key)!;
+  const { tab: requestedTab } = Route.useSearch();
 
   const [access, setAccess] = useState<AccessState>({
     status: "checking",
@@ -449,6 +454,7 @@ function WorkspacePage() {
             <AdminDashboard
               name={access.name}
               accountCode={roleDisplayCode(access.accountCode, "admin")}
+              requestedTab={requestedTab}
             />
           ) : (
             <StandardWorkspace
@@ -465,12 +471,27 @@ function WorkspacePage() {
 function AdminDashboard({
   name,
   accountCode,
+  requestedTab,
 }: {
   name: string;
   accountCode: string | null;
+  requestedTab?: string | undefined;
 }) {
   const [search, setSearch] = useState("");
-  const [notice, setNotice] = useState<string | null>(null);
+  const validInitialTab = ADMIN_SERVICES.some((service) => service.tab === requestedTab)
+    ? (requestedTab as AdminTab)
+    : null;
+  const [selectedTab, setSelectedTab] = useState<AdminTab | null>(validInitialTab);
+
+  useEffect(() => {
+    setSelectedTab(validInitialTab);
+  }, [requestedTab]);
+
+  useEffect(() => {
+    if (selectedTab) {
+      document.getElementById("admin-module")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  }, [selectedTab]);
 
   const firstName = name.trim().split(/\s+/)[0] || "Admin";
 
@@ -509,7 +530,7 @@ function AdminDashboard({
             type="button"
             title="Admin Workflow"
             aria-label="Admin Workflow"
-            onClick={() => setNotice("Admin Workflow")}
+            onClick={() => document.getElementById("admin-services")?.scrollIntoView({ behavior: "smooth" })}
             className="grid h-10 w-10 shrink-0 place-items-center rounded-full border border-gold/40 bg-gold/10 text-gold transition hover:bg-gold/20"
           >
             <Workflow className="h-5 w-5" aria-hidden="true" />
@@ -517,7 +538,7 @@ function AdminDashboard({
         </div>
       </header>
 
-      <section aria-label="Admin services" className="space-y-4">
+      {!selectedTab && <section id="admin-services" aria-label="Admin services" className="space-y-4">
         <label className="flex min-h-12 items-center gap-3 rounded-xl border border-border bg-background px-4 focus-within:border-gold">
           <Search className="h-5 w-5 shrink-0 text-muted-foreground" />
           <input
@@ -548,11 +569,11 @@ function AdminDashboard({
                 "group flex min-h-28 w-full flex-col items-center justify-center gap-3 rounded-2xl border border-border bg-card p-4 text-center transition hover:border-gold/70 hover:shadow-[0_4px_20px_rgba(212,175,55,0.08)]";
 
               return (
-                <Link
+                <button
                   key={service.id}
-                  to="/admin"
-                  search={{ tab: service.tab } as any}
+                  type="button"
                   aria-label={`Open ${service.name}`}
+                  onClick={() => setSelectedTab(service.tab as AdminTab)}
                   className={cardClass}
                 >
                   <span className="grid h-11 w-11 place-items-center rounded-xl border border-gold/25 bg-gold/10 text-gold">
@@ -561,10 +582,7 @@ function AdminDashboard({
                   <span className="text-sm font-semibold sm:text-base">
                     {service.name}
                   </span>
-                  <span className="text-[10px] font-medium text-emerald-400">
-                    Live module
-                  </span>
-                </Link>
+                </button>
               );
             })}
           </div>
@@ -581,50 +599,21 @@ function AdminDashboard({
             </button>
           </div>
         )}
-      </section>
+      </section>}
 
-      {notice && (
-        <div
-          className="fixed inset-0 z-[70] flex items-center justify-center bg-black/60 p-4"
-          role="presentation"
-          onClick={(event) => {
-            if (event.target === event.currentTarget) setNotice(null);
-          }}
-        >
-          <section
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="admin-coming-soon-title"
-            className="w-full max-w-sm rounded-2xl border border-gold/30 bg-background p-5 shadow-2xl"
-          >
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <h2 id="admin-coming-soon-title" className="text-lg font-bold">
-                  {notice}
-                </h2>
-                <p className="mt-2 text-sm text-muted-foreground">
-                  Coming soon. This Admin section is not available yet.
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={() => setNotice(null)}
-                aria-label="Close notice"
-                className="grid h-9 w-9 shrink-0 place-items-center rounded-full border border-border hover:bg-secondary"
-              >
-                <X className="h-4 w-4" />
-              </button>
+      {selectedTab && (
+        <section id="admin-module" className="space-y-4 rounded-2xl border border-border bg-card p-4 sm:p-6">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-gold">Administration</p>
+              <h2 className="mt-1 text-xl font-bold">{ADMIN_SERVICES.find((service) => service.tab === selectedTab)?.name}</h2>
             </div>
-            <button
-              type="button"
-              onClick={() => setNotice(null)}
-              className="btn btn-primary mt-5 w-full"
-            >
-              Close
-            </button>
-          </section>
-        </div>
+            <button type="button" className="btn btn-outline" onClick={() => setSelectedTab(null)}>Back to overview</button>
+          </div>
+          <AdminPage requestedTab={selectedTab} embedded onTabChange={(tab) => setSelectedTab(tab)} />
+        </section>
       )}
+
     </>
   );
 }

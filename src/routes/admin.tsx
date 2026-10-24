@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, redirect } from "@tanstack/react-router";
 import {
   AlertTriangle,
   ArrowRight,
@@ -169,11 +169,23 @@ const emptyBannerForm: BannerForm = {
 };
 
 export const Route = createFileRoute("/admin")({
-  validateSearch: (search: Record<string, unknown>): { tab?: string | undefined } => {
-    return { tab: typeof search["tab"] === "string" ? search["tab"] as string : undefined };
+  validateSearch: (search: Record<string, unknown>): { tab?: string } => ({
+    ...(typeof search["tab"] === "string" ? { tab: search["tab"] } : {}),
+  }),
+  beforeLoad: ({ search }) => {
+    throw redirect({
+      to: "/workspace/$role",
+      params: { role: "admin" },
+      search: { tab: search.tab } as any,
+    });
   },
-  component: AdminPage,
+  component: AdminRoutePage,
 });
+
+function AdminRoutePage() {
+  const { tab } = Route.useSearch();
+  return <AdminPage requestedTab={tab} />;
+}
 
 function makeSlug(value: string) {
   return value
@@ -263,8 +275,15 @@ function getProductImageUrl(path: string): string {
     .data.publicUrl;
 }
 
-function AdminPage() {
-  const { tab: requestedTab } = Route.useSearch();
+export function AdminPage({
+  requestedTab,
+  embedded = false,
+  onTabChange,
+}: {
+  requestedTab?: string | undefined;
+  embedded?: boolean;
+  onTabChange?: (tab: AdminTab) => void;
+}) {
   const activeTab: AdminTab = TABS.some((item) => item.id === requestedTab)
     ? (requestedTab as AdminTab)
     : "products";
@@ -678,7 +697,15 @@ function AdminPage() {
 
   const activeTabData = TABS.find((tab) => tab.id === activeTab)!;
   const ActiveIcon = activeTabData.icon;
-  const setTab = (tab: AdminTab) => { window.location.href = `/admin?tab=${tab}`; setSearchText(""); setStatusFilter("all"); setErrorMessage(""); setMessage(""); setModuleError(""); };
+  const setTab = (tab: AdminTab) => {
+    if (embedded) onTabChange?.(tab);
+    else window.location.href = `/workspace/admin?tab=${tab}`;
+    setSearchText("");
+    setStatusFilter("all");
+    setErrorMessage("");
+    setMessage("");
+    setModuleError("");
+  };
 
   function renderCategoryPanel() {
     return <div className="space-y-5">
@@ -748,11 +775,11 @@ function AdminPage() {
     }
   }
 
-  return <main className="min-h-screen bg-background px-3 py-6 text-foreground sm:px-5 sm:py-8"><div className="mx-auto max-w-7xl space-y-6"><header className="flex flex-wrap items-end justify-between gap-4 border-b pb-5"><div><p className="text-xs font-semibold uppercase tracking-[0.2em] text-gold">{BRAND.name}</p><h1 className="mt-2 text-3xl font-bold sm:text-4xl">Administration</h1><p className="mt-2 text-sm text-muted-foreground">Manage live marketplace operations and records.</p></div><div className="flex gap-2"><a href="/workspace/admin" className={buttonClass}>Workspace home</a><Link to="/" className={buttonClass}>View storefront</Link></div></header>
-    <nav aria-label="Administration modules" className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5">{TABS.map((tab) => { const Icon = tab.icon; return <button key={tab.id} type="button" onClick={() => setTab(tab.id)} aria-current={activeTab === tab.id ? "page" : undefined} className={`flex min-h-16 items-center gap-3 rounded-xl border p-3 text-left transition ${activeTab === tab.id ? "border-gold bg-gold/10" : "border-border bg-card hover:border-gold/50"}`}><Icon className="h-5 w-5 shrink-0 text-gold" /><span><span className="block text-sm font-semibold">{tab.label}</span><span className="hidden text-[11px] text-muted-foreground sm:block">{tab.note}</span></span></button>; })}</nav>
+  return <div className={embedded ? "space-y-5" : "min-h-screen bg-background px-3 py-6 text-foreground sm:px-5 sm:py-8"}><div className={embedded ? "space-y-5" : "mx-auto max-w-7xl space-y-6"}>{!embedded && <header className="flex flex-wrap items-end justify-between gap-4 border-b pb-5"><div><p className="text-xs font-semibold uppercase tracking-[0.2em] text-gold">{BRAND.name}</p><h1 className="mt-2 text-3xl font-bold sm:text-4xl">Administration</h1><p className="mt-2 text-sm text-muted-foreground">Manage marketplace operations and records.</p></div><div className="flex gap-2"><a href="/workspace/admin" className={buttonClass}>Workspace home</a><Link to="/" className={buttonClass}>View storefront</Link></div></header>}
+    {!embedded && <nav aria-label="Administration modules" className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5">{TABS.map((tab) => { const Icon = tab.icon; return <button key={tab.id} type="button" onClick={() => setTab(tab.id)} aria-current={activeTab === tab.id ? "page" : undefined} className={`flex min-h-16 items-center gap-3 rounded-xl border p-3 text-left transition ${activeTab === tab.id ? "border-gold bg-gold/10" : "border-border bg-card hover:border-gold/50"}`}><Icon className="h-5 w-5 shrink-0 text-gold" /><span><span className="block text-sm font-semibold">{tab.label}</span><span className="hidden text-[11px] text-muted-foreground sm:block">{tab.note}</span></span></button>; })}</nav>}
     {(message || errorMessage || moduleError) && <div role={errorMessage || moduleError ? "alert" : "status"} className={`rounded-xl border p-3 text-sm ${errorMessage || moduleError ? "border-red-500/40 bg-red-500/10 text-red-200" : "border-emerald-500/30 bg-emerald-500/10 text-emerald-200"}`}>{errorMessage || moduleError || message}</div>}
-    <section className="space-y-5"><div className="flex flex-wrap items-center justify-between gap-3"><div><div className="flex items-center gap-2"><ActiveIcon className="h-5 w-5 text-gold" /><h2 className="text-lg font-semibold">{activeTabData.label}</h2></div><p className="mt-1 text-sm text-muted-foreground">{activeTabData.note}</p></div><button className={buttonClass} type="button" onClick={() => void loadModuleData(activeTab)}><RefreshCw className="mr-2 h-4 w-4" />Reload module</button></div>{renderModule()}</section>
-    </div></main>;
+    <section className="space-y-5">{!embedded && <div className="flex flex-wrap items-center justify-between gap-3"><div><div className="flex items-center gap-2"><ActiveIcon className="h-5 w-5 text-gold" /><h2 className="text-lg font-semibold">{activeTabData.label}</h2></div><p className="mt-1 text-sm text-muted-foreground">{activeTabData.note}</p></div><button className={buttonClass} type="button" onClick={() => void loadModuleData(activeTab)}><RefreshCw className="mr-2 h-4 w-4" />Reload module</button></div>}{renderModule()}</section>
+    </div></div>;
 }
 
 function StatCard({ label, value, note }: { label: string; value: string; note: string }) {

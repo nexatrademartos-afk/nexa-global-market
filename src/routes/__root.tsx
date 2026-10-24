@@ -289,11 +289,9 @@ function RootComponent() {
     pathname.startsWith("/workspace/admin/");
 
   const [adminNavigationAllowed, setAdminNavigationAllowed] = useState(false);
-  const [adminNotice, setAdminNotice] = useState<string | null>(null);
 
   useEffect(() => {
     let active = true;
-    setAdminNotice(null);
 
     if (!isAdminArea || !sessionReady || !signedIn) {
       setAdminNavigationAllowed(false);
@@ -355,60 +353,14 @@ function RootComponent() {
 {showCustomerQuickNav && <CustomerQuickNav />}
 
       {showAdminQuickNav && (
-        <AdminQuickNav onComingSoon={setAdminNotice} />
+        <AdminQuickNav />
       )}
 
-      {showAdminQuickNav && adminNotice && (
-        <div
-          className="fixed inset-0 z-[70] flex items-center justify-center bg-black/60 p-4"
-          role="presentation"
-          onClick={(event) => {
-            if (event.target === event.currentTarget) setAdminNotice(null);
-          }}
-        >
-          <section
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="admin-nav-notice-title"
-            className="w-full max-w-sm rounded-2xl border border-gold/30 bg-background p-5 shadow-2xl"
-          >
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <h2 id="admin-nav-notice-title" className="text-lg font-bold">
-                  {adminNotice}
-                </h2>
-                <p className="mt-2 text-sm text-muted-foreground">
-                  Coming soon. This Admin section is not available yet.
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={() => setAdminNotice(null)}
-                aria-label="Close notice"
-                className="grid h-9 w-9 shrink-0 place-items-center rounded-full border border-border hover:bg-secondary"
-              >
-                <X className="h-4 w-4" />
-              </button>
-            </div>
-            <button
-              type="button"
-              onClick={() => setAdminNotice(null)}
-              className="btn btn-primary mt-5 w-full"
-            >
-              Close
-            </button>
-          </section>
-        </div>
-      )}
     </QueryClientProvider>
   );
 }
 
-function AdminQuickNav({
-  onComingSoon,
-}: {
-  onComingSoon: (label: string) => void;
-}) {
+function AdminQuickNav() {
   return (
     <nav
       aria-label="Admin quick navigation"
@@ -424,9 +376,9 @@ function AdminQuickNav({
       </a>
 
       <Link
-        to="/admin"
-        activeOptions={{ exact: true }}
-        activeProps={{ className: "text-gold" }}
+        to="/workspace/$role"
+        params={{ role: "admin" }}
+        search={{ tab: "products" }}
         className="flex min-h-14 min-w-0 flex-col items-center justify-center gap-1 px-0.5 text-center text-[9px] text-muted-foreground transition-colors hover:text-gold sm:text-[10px]"
         aria-label="Products"
       >
@@ -435,21 +387,22 @@ function AdminQuickNav({
       </Link>
 
       {[
-        { label: "Approvals", icon: ClipboardCheck },
-        { label: "Orders", icon: ShoppingBag },
-        { label: "Stock", icon: Warehouse },
-        { label: "Finance", icon: Wallet },
-      ].map(({ label, icon: Icon }) => (
-        <button
+        { label: "Approvals", tab: "staff", icon: ClipboardCheck },
+        { label: "Orders", tab: "orders", icon: ShoppingBag },
+        { label: "Stock", tab: "inventory", icon: Warehouse },
+        { label: "Finance", tab: "finance", icon: Wallet },
+      ].map(({ label, tab, icon: Icon }) => (
+        <Link
           key={label}
-          type="button"
-          onClick={() => onComingSoon(label)}
+          to="/workspace/$role"
+          params={{ role: "admin" }}
+          search={{ tab }}
           className="flex min-h-14 min-w-0 flex-col items-center justify-center gap-1 px-0.5 text-center text-[9px] text-muted-foreground transition-colors hover:text-gold sm:text-[10px]"
           aria-label={label}
         >
           <Icon className="h-5 w-5 shrink-0" aria-hidden="true" />
           <span>{label}</span>
-        </button>
+        </Link>
       ))}
     </nav>
   );
