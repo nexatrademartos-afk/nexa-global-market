@@ -1,6 +1,6 @@
 import { BRAND } from "@/lib/brand";
-import { useEffect, useState } from "react";
-import { Bot, MessageCircle, Send, X } from "lucide-react";
+import { useEffect, useState, useRef } from "react";
+import { Bot, MessageCircle, Send, X, RotateCcw, Loader2 } from "lucide-react";
 import { useLocalList } from "@/lib/local-list";
 import { fetchStoreCatalogue } from "@/lib/preview-data";
 import {
@@ -9,6 +9,8 @@ import {
   openWhatsApp,
 } from "@/lib/Whatsapp";
 import { WhatsAppIcon } from "@/components/WhatsAppIcon";
+import { sendAiChatMessage } from "@/lib/ai/server";
+import type { ChatMessage as AiChatMessage } from "@/lib/ai/types";
 
 interface ChatMessage {
   id: string;
@@ -16,15 +18,19 @@ interface ChatMessage {
   text: string;
 }
 
-const FAQ_RESPONSES: Record<string, string> = {
-  whatsapp: "You can order directly via WhatsApp or chat with our team at +27 68 496 3972. Use the WhatsApp button on the bottom right to send your cart or quick enquiry!",
-  order: "To order, browse products, add them to your cart, and either checkout online or tap 'Order My Cart' from the WhatsApp floating button!",
-  track: "You can view and track all your past and pending orders under your Account -> My Orders section.",
-  delivery: "We offer reliable nationwide and regional shipping. Standard delivery takes 2-5 business days depending on your location.",
-  shipping: "We offer reliable nationwide and regional shipping. Standard delivery takes 2-5 business days depending on your location.",
-  return: "We accept returns on eligible items within 7 days of receipt. Please ensure items are in original condition and packaging.",
-  refund: "Refunds are processed within 3-5 business days after inspection of the returned product.",
-  contact: `You can reach ${BRAND.shortName} support directly on WhatsApp at +27 68 496 3972 or via email at flejexaglobalmart@gmail.com.`,
+const FALLBACK_FAQ: Record<string, string> = {
+  whatsapp:
+    "You can order directly via WhatsApp or chat with our team at +27 68 496 3972. Use the WhatsApp button on the bottom right to send your cart or quick enquiry!",
+  order:
+    "To order, browse products, add them to your cart, and either checkout online or tap 'Order My Cart' from the WhatsApp floating button!",
+  delivery:
+    "We offer reliable nationwide shipping across South Africa. Standard delivery takes 2-5 business days.",
+  shipping:
+    "We offer reliable nationwide shipping across South Africa. Standard delivery takes 2-5 business days.",
+  return:
+    "We accept returns on eligible items within 7 days of receipt in original condition and packaging.",
+  contact:
+    "You can reach Nexa Global Market directly on WhatsApp at +27 68 496 3972.",
 };
 
 export function FloatingSupportButtons() {
@@ -39,10 +45,12 @@ export function FloatingSupportButtons() {
     {
       id: "welcome",
       sender: "ai",
-      text: `Hello! Welcome to ${BRAND.name}. How can I help you today? Ask me about products, orders, delivery, or WhatsApp ordering.`,
+      text: `Hello! Welcome to ${BRAND.name}. I am your 24/7 shopping concierge. How can I help you today? Ask me about products, orders, delivery, or ordering via WhatsApp!`,
     },
   ]);
   const [input, setInput] = useState("");
+  const [isThinking, setIsThinking] = useState(false);
+  const chatBottomRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     let active = true;
@@ -60,24 +68,42 @@ export function FloatingSupportButtons() {
     };
   }, []);
 
+  useEffect(() => {
+    if (aiOpen) {
+      chatBottomRef.current?.scrollIntoView({ behavior: "smooth" });
+    }
+  }, [messages, aiOpen, isThinking]);
+
   function orderCartOnWhatsApp() {
     const items = cart.ids.flatMap((id) => {
       const product = products.find((item) => item.id === id);
       if (!product) return [];
 
-      return [{
-        product,
-        quantity: cart.quantities[id] ?? 1,
-      }];
+      return [
+        {
+          product,
+          quantity: cart.quantities[id] ?? 1,
+        },
+      ];
     });
 
     openWhatsApp(buildCartWhatsAppMessage(items));
     setMenuOpen(false);
   }
 
-  function handleSend(userText?: string) {
+  function handleResetChat() {
+    setMessages([
+      {
+        id: "welcome",
+        sender: "ai",
+        text: `Hello! Welcome to ${BRAND.name}. How can I assist you with your shopping or order today?`,
+      },
+    ]);
+  }
+
+  async function handleSend(userText?: string) {
     const query = (userText ?? input).trim();
-    if (!query) return;
+    if (!query || isThinking) return;
 
     const userMsg: ChatMessage = {
       id: String(Date.now()),
@@ -85,29 +111,72 @@ export function FloatingSupportButtons() {
       text: query,
     };
 
-    setMessages((prev) => [...prev, userMsg]);
+    const nextMessages = [...messages, userMsg];
+    setMessages(nextMessages);
     if (!userText) setInput("");
+    setIsThinking(true);
 
-    const lower = query.toLowerCase();
-    let reply = "Thank you for asking! For immediate support or custom inquiries, our team is active on WhatsApp at +27 68 496 3972.";
+    try {
+      // Build lightweight conversation history for the server function
+      const historyPayload: AiChatMessage[] = nextMessages
+        .slice(-6)
+        .map((m) => ({
+          role: m.sender === "user" ? ("user" as const) : ("assistant" as const),
+          content: m.text,
+        }));
 
-    for (const [key, val] of Object.entries(FAQ_RESPONSES)) {
-      if (lower.includes(key)) {
-        reply = val;
-        break;
-      }
-    }
+      // Build catalog context so AI knows currently active items
+      const productSample = products
+        .slice(0, 10)
+        .map((p) => `${p.name} (R${p.price})`)
+        .join(", ");
 
-    setTimeout(() => {
+      const contextData = productSample
+        ? `Featured Store Products: ${productSample}. Total catalogue items: ${products.length}. Support WhatsApp: +27 68 496 3972.`
+        : `Support WhatsApp: +27 68 496 3972. Nationwide delivery across South Africa.`;
+
+      const response = await sendAiChatMessage({
+        data: {
+          mode: "customer",
+          messages: historyPayload,
+          contextData,
+        },
+      });
+
       setMessages((prev) => [
         ...prev,
         {
           id: String(Date.now() + 1),
           sender: "ai",
-          text: reply,
+          text: response.text,
         },
       ]);
-    }, 400);
+    } catch (error) {
+      console.warn("AI generation fallback:", error);
+
+      // Graceful rule-based fallback if offline or API key pending
+      const lower = query.toLowerCase();
+      let fallbackText =
+        "Thank you for asking! For immediate support, custom product orders, or direct quotes, our customer care team is available directly on WhatsApp at +27 68 496 3972.";
+
+      for (const [key, val] of Object.entries(FALLBACK_FAQ)) {
+        if (lower.includes(key)) {
+          fallbackText = val;
+          break;
+        }
+      }
+
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: String(Date.now() + 1),
+          sender: "ai",
+          text: fallbackText,
+        },
+      ]);
+    } finally {
+      setIsThinking(false);
+    }
   }
 
   return (
@@ -197,38 +266,50 @@ export function FloatingSupportButtons() {
                 </div>
                 <div>
                   <h2 id="nexa-ai-title" className="text-base font-bold leading-tight">
-                    {BRAND.shortName} AI Assistant
+                    {BRAND.shortName} AI Concierge
                   </h2>
                   <p className="text-xs text-muted-foreground flex items-center gap-1.5">
                     <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
-                    Online • Instant Answers
+                    Online • 24/7 Intelligent Shopping
                   </p>
                 </div>
               </div>
 
-              <button
-                type="button"
-                onClick={() => setAiOpen(false)}
-                aria-label={`Close ${BRAND.shortName} AI`}
-                className="grid h-8 w-8 place-items-center rounded-full hover:bg-muted text-muted-foreground"
-              >
-                <X className="h-4 w-4" />
-              </button>
+              <div className="flex items-center gap-1">
+                <button
+                  type="button"
+                  onClick={handleResetChat}
+                  title="Reset conversation"
+                  aria-label="Reset conversation"
+                  className="grid h-8 w-8 place-items-center rounded-full hover:bg-muted text-muted-foreground"
+                >
+                  <RotateCcw className="h-3.5 w-3.5" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setAiOpen(false)}
+                  aria-label={`Close ${BRAND.shortName} AI`}
+                  className="grid h-8 w-8 place-items-center rounded-full hover:bg-muted text-muted-foreground"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
             </div>
 
             {/* Quick action chips */}
             <div className="flex gap-1.5 overflow-x-auto p-3 border-b border-border/50 text-xs">
               {[
                 "How to order on WhatsApp?",
-                "Delivery & Shipping",
-                "Track my order",
-                "Return policy",
+                "Delivery & Shipping times",
+                "What products are on sale?",
+                "Return & refund policy",
               ].map((chip) => (
                 <button
                   key={chip}
                   type="button"
+                  disabled={isThinking}
                   onClick={() => handleSend(chip)}
-                  className="shrink-0 rounded-full border border-gold/30 bg-gold/5 px-2.5 py-1 text-foreground hover:bg-gold/15 transition-colors"
+                  className="shrink-0 rounded-full border border-gold/30 bg-gold/5 px-2.5 py-1 text-foreground hover:bg-gold/15 transition-colors disabled:opacity-50"
                 >
                   {chip}
                 </button>
@@ -236,14 +317,14 @@ export function FloatingSupportButtons() {
             </div>
 
             {/* Chat message list */}
-            <div className="flex-1 overflow-y-auto p-4 space-y-3 min-h-[220px] max-h-[340px]">
+            <div className="flex-1 overflow-y-auto p-4 space-y-3 min-h-[240px] max-h-[360px]">
               {messages.map((m) => (
                 <div
                   key={m.id}
                   className={`flex ${m.sender === "user" ? "justify-end" : "justify-start"}`}
                 >
                   <div
-                    className={`max-w-[85%] rounded-2xl px-3.5 py-2.5 text-sm leading-relaxed ${
+                    className={`max-w-[85%] rounded-2xl px-3.5 py-2.5 text-sm leading-relaxed whitespace-pre-wrap ${
                       m.sender === "user"
                         ? "bg-primary text-primary-foreground rounded-tr-none"
                         : "bg-muted text-foreground border border-border/60 rounded-tl-none"
@@ -253,6 +334,17 @@ export function FloatingSupportButtons() {
                   </div>
                 </div>
               ))}
+
+              {isThinking && (
+                <div className="flex justify-start">
+                  <div className="flex items-center gap-2 rounded-2xl rounded-tl-none border border-border/60 bg-muted px-3.5 py-2.5 text-xs text-muted-foreground">
+                    <Loader2 className="h-3.5 w-3.5 animate-spin text-gold" />
+                    <span>Nexa AI is typing...</span>
+                  </div>
+                </div>
+              )}
+
+              <div ref={chatBottomRef} />
             </div>
 
             {/* Bottom Input & Quick WhatsApp button */}
@@ -260,21 +352,23 @@ export function FloatingSupportButtons() {
               <form
                 onSubmit={(e) => {
                   e.preventDefault();
-                  handleSend();
+                  void handleSend();
                 }}
                 className="flex items-center gap-2"
               >
                 <input
                   type="text"
                   value={input}
+                  disabled={isThinking}
                   onChange={(e) => setInput(e.target.value)}
-                  placeholder="Ask about products, orders, shipping..."
-                  className="flex-1 rounded-xl border border-border bg-muted/50 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gold/40"
+                  placeholder="Ask about products, orders, delivery..."
+                  className="flex-1 rounded-xl border border-border bg-muted/50 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gold/40 disabled:opacity-60"
                 />
                 <button
                   type="submit"
+                  disabled={isThinking || !input.trim()}
                   aria-label="Send message"
-                  className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-gold text-black hover:opacity-90 transition-opacity font-semibold"
+                  className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-gold text-black hover:opacity-90 transition-opacity font-semibold disabled:opacity-50"
                 >
                   <Send className="h-4 w-4" />
                 </button>
