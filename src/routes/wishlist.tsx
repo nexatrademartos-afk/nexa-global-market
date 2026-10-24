@@ -1,4 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { BRAND, brandPageTitle } from "@/lib/brand";
 import { PREVIEW_PRODUCTS } from "@/lib/preview-data";
 import { useLocalList } from "@/lib/local-list";
 import { ProductCard } from "@/components/ProductCard";
@@ -6,8 +7,8 @@ import { EmptyState, PreviewNotice, SkeletonGrid } from "@/components/states";
 
 export const Route = createFileRoute("/wishlist")({
   head: () => ({ meta: [
-    { title: "Wishlist — NEXA Trade Mart" }, { name: "description", content: "Items you saved on NEXA." },
-    { property: "og:title", content: "Wishlist — NEXA Trade Mart" }, { property: "og:description", content: "Your saved NEXA items." },
+    { title: brandPageTitle("Wishlist") }, { name: "description", content: `Items you saved on ${BRAND.shortName}.` },
+    { property: "og:title", content: brandPageTitle("Wishlist") }, { property: "og:description", content: `Your saved ${BRAND.shortName} items.` },
   ] }),
   component: () => <div className="mx-auto max-w-6xl px-4 py-6"><WishlistView /></div>,
 });

@@ -1,13 +1,14 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { BRAND, brandPageTitle } from "@/lib/brand";
 import { Mail, MessageCircle, ShieldCheck, ArrowLeft } from "lucide-react";
 
 export const Route = createFileRoute("/support")({
 head: () => ({
 meta: [
-{ title: "Contact & Support — NEXA GLOBAL MART" },
+{ title: brandPageTitle("Contact & Support") },
 {
 name: "description",
-content: "Find contact and support information for NEXA GLOBAL MART.",
+content: `Find contact and support information for ${BRAND.name}.`,
 },
 ],
 }),
@@ -33,7 +34,7 @@ Back to shopping
       Contact & Support
     </h1>
     <p className="leading-7 text-muted-foreground">
-      Need help while browsing NEXA? This page will be your starting point
+      Need help while browsing {BRAND.shortName}? This page will be your starting point
       for marketplace assistance, account questions and general enquiries.
     </p>
   </header>
@@ -74,7 +75,7 @@ Back to shopping
       <div>
         <h2 className="font-semibold">Account and policy information</h2>
         <p className="mt-2 text-sm leading-6 text-muted-foreground">
-          You can review the policies relevant to using NEXA or open the
+          You can review the policies relevant to using {BRAND.shortName} or open the
           account access page if you want to register or sign in.
         </p>
         <div className="mt-4 flex flex-wrap gap-3">
@@ -90,7 +91,7 @@ Back to shopping
   </section>
 
   <p className="border-t pt-4 text-xs leading-5 text-muted-foreground">
-    NEXA GLOBAL MART is still being developed. This page does not claim
+    {BRAND.name} is still being developed. This page does not claim
     that a live support team or contact channel is available yet.
   </p>
 </main>

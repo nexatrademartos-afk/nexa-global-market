@@ -1,10 +1,11 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { BRAND, brandPageTitle } from "@/lib/brand";
 import { PlannedBadge } from "@/components/states";
 
 export const Route = createFileRoute("/sell")({
   head: () => ({ meta: [
-    { title: "Sell on NEXA — Business Partners" }, { name: "description", content: "Apply to sell your shop or brand on NEXA Trade Mart." },
-    { property: "og:title", content: "Sell on NEXA Trade Mart" }, { property: "og:description", content: "Shops, brands and businesses can apply to become NEXA Business Partners." },
+    { title: `Sell on ${BRAND.shortName} — Business Partners` }, { name: "description", content: `Apply to sell your shop or brand on ${BRAND.name}.` },
+    { property: "og:title", content: `Sell on ${BRAND.name}` }, { property: "og:description", content: `Shops, brands and businesses can apply to become ${BRAND.shortName} Business Partners.` },
   ] }),
   component: Sell,
 });
@@ -12,13 +13,13 @@ export const Route = createFileRoute("/sell")({
 function Sell() {
   const steps = [
     ["Apply", "Submit your business details for review."],
-    ["Get approved", "NEXA verifies and approves business accounts."],
+    ["Get approved", `${BRAND.shortName} verifies and approves business accounts.`],
     ["List products", "Each listing is reviewed before going live."],
-    ["Choose fulfilment", "Own fulfilment, NEXA pickup/delivery, NEXA warehouse or an approved courier."],
+    ["Choose fulfilment", `Own fulfilment, ${BRAND.shortName} pickup/delivery, ${BRAND.shortName} warehouse or an approved courier.`],
   ];
   return (
     <div className="mx-auto max-w-3xl space-y-6 px-4 py-8">
-      <h1 className="text-3xl font-bold">Sell on NEXA</h1>
+      <h1 className="text-3xl font-bold">Sell on {BRAND.shortName}</h1>
       <ol className="space-y-2">
         {steps.map(([t, b], i) => (
           <li key={t} className="surface flex gap-3 p-4">

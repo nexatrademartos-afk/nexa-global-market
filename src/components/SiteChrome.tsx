@@ -1,3 +1,4 @@
+import { BRAND } from "@/lib/brand";
 
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "@tanstack/react-router";
@@ -84,11 +85,11 @@ export function Logo() {
   return (
     <Link
       to="/"
-      aria-label="NEXA GLOBAL MART home"
+      aria-label={`${BRAND.name} home`}
       className="flex shrink-0 items-center"
     >
       <img
-        src="/nexa-global-mart-logo.png"
+        src={BRAND.logoPath}
         alt=""
         aria-hidden="true"
         className="block h-[24px] w-full object-cover object-center sm:h-[28px] lg:h-[32px]"
@@ -118,7 +119,7 @@ export function SiteHeader() {
   return (
     <header className="sticky top-0 z-40 relative overflow-hidden border-b border-gold/30 bg-background shadow-[0_2px_18px_rgba(212,175,55,0.08)]">
       <img
-        src="/nexa-global-mart-logo.png"
+        src={BRAND.logoPath}
         alt=""
         aria-hidden="true"
         className="block h-auto w-full"
@@ -143,7 +144,7 @@ export function SiteHeader() {
               to="/sell"
               activeProps={{ className: "font-semibold text-gold" }}
             >
-              Sell on NEXA
+              Sell on {BRAND.shortName}
             </Link>
             <Link
               to="/account"
@@ -271,7 +272,7 @@ export function SiteHeader() {
               onClick={closeMenu}
               className="rounded-lg px-3 py-3 text-sm hover:bg-secondary"
             >
-              Sell on NEXA
+              Sell on {BRAND.shortName}
             </Link>
             <Link
               to="/wishlist"
@@ -402,7 +403,7 @@ export function WelcomeBanner() {
         <div className="flex items-start justify-between gap-3">
           <div>
             <p className="text-xs font-bold uppercase tracking-[0.2em] text-gold">
-              Welcome to NEXA GLOBAL MART
+              Welcome to {BRAND.name}
             </p>
             <h2
               id="nexa-welcome-title"
@@ -411,7 +412,7 @@ export function WelcomeBanner() {
               Your marketplace. Your choice.
             </h2>
             <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">
-              Discover products and explore NEXA before creating an account.
+              Discover products and explore {BRAND.shortName} before creating an account.
               You can browse freely and sign in whenever you need your account.
             </p>
           </div>
@@ -511,12 +512,12 @@ export function SiteFooter() {
         
         <Link
           to="/"
-          aria-label="NEXA GLOBAL MART home"
+          aria-label={`${BRAND.name} home`}
           className="inline-flex"
         >
           <img
-            src="/nexa-global-mart-logo.png"
-            alt="NEXA GLOBAL MART — Shop More. Save More. Get Rewarded."
+            src={BRAND.logoPath}
+            alt={`${BRAND.name} — ${BRAND.tagline}`}
             className="h-auto w-[230px] max-w-full object-contain"
             loading="lazy"
           />

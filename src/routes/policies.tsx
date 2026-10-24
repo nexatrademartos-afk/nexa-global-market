@@ -5,11 +5,11 @@ import { POLICY_REGISTRY } from "@/lib/policies";
 export const Route = createFileRoute("/policies")({
   head: () => ({
     meta: [
-      { title: "Policy Centre — NEXA GLOBAL MART" },
+      { title: brandPageTitle("Policy Centre") },
       {
         name: "description",
         content:
-          "Review NEXA GLOBAL MART marketplace terms, privacy information and policies.",
+          `Review ${BRAND.name} marketplace terms, privacy information and policies.`,
       },
     ],
   }),

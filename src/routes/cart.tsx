@@ -22,18 +22,18 @@ export const Route = createFileRoute("/cart")({
 
   head: () => ({
     meta: [
-      { title: "Your cart — NEXA GLOBAL MART" },
+      { title: brandPageTitle("Your cart") },
       {
         name: "description",
-        content: "Review your NEXA cart and enquire about ordering on WhatsApp.",
+        content: `Review your ${BRAND.shortName} cart and enquire about ordering on WhatsApp.`,
       },
       {
         property: "og:title",
-        content: "Cart — NEXA GLOBAL MART",
+        content: brandPageTitle("Cart"),
       },
       {
         property: "og:description",
-        content: "Your NEXA shopping cart.",
+        content: `Your ${BRAND.shortName} shopping cart.`,
       },
     ],
   }),
@@ -192,7 +192,7 @@ export function CartView() {
 
             <p className="text-xs text-muted-foreground">
               Delivery charges and final availability must be confirmed
-              with NEXA GLOBAL MART.
+              with {BRAND.name}.
             </p>
 
             <button

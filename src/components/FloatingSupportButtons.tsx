@@ -1,3 +1,4 @@
+import { BRAND } from "@/lib/brand";
 import { useEffect, useState } from "react";
 import { Bot, MessageCircle, Send, X } from "lucide-react";
 import { useLocalList } from "@/lib/local-list";
@@ -23,7 +24,7 @@ const FAQ_RESPONSES: Record<string, string> = {
   shipping: "We offer reliable nationwide and regional shipping. Standard delivery takes 2-5 business days depending on your location.",
   return: "We accept returns on eligible items within 7 days of receipt. Please ensure items are in original condition and packaging.",
   refund: "Refunds are processed within 3-5 business days after inspection of the returned product.",
-  contact: "You can reach NEXA support directly on WhatsApp at +27 68 496 3972 or via email at flejexaglobalmart@gmail.com.",
+  contact: `You can reach ${BRAND.shortName} support directly on WhatsApp at +27 68 496 3972 or via email at flejexaglobalmart@gmail.com.`,
 };
 
 export function FloatingSupportButtons() {
@@ -38,7 +39,7 @@ export function FloatingSupportButtons() {
     {
       id: "welcome",
       sender: "ai",
-      text: "Hello! Welcome to NEXA GLOBAL MART. How can I help you today? Ask me about products, orders, delivery, or WhatsApp ordering.",
+      text: `Hello! Welcome to ${BRAND.name}. How can I help you today? Ask me about products, orders, delivery, or WhatsApp ordering.`,
     },
   ]);
   const [input, setInput] = useState("");
@@ -113,7 +114,7 @@ export function FloatingSupportButtons() {
     <>
       <div
         className="fixed bottom-24 right-3 z-[60] flex flex-col items-center gap-2 sm:bottom-6 sm:right-5"
-        aria-label="NEXA customer support"
+        aria-label={`${BRAND.shortName} customer support`}
       >
         <div className="relative">
           <button
@@ -164,12 +165,12 @@ export function FloatingSupportButtons() {
             setMenuOpen(false);
             setAiOpen(true);
           }}
-          aria-label="Nexa AI assistant"
+          aria-label={`${BRAND.shortName} AI assistant`}
           className="grid h-12 w-12 place-items-center rounded-full border border-gold/40 bg-background text-foreground shadow-lg transition-transform hover:scale-105 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-gold/30"
         >
           <Bot className="h-6 w-6 text-gold" />
         </button>
-        <span className="sr-only">Nexa AI Support Assistant</span>
+        <span className="sr-only">{BRAND.shortName} AI Support Assistant</span>
       </div>
 
       {aiOpen && (
@@ -196,7 +197,7 @@ export function FloatingSupportButtons() {
                 </div>
                 <div>
                   <h2 id="nexa-ai-title" className="text-base font-bold leading-tight">
-                    Nexa AI Assistant
+                    {BRAND.shortName} AI Assistant
                   </h2>
                   <p className="text-xs text-muted-foreground flex items-center gap-1.5">
                     <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
@@ -208,7 +209,7 @@ export function FloatingSupportButtons() {
               <button
                 type="button"
                 onClick={() => setAiOpen(false)}
-                aria-label="Close Nexa AI"
+                aria-label={`Close ${BRAND.shortName} AI`}
                 className="grid h-8 w-8 place-items-center rounded-full hover:bg-muted text-muted-foreground"
               >
                 <X className="h-4 w-4" />

@@ -1,10 +1,11 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { BRAND, brandPageTitle } from "@/lib/brand";
 import { AuthForm } from "@/components/AuthForm";
 
 export const Route = createFileRoute("/sign-up")({
   head: () => ({ meta: [
-    { title: "Create account — NEXA Trade Mart" }, { name: "description", content: "Create a free NEXA customer account." },
-    { property: "og:title", content: "Join NEXA" }, { property: "og:description", content: "Shop More. Save More. Get Rewarded." },
+    { title: brandPageTitle("Create account") }, { name: "description", content: `Create a free ${BRAND.shortName} customer account.` },
+    { property: "og:title", content: `Join ${BRAND.shortName}` }, { property: "og:description", content: BRAND.tagline },
   ] }),
   component: () => (
     <AuthForm title="Create your account" cta="Create customer account" withName

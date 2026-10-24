@@ -1,3 +1,4 @@
+import { BRAND } from "@/lib/brand";
 import { Sparkles } from "lucide-react";
 
 /**
@@ -13,7 +14,7 @@ export function startNexaLoginEvent(): void {
     window.dispatchEvent(
       new CustomEvent("nexa:login-success", {
         detail: {
-          brand: "NEXA GLOBAL MART",
+          brand: BRAND.name,
           timestamp: new Date().toISOString(),
         },
       })
@@ -27,7 +28,7 @@ export function startNexaLoginEvent(): void {
 export function NexaIdentityAnnouncement() {
   return (
     <aside
-      aria-label="NEXA GLOBAL MART announcement"
+      aria-label={`${BRAND.name} announcement`}
       className="relative overflow-hidden rounded-2xl border border-gold/50 bg-gold-soft p-4 sm:p-5"
     >
       <div className="flex items-start gap-3">
@@ -44,7 +45,7 @@ export function NexaIdentityAnnouncement() {
           </p>
 
           <h2 className="mt-1 text-base font-bold sm:text-lg">
-            Welcome to NEXA GLOBAL MART
+            Welcome to {BRAND.name}
           </h2>
 
           <p className="mt-2 text-sm leading-6 text-muted-foreground">

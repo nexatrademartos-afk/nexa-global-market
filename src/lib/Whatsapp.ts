@@ -1,3 +1,4 @@
+import { BRAND } from "@/lib/brand";
 
 import {
   formatStorePrice,
@@ -22,7 +23,7 @@ export function buildProductWhatsAppMessage(
   const safeQuantity = Math.max(1, Math.floor(quantity));
 
   return [
-    "Hello NEXA GLOBAL MART!",
+    `Hello ${BRAND.name}!`,
     "",
     "I'd like to enquire about this product:",
     `Product: ${product.name}`,
@@ -52,7 +53,7 @@ export function buildCartWhatsAppMessage(
 
   if (validItems.length === 0) {
     return [
-      "Hello NEXA GLOBAL MART!",
+      `Hello ${BRAND.name}!`,
       "",
       "I'd like help placing an order.",
       "Please assist me with your available products.",
@@ -66,7 +67,7 @@ export function buildCartWhatsAppMessage(
   );
 
   return [
-    "Hello NEXA GLOBAL MART!",
+    `Hello ${BRAND.name}!`,
     "",
     "I'd like to place an order for these items:",
     "",
@@ -86,7 +87,7 @@ export function buildCartWhatsAppMessage(
 }
 
 export const NEXA_QUICK_MESSAGE = [
-  "Hello NEXA GLOBAL MART!",
+  `Hello ${BRAND.name}!`,
   "",
   "I'd like help with your products and services.",
 ].join("\n");

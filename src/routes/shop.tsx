@@ -1,4 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { BRAND, brandPageTitle } from "@/lib/brand";
 import { useEffect, useMemo, useState } from "react";
 import { ProductCard } from "@/components/ProductCard";
 import { EmptyState, SkeletonGrid } from "@/components/states";
@@ -34,13 +35,13 @@ export const Route = createFileRoute("/shop")({
 
   head: () => ({
     meta: [
-      { title: "Shop — NEXA•Global Mart" },
+      { title: brandPageTitle("Shop") },
       {
         name: "description",
         content:
-          "Browse available products and categories across NEXA•Global Mart.",
+          `Browse available products and categories across ${BRAND.name}.`,
       },
-      { property: "og:title", content: "Shop — NEXA•Global Mart" },
+      { property: "og:title", content: brandPageTitle("Shop") },
       {
         property: "og:description",
         content:
@@ -131,7 +132,7 @@ function Shop() {
     <main className="mx-auto min-h-screen max-w-6xl space-y-5 px-4 py-6">
       <header className="space-y-2">
         <p className="text-xs font-semibold uppercase tracking-[0.2em] text-gold">
-          NEXA•Global Mart
+          {BRAND.name}
         </p>
 
         <h1 className="text-3xl font-bold">Shop</h1>

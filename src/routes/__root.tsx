@@ -1,4 +1,5 @@
 import { FloatingSupportButtons } from "@/components/FloatingSupportButtons";
+import { BRAND } from "@/lib/brand";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   Outlet,
@@ -144,12 +145,12 @@ export const Route =
           content: "#080808",
         },
         {
-          title: "NEXA GLOBAL MART",
+          title: BRAND.name,
         },
         {
           name: "description",
           content:
-            "NEXA GLOBAL MART — Shop More. Save More. Get Rewarded. Discover products, explore opportunities, and shop with confidence.",
+            `${BRAND.name} — ${BRAND.tagline}. Discover products, explore opportunities, and shop with confidence.`,
         },
         {
           property: "og:type",
@@ -157,16 +158,16 @@ export const Route =
         },
         {
           property: "og:site_name",
-          content: "NEXA GLOBAL MART",
+          content: BRAND.name,
         },
         {
           property: "og:title",
-          content: "NEXA GLOBAL MART",
+          content: BRAND.name,
         },
         {
           property: "og:description",
           content:
-            "Shop More. Save More. Get Rewarded. Discover products and global shopping opportunities with NEXA GLOBAL MART.",
+            BRAND.description,
         },
         {
           name: "twitter:card",
@@ -174,7 +175,7 @@ export const Route =
         },
         {
           name: "twitter:title",
-          content: "NEXA GLOBAL MART",
+          content: BRAND.name,
         },
         {
           name: "twitter:description",
@@ -473,7 +474,7 @@ function CustomerQuickNav() {
       />
       <QuickNavItem
         to="/account/settings"
-        label="NEXA Wallet"
+        label={`${BRAND.shortName} Wallet`}
         icon={Wallet}
       />
       <QuickNavItem

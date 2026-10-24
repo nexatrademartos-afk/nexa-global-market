@@ -1,4 +1,5 @@
 import { ProductCard } from "@/components/ProductCard";
+import { BRAND } from "@/lib/brand";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { Search, ChevronRight, ShoppingBag } from "lucide-react";
@@ -51,12 +52,12 @@ export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
       {
-        title: "NEXA GLOBAL MART — Shop More. Save More. Get Rewarded.",
+        title: `${BRAND.name} — ${BRAND.tagline}`,
       },
       {
         name: "description",
         content:
-          "Discover products, explore global shopping opportunities, and shop with confidence at NEXA GLOBAL MART. Shop More. Save More. Get Rewarded.",
+          `Discover products, explore global shopping opportunities, and shop with confidence at ${BRAND.name}. ${BRAND.tagline}`,
       },
       {
         property: "og:type",
@@ -64,11 +65,11 @@ export const Route = createFileRoute("/")({
       },
       {
         property: "og:site_name",
-        content: "NEXA GLOBAL MART",
+        content: BRAND.name,
       },
       {
         property: "og:title",
-        content: "NEXA GLOBAL MART — Shop More. Save More. Get Rewarded.",
+        content: `${BRAND.name} — ${BRAND.tagline}`,
       },
       {
         property: "og:description",
@@ -95,12 +96,12 @@ export const Route = createFileRoute("/")({
       },
       {
         name: "twitter:title",
-        content: "NEXA GLOBAL MART — Shop More. Save More. Get Rewarded.",
+        content: `${BRAND.name} — ${BRAND.tagline}`,
       },
       {
         name: "twitter:description",
         content:
-          "Discover products and global shopping opportunities with NEXA GLOBAL MART.",
+          BRAND.description,
       },
       {
         name: "twitter:image",
@@ -612,8 +613,8 @@ function Home() {
           <h2 className="text-2xl font-bold">Your marketplace. Your choice.</h2>
           <p className="mx-auto mt-3 max-w-xl text-sm leading-6 text-muted-foreground">
             {signedIn
-              ? "Keep exploring products across NEXA•Global Mart."
-              : "Keep browsing as a guest, or create an account to get started with your NEXA journey."}
+              ? `Keep exploring products across ${BRAND.name}.`
+              : `Keep browsing as a guest, or create an account to get started with your ${BRAND.shortName} journey.`}
           </p>
 
           {sessionReady && !signedIn && (
@@ -640,7 +641,7 @@ function Home() {
       <footer className="mt-8 border-t border-gold/30 bg-ink">
         <div className="mx-auto max-w-6xl px-4 py-8">
           <p className="font-display text-xl font-bold">
-            <span className="text-gold">NEXA</span>
+            <span className="text-gold">{BRAND.shortName}</span>
             <span className="text-slate-300">•Global Mart</span>
           </p>
           <p className="mt-2 text-sm text-slate-300">

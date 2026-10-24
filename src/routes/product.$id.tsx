@@ -1,4 +1,5 @@
 import { WhatsAppIcon } from "@/components/WhatsAppIcon";
+import { BRAND, brandPageTitle } from "@/lib/brand";
 import {
   buildProductWhatsAppMessage,
   openWhatsApp,
@@ -38,26 +39,26 @@ head: ({ loaderData }) => {
 if (!loaderData) {
 return {
 meta: [
-{ title: "Product not found — NEXA GLOBAL MART" },
+{ title: brandPageTitle("Product not found") },
 { name: "robots", content: "noindex" },
 ],
 };
 }
 
 const { product, categoryName } = loaderData;
-const title = `${product.name} — NEXA GLOBAL MART`;
+const title = brandPageTitle(product.name);
 
 return {
   meta: [
     { title },
     {
       name: "description",
-      content: `Shop ${product.name} in ${categoryName} at NEXA GLOBAL MART.`,
+      content: `Shop ${product.name} in ${categoryName} at ${BRAND.name}.`,
     },
     { property: "og:title", content: title },
     {
       property: "og:description",
-      content: `Explore ${product.name} at NEXA GLOBAL MART.`,
+      content: `Explore ${product.name} at ${BRAND.name}.`,
     },
   ],
 };
