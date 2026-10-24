@@ -2,7 +2,7 @@ import { WhatsAppIcon } from "@/components/WhatsAppIcon";
 import {
   buildProductWhatsAppMessage,
   openWhatsApp,
-} from "@/lib/whatsapp";
+} from "@/lib/Whatsapp";
 import { createFileRoute, Link, notFound, useNavigate } from "@tanstack/react-router";
 import { Heart, ShoppingCart, Zap } from "lucide-react";
 import { ProductTile } from "@/components/ProductCard";
