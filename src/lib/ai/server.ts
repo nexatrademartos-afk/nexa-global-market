@@ -52,10 +52,25 @@ export const sendAiChatMessage = createServerFn({ method: "POST" })
       ? `${basePrompt}\n\n--- CURRENT LIVE CONTEXT ---\n${data.contextData}`
       : basePrompt;
 
-    return await generateAiResponse({
-      messages: data.messages,
-      systemPrompt,
-      temperature: data.mode === "admin" ? 0.3 : 0.7,
-      maxTokens: data.mode === "admin" ? 1500 : 1000,
-    });
+    try {
+      return await generateAiResponse({
+        messages: data.messages,
+        systemPrompt,
+        temperature: data.mode === "admin" ? 0.3 : 0.7,
+        maxTokens: data.mode === "admin" ? 1500 : 1000,
+      });
+    } catch (err: unknown) {
+      const errMsg = err instanceof Error ? err.message : String(err);
+      return {
+        text:
+          data.mode === "admin"
+            ? `Admin Notice: AI generation hit a service issue (${errMsg}). Offline operational checks remain active.`
+            : "Welcome to Nexa Global Market! Our automated assistant is currently refreshing. You can check our FAQs or contact our team directly on WhatsApp (+27 68 496 3972) for instant support.",
+        provider: "gemini",
+        model: "gemini-3.5-flash",
+        status: "service_unavailable",
+        errorDetails: errMsg,
+        suggestedAction: "whatsapp",
+      };
+    }
   });
