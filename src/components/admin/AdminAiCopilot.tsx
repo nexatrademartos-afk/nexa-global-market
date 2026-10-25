@@ -1,3 +1,4 @@
+import { BRAND } from "@/lib/brand";
 import { useState, useRef, useEffect } from "react";
 import {
   BrainCircuit,
@@ -89,7 +90,7 @@ export function AdminAiCopilot({
     {
       id: "init",
       sender: "ai",
-      text: "NEXA Intelligence Copilot initialized. I have live access to your catalogue, orders, applications, and customer messages. Choose an operational action below or type a query to automate executive tasks.",
+      text: `${BRAND.shortName} Intelligence Copilot initialized. I have live access to your catalogue, orders, applications, and customer messages. Choose an operational action below or type a query to automate executive tasks.`,
       timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
     },
   ]);
@@ -213,7 +214,7 @@ ${unread
   .slice(0, 3)
   .map(
     (msg, i) =>
-      `**Customer:** ${msg.name} (${msg.email})\n**Subject:** ${msg.subject || "Order/General enquiry"}\n**Message:** "${msg.message}"\n\n*Suggested Reply:*\n"Dear ${msg.name},\n\nThank you for reaching out to NEXA GLOBAL MART. We have received your inquiry regarding '${msg.subject || "your message"}' and our operations team is reviewing it immediately. You can also reach us directly on WhatsApp at +27 68 496 3972 with your reference number.\n\nWarm regards,\nNEXA Global Mart Care Team"\n`
+      `**Customer:** ${msg.name} (${msg.email})\n**Subject:** ${msg.subject || "Order/General enquiry"}\n**Message:** "${msg.message}"\n\n*Suggested Reply:*\n"Dear ${msg.name},\n\nThank you for reaching out to ${BRAND.name}. We have received your inquiry regarding '${msg.subject || "your message"}' and our operations team is reviewing it immediately. You can also reach us directly on WhatsApp at +27 68 496 3972 with your reference number.\n\nWarm regards,\n${BRAND.name} Care Team"\n`
   )
   .join("\n---\n")}`;
 
@@ -387,7 +388,7 @@ ${unread
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <h2 className="text-xl font-bold tracking-tight">NEXA Intelligence Copilot</h2>
+              <h2 className="text-xl font-bold tracking-tight">{BRAND.shortName} Intelligence Copilot</h2>
               <span className="rounded-full bg-gold/20 px-2 py-0.5 text-xs font-semibold text-gold">
                 Operations & Executive
               </span>
@@ -549,7 +550,7 @@ ${unread
               }`}
             >
               <div className="flex items-center gap-2 text-[11px] text-muted-foreground mb-1 px-1">
-                <span>{msg.sender === "user" ? "Administrator" : "NEXA Copilot"}</span>
+                <span>{msg.sender === "user" ? "Administrator" : `${BRAND.shortName} Copilot`}</span>
                 <span>•</span>
                 <span>{msg.timestamp}</span>
                 {msg.isDeterministicFallback && (
