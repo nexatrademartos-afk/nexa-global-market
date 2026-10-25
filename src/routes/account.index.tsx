@@ -26,8 +26,9 @@ type CustomerProfile = {
   customer_code: string | null;
 };
 
-type Service = {
+export type Service = {
   title: string;
+  description?: string;
   to:
     | "/shop"
     | "/account/orders"
@@ -44,90 +45,104 @@ type Service = {
   available: boolean;
 };
 
-const SERVICES: Service[] = [
-  {
-    title: "My Orders",
-    to: "/account/orders",
-    icon: Package,
-    available: false,
-  },
-  {
-    title: "NEXA Wallet",
-    to: "/account/settings",
-    icon: Wallet,
-    available: false,
-  },
-  {
-    title: "Q Points",
-    to: "/account/rewards",
-    icon: Gift,
-    available: false,
-  },
-  {
-    title: "Delivery & Tracking",
-    to: "/account/orders",
-    icon: Truck,
-    available: false,
-  },
+export const SERVICES: Service[] = [
   {
     title: "Shop Products",
+    description: "Browse live products and catalogue",
     to: "/shop",
     icon: ShoppingBag,
     available: true,
   },
   {
     title: "My Cart",
+    description: "View and adjust items in your cart",
     to: "/account/cart",
     icon: ShoppingBag,
     available: true,
   },
   {
     title: "Shopping & Savings",
+    description: "Your saved items and wishlist",
     to: "/account/wishlist",
     icon: Heart,
     available: true,
   },
   {
     title: "My Profile",
+    description: "Manage personal details and contact info",
     to: "/account/profile",
     icon: UserRound,
-    available: false,
+    available: true,
   },
   {
     title: "Delivery Addresses",
+    description: "Manage saved shipping addresses",
     to: "/account/addresses",
     icon: MapPin,
+    available: true,
+  },
+  {
+    title: "Security & Privacy",
+    description: "Password reset and account preferences",
+    to: "/account/settings",
+    icon: ShieldCheck,
+    available: true,
+  },
+  {
+    title: "Help & Support",
+    description: "Customer service and WhatsApp enquiries",
+    to: "/account/returns",
+    icon: CircleHelp,
+    available: true,
+  },
+  {
+    title: "Role Applications",
+    description: "Apply for Partner and Delivery roles",
+    to: "/account/applications",
+    icon: Compass,
+    available: true,
+  },
+  {
+    title: "My Orders",
+    description: "Order history and status",
+    to: "/account/orders",
+    icon: Package,
+    available: false,
+  },
+  {
+    title: "Delivery & Tracking",
+    description: "Live courier tracking",
+    to: "/account/orders",
+    icon: Truck,
+    available: false,
+  },
+  {
+    title: "NEXA Wallet",
+    description: "Balance and in-app credits",
+    to: "/account/settings",
+    icon: Wallet,
+    available: false,
+  },
+  {
+    title: "Q Points",
+    description: "Earn and redeem loyalty points",
+    to: "/account/rewards",
+    icon: Gift,
     available: false,
   },
   {
     title: "Coupons",
+    description: "Discounts and promotional vouchers",
     to: "/account/rewards",
     icon: TicketPercent,
     available: false,
   },
   {
     title: "Notifications",
+    description: "Account alerts and order updates",
     to: "/account/notifications",
     icon: Bell,
     available: false,
-  },
-  {
-    title: "Help & Support",
-    to: "/account/returns",
-    icon: CircleHelp,
-    available: false,
-  },
-  {
-    title: "Security & Privacy",
-    to: "/account/settings",
-    icon: ShieldCheck,
-    available: false,
-  },
-  {
-    title: "Discover",
-    to: "/account/applications",
-    icon: Compass,
-    available: true,
   },
 ];
 
@@ -157,8 +172,7 @@ function CustomerDashboard() {
 
     async function loadProfile() {
       try {
-        const { data: authData, error: authError } =
-          await supabase.auth.getUser();
+        const { data: authData, error: authError } = await supabase.auth.getUser();
 
         if (authError) throw authError;
 
@@ -191,9 +205,7 @@ function CustomerDashboard() {
         setCustomerCode(profile?.customer_code?.trim() || "");
       } catch {
         if (active) {
-          setError(
-            "We couldn't load all your account details. Please refresh and try again.",
-          );
+          setError("We couldn't load all your account details. Please refresh and try again.");
         }
       } finally {
         if (active) setLoading(false);
@@ -214,8 +226,10 @@ function CustomerDashboard() {
 
     if (!term) return SERVICES;
 
-    return SERVICES.filter((service) =>
-      service.title.toLowerCase().includes(term),
+    return SERVICES.filter(
+      (service) =>
+        service.title.toLowerCase().includes(term) ||
+        (service.description && service.description.toLowerCase().includes(term)),
     );
   }, [search]);
 
@@ -226,9 +240,7 @@ function CustomerDashboard() {
           <h1 className="font-display text-xl font-bold tracking-tight sm:text-2xl">
             {loading ? "Welcome back" : `Welcome back, ${firstName}`}
           </h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Your account, all in one place.
-          </p>
+          <p className="mt-1 text-sm text-muted-foreground">Your account, all in one place.</p>
         </div>
 
         <span
@@ -243,9 +255,7 @@ function CustomerDashboard() {
       <section className="surface rounded-2xl border border-gold/40 px-3 py-3 sm:px-4">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0 flex-1">
-            <p className="text-xs font-medium text-muted-foreground">
-              Your NEXA Customer ID
-            </p>
+            <p className="text-xs font-medium text-muted-foreground">Your NEXA Customer ID</p>
 
             <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1.5">
               <p className="break-all font-mono text-base font-bold tracking-wide sm:text-lg">
@@ -253,10 +263,7 @@ function CustomerDashboard() {
               </p>
 
               <span className="inline-flex shrink-0 items-center gap-1 text-xs font-semibold text-muted-foreground">
-                <ShieldCheck
-                  className="h-4 w-4 text-gold"
-                  aria-hidden="true"
-                />
+                <ShieldCheck className="h-4 w-4 text-gold" aria-hidden="true" />
                 Signed in
               </span>
             </div>
@@ -284,18 +291,14 @@ function CustomerDashboard() {
             id="customer-id-information"
             className="mt-3 rounded-xl bg-muted/50 p-3 text-sm leading-5 text-muted-foreground"
           >
-            Your NEXA Customer ID identifies your customer account when you
-            contact support. Keep your sign-in details private. Your ID is
-            not your password or a payment credential.
+            Your NEXA Customer ID identifies your customer account when you contact support. Keep
+            your sign-in details private. Your ID is not your password or a payment credential.
           </p>
         )}
       </section>
 
       {error && (
-        <p
-          role="alert"
-          className="rounded-xl border border-red-500/40 p-3 text-sm"
-        >
+        <p role="alert" className="rounded-xl border border-red-500/40 p-3 text-sm text-red-500">
           {error}
         </p>
       )}
@@ -304,8 +307,7 @@ function CustomerDashboard() {
         <div className="flex items-center justify-between gap-3">
           <h2 className="text-base font-bold sm:text-lg">Explore services</h2>
           <span className="text-xs text-muted-foreground">
-            {filteredServices.length}{" "}
-            {filteredServices.length === 1 ? "service" : "services"}
+            {filteredServices.length} {filteredServices.length === 1 ? "service" : "services"}
           </span>
         </div>
 
@@ -324,7 +326,7 @@ function CustomerDashboard() {
             <button
               type="button"
               onClick={() => setSearch("")}
-              className="absolute right-2 top-1/2 grid h-8 w-8 -translate-y-1/2 place-items-center rounded-full"
+              className="absolute right-2 top-1/2 grid h-8 w-8 -translate-y-1/2 place-items-center rounded-full text-muted-foreground hover:text-foreground"
               aria-label="Clear service search"
             >
               <X className="h-4 w-4" />
@@ -344,19 +346,13 @@ function CustomerDashboard() {
 
         {filteredServices.length === 0 && (
           <div className="surface rounded-xl p-5 text-center">
-            <a
-  href="/account/secure-access"
-  className="inline-flex items-center justify-center rounded-md font-semibold transition-colors hover:text-gold hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold"
-  aria-label="Continue to the secure access gateway"
->
-  No matching services
-</a>
+            <h3 className="font-semibold text-foreground">No matching services</h3>
             <p className="mt-1 text-sm text-muted-foreground">
               Try another search term to find a service.
             </p>
             <button
               type="button"
-              className="mt-2 text-sm font-semibold text-gold hover:underline"
+              className="mt-3 inline-flex items-center gap-1 text-sm font-semibold text-gold hover:underline"
               onClick={() => setSearch("")}
             >
               Clear search
@@ -368,13 +364,7 @@ function CustomerDashboard() {
   );
 }
 
-function ServiceCard({
-  service,
-  featured = false,
-}: {
-  service: Service;
-  featured?: boolean;
-}) {
+function ServiceCard({ service, featured = false }: { service: Service; featured?: boolean }) {
   const Icon = service.icon;
 
   return (
@@ -399,9 +389,7 @@ function ServiceCard({
         {!service.available && <PlannedBadge label="Coming soon" />}
       </div>
 
-      <span className="mt-3 text-sm font-bold leading-5 sm:text-base">
-        {service.title}
-      </span>
+      <span className="mt-3 text-sm font-bold leading-5 sm:text-base">{service.title}</span>
 
       <span className="mt-auto flex items-center gap-1 pt-3 text-xs font-semibold text-muted-foreground transition-colors group-hover:text-gold">
         {service.available ? "Open" : "View"}

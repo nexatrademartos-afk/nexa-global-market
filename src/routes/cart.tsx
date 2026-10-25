@@ -1,21 +1,11 @@
-
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useLocalList } from "@/lib/local-list";
-import {
-  fetchStoreCatalogue,
-  formatStorePrice,
-} from "@/lib/preview-data";
-import {
-  EmptyState,
-  PreviewNotice,
-  SkeletonGrid,
-} from "@/components/states";
+import { fetchStoreCatalogue, formatStorePrice, type StoreCatalogue } from "@/lib/preview-data";
+import { EmptyState, PreviewNotice, SkeletonGrid } from "@/components/states";
 import { ProductTile } from "@/components/ProductCard";
 import { WhatsAppIcon } from "@/components/WhatsAppIcon";
-import {
-  buildCartWhatsAppMessage,
-  openWhatsApp,
-} from "@/lib/Whatsapp";
+import { buildCartWhatsAppMessage, openWhatsApp } from "@/lib/Whatsapp";
+import { BRAND, brandPageTitle } from "@/lib/brand";
 
 export const Route = createFileRoute("/cart")({
   loader: () => fetchStoreCatalogue(),
@@ -38,18 +28,22 @@ export const Route = createFileRoute("/cart")({
     ],
   }),
 
-  component: () => (
-    <div className="mx-auto max-w-3xl px-4 py-6">
-      <CartView />
-    </div>
-  ),
+  component: CartPageComponent,
 });
 
-export function CartView() {
+function CartPageComponent() {
   const catalogue = Route.useLoaderData();
+  return (
+    <div className="mx-auto max-w-3xl px-4 py-6">
+      <CartView catalogue={catalogue} />
+    </div>
+  );
+}
+
+export function CartView({ catalogue }: { catalogue?: StoreCatalogue }) {
   const cart = useLocalList("nexa-cart");
 
-  if (!cart.ready) {
+  if (!cart.ready || !catalogue) {
     return <SkeletonGrid count={2} />;
   }
 
@@ -58,18 +52,17 @@ export function CartView() {
 
     if (!product) return [];
 
-    return [{
-      product,
-      quantity: Math.max(1, cart.quantities[id] ?? 1),
-    }];
+    return [
+      {
+        product,
+        quantity: Math.max(1, cart.quantities[id] ?? 1),
+      },
+    ];
   });
 
   const missingCount = cart.ids.length - items.length;
 
-  const total = items.reduce(
-    (sum, item) => sum + item.product.price * item.quantity,
-    0,
-  );
+  const total = items.reduce((sum, item) => sum + item.product.price * item.quantity, 0);
 
   function orderOnWhatsApp() {
     openWhatsApp(buildCartWhatsAppMessage(items));
@@ -80,9 +73,8 @@ export function CartView() {
       <h1 className="text-2xl font-bold">Your Cart</h1>
 
       <PreviewNotice>
-        Your cart is saved on this device. WhatsApp opens a message for
-        you to review and send; it does not automatically place or confirm
-        an order.
+        Your cart is saved on this device. WhatsApp opens a message for you to review and send; it
+        does not automatically place or confirm an order.
       </PreviewNotice>
 
       {items.length === 0 ? (
@@ -90,11 +82,7 @@ export function CartView() {
           title="Your cart is empty"
           body="Browse the shop and add products you'd like to order."
           action={
-            <Link
-              to="/shop"
-              search={{ page: 1 }}
-              className="btn btn-primary"
-            >
+            <Link to="/shop" search={{ page: 1 }} className="btn btn-primary">
               Shop now
             </Link>
           }
@@ -103,15 +91,9 @@ export function CartView() {
         <>
           <ul className="space-y-3">
             {items.map(({ product, quantity }) => (
-              <li
-                key={product.id}
-                className="surface flex items-center gap-3 p-3"
-              >
+              <li key={product.id} className="surface flex items-center gap-3 p-3">
                 <div className="h-16 w-16 shrink-0 overflow-hidden rounded-lg">
-                  <ProductTile
-                    p={product}
-                    className="h-16 w-16"
-                  />
+                  <ProductTile p={product} className="h-16 w-16" />
                 </div>
 
                 <div className="min-w-0 flex-1">
@@ -124,26 +106,19 @@ export function CartView() {
                   <div className="mt-2 flex items-center gap-2">
                     <button
                       type="button"
-                      onClick={() =>
-                        cart.setQuantity(product.id, quantity - 1)
-                      }
+                      onClick={() => cart.setQuantity(product.id, quantity - 1)}
                       aria-label={`Decrease ${product.name} quantity`}
                       className="grid h-8 w-8 place-items-center rounded-md border border-border hover:bg-muted"
                     >
                       −
                     </button>
 
-                    <span className="min-w-5 text-center text-sm font-semibold">
-                      {quantity}
-                    </span>
+                    <span className="min-w-5 text-center text-sm font-semibold">{quantity}</span>
 
                     <button
                       type="button"
                       onClick={() =>
-                        cart.setQuantity(
-                          product.id,
-                          Math.min(quantity + 1, product.stock),
-                        )
+                        cart.setQuantity(product.id, Math.min(quantity + 1, product.stock))
                       }
                       disabled={quantity >= product.stock}
                       aria-label={`Increase ${product.name} quantity`}
@@ -155,9 +130,7 @@ export function CartView() {
                 </div>
 
                 <div className="flex flex-col items-end gap-2">
-                  <p className="text-sm font-bold">
-                    {formatStorePrice(product.price * quantity)}
-                  </p>
+                  <p className="text-sm font-bold">{formatStorePrice(product.price * quantity)}</p>
 
                   <button
                     type="button"
@@ -176,23 +149,19 @@ export function CartView() {
               role="status"
               className="rounded-lg border border-border p-3 text-sm text-muted-foreground"
             >
-              {missingCount} cart item(s) are no longer available in the
-              active catalogue. Remove those items and add current products
-              before ordering.
+              {missingCount} cart item(s) are no longer available in the active catalogue. Remove
+              those items and add current products before ordering.
             </p>
           )}
 
           <div className="surface space-y-3 p-4">
             <div className="flex items-center justify-between gap-3">
               <span className="font-semibold">Estimated item total</span>
-              <span className="text-lg font-bold">
-                {formatStorePrice(total)}
-              </span>
+              <span className="text-lg font-bold">{formatStorePrice(total)}</span>
             </div>
 
             <p className="text-xs text-muted-foreground">
-              Delivery charges and final availability must be confirmed
-              with {BRAND.name}.
+              Delivery charges and final availability must be confirmed with {BRAND.name}.
             </p>
 
             <button
@@ -205,8 +174,8 @@ export function CartView() {
             </button>
 
             <p className="text-center text-xs text-muted-foreground">
-              WhatsApp will open with your items, quantities, and estimated
-              total. You must send the message to contact the business.
+              WhatsApp will open with your items, quantities, and estimated total. You must send the
+              message to contact the business.
             </p>
           </div>
         </>

@@ -14,6 +14,7 @@ import { Route as AboutRouteImport } from './routes/about'
 import { Route as AccountRouteImport } from './routes/account'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as CartRouteImport } from './routes/cart'
+import { Route as ForgotPasswordRouteImport } from './routes/forgot-password'
 import { Route as PoliciesRouteImport } from './routes/policies'
 import { Route as SellRouteImport } from './routes/sell'
 import { Route as ShopRouteImport } from './routes/shop'
@@ -59,6 +60,11 @@ const AdminRoute = AdminRouteImport.update({
 const CartRoute = CartRouteImport.update({
   id: '/cart',
   path: '/cart',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ForgotPasswordRoute = ForgotPasswordRouteImport.update({
+  id: '/forgot-password',
+  path: '/forgot-password',
   getParentRoute: () => rootRouteImport,
 } as any)
 const PoliciesRoute = PoliciesRouteImport.update({
@@ -173,6 +179,7 @@ export interface FileRoutesByFullPath {
   '/account': typeof AccountRouteWithChildren
   '/admin': typeof AdminRoute
   '/cart': typeof CartRoute
+  '/forgot-password': typeof ForgotPasswordRoute
   '/policies': typeof PoliciesRoute
   '/sell': typeof SellRoute
   '/shop': typeof ShopRoute
@@ -200,6 +207,7 @@ export interface FileRoutesByTo {
   '/about': typeof AboutRoute
   '/admin': typeof AdminRoute
   '/cart': typeof CartRoute
+  '/forgot-password': typeof ForgotPasswordRoute
   '/policies': typeof PoliciesRoute
   '/sell': typeof SellRoute
   '/shop': typeof ShopRoute
@@ -229,6 +237,7 @@ export interface FileRoutesById {
   '/account': typeof AccountRouteWithChildren
   '/admin': typeof AdminRoute
   '/cart': typeof CartRoute
+  '/forgot-password': typeof ForgotPasswordRoute
   '/policies': typeof PoliciesRoute
   '/sell': typeof SellRoute
   '/shop': typeof ShopRoute
@@ -259,6 +268,7 @@ export interface FileRouteTypes {
     | '/account'
     | '/admin'
     | '/cart'
+    | '/forgot-password'
     | '/policies'
     | '/sell'
     | '/shop'
@@ -286,6 +296,7 @@ export interface FileRouteTypes {
     | '/about'
     | '/admin'
     | '/cart'
+    | '/forgot-password'
     | '/policies'
     | '/sell'
     | '/shop'
@@ -314,6 +325,7 @@ export interface FileRouteTypes {
     | '/account'
     | '/admin'
     | '/cart'
+    | '/forgot-password'
     | '/policies'
     | '/sell'
     | '/shop'
@@ -343,6 +355,7 @@ export interface RootRouteChildren {
   AccountRoute: typeof AccountRouteWithChildren
   AdminRoute: typeof AdminRoute
   CartRoute: typeof CartRoute
+  ForgotPasswordRoute: typeof ForgotPasswordRoute
   PoliciesRoute: typeof PoliciesRoute
   SellRoute: typeof SellRoute
   ShopRoute: typeof ShopRoute
@@ -389,6 +402,13 @@ declare module '@tanstack/react-router' {
       path: '/cart'
       fullPath: '/cart'
       preLoaderRoute: typeof CartRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/forgot-password': {
+      id: '/forgot-password'
+      path: '/forgot-password'
+      fullPath: '/forgot-password'
+      preLoaderRoute: typeof ForgotPasswordRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/policies': {
@@ -580,6 +600,7 @@ const rootRouteChildren: RootRouteChildren = {
   AccountRoute: AccountRouteWithChildren,
   AdminRoute: AdminRoute,
   CartRoute: CartRoute,
+  ForgotPasswordRoute: ForgotPasswordRoute,
   PoliciesRoute: PoliciesRoute,
   SellRoute: SellRoute,
   ShopRoute: ShopRoute,

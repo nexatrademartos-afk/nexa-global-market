@@ -1,309 +1,262 @@
 import { WhatsAppIcon } from "@/components/WhatsAppIcon";
-import {
-  buildProductWhatsAppMessage,
-  openWhatsApp,
-} from "@/lib/whatsapp";
+import { buildProductWhatsAppMessage, openWhatsApp } from "@/lib/whatsapp";
 import { useState } from "react";
 import { Link, useNavigate } from "@tanstack/react-router";
 import {
-Heart,
-ShoppingCart,
-Zap,
-ChevronDown,
-ChevronUp,
-Minus,
-Plus,
-Trash2,
+  Heart,
+  ShoppingCart,
+  Zap,
+  ChevronDown,
+  ChevronUp,
+  Minus,
+  Plus,
+  Trash2,
 } from "lucide-react";
 import {
-formatStorePrice,
-getStoreImageUrl,
-type PreviewProduct,
-type StoreProduct,
+  formatStorePrice,
+  getStoreImageUrl,
+  type PreviewProduct,
+  type StoreProduct,
 } from "@/lib/preview-data";
 import { useLocalList } from "@/lib/local-list";
 
 type ProductCardItem = PreviewProduct | StoreProduct;
 
 function isStoreProduct(p: ProductCardItem): p is StoreProduct {
-return "slug" in p && "price" in p;
+  return "slug" in p && "price" in p;
 }
 
 function productImage(p: ProductCardItem): string | null {
-return isStoreProduct(p) ? getStoreImageUrl(p.image_url) : null;
+  return isStoreProduct(p) ? getStoreImageUrl(p.image_url) : null;
 }
 
-export function ProductTile({
-p,
-className = "",
-}: {
-p: ProductCardItem;
-className?: string;
-}) {
-const image = productImage(p);
+export function ProductTile({ p, className = "" }: { p: ProductCardItem; className?: string }) {
+  const image = productImage(p);
 
-return (
-<div
-className={"relative grid aspect-square place-items-center overflow-hidden bg-ink text-ink-foreground ${className}"}
->
-{image ? (
-<img
-src={image}
-alt={p.name}
-loading="lazy"
-className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
-/>
-) : (
-<span className="font-display text-4xl font-bold text-gold/80">
-{p.name.slice(0, 2).toUpperCase()}
-</span>
-)}
+  return (
+    <div
+      className={`relative grid aspect-square place-items-center overflow-hidden bg-ink text-ink-foreground ${className}`}
+    >
+      {image ? (
+        <img
+          src={image}
+          alt={p.name}
+          loading="lazy"
+          className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+        />
+      ) : (
+        <span className="font-display text-4xl font-bold text-gold/80">
+          {p.name.slice(0, 2).toUpperCase()}
+        </span>
+      )}
 
-  {!isStoreProduct(p) && (
-    <span className="absolute left-2 top-2 rounded-full bg-background/90 px-2 py-0.5 text-[10px] font-semibold text-foreground">
-      PREVIEW
-    </span>
-  )}
-</div>
-
-);
+      {!isStoreProduct(p) && (
+        <span className="absolute left-2 top-2 rounded-full bg-background/90 px-2 py-0.5 text-[10px] font-semibold text-foreground">
+          PREVIEW
+        </span>
+      )}
+    </div>
+  );
 }
 
-export function ProductCard({
-p,
-categoryName,
-}: {
-p: ProductCardItem;
-categoryName?: string;
-}) {
-const navigate = useNavigate();
-const cart = useLocalList("nexa-cart");
-const wish = useLocalList("nexa-wishlist");
-const [quantityMenuOpen, setQuantityMenuOpen] = useState(false);
+export function ProductCard({ p, categoryName }: { p: ProductCardItem; categoryName?: string }) {
+  const navigate = useNavigate();
+  const cart = useLocalList("nexa-cart");
+  const wish = useLocalList("nexa-wishlist");
+  const [quantityMenuOpen, setQuantityMenuOpen] = useState(false);
 
-const saved = wish.has(p.id);
-const liveProduct = isStoreProduct(p);
-const quantity = cart.quantities[p.id] ?? 0;
-const stock = liveProduct ? Math.max(0, p.stock ?? 0) : 0;
-const canAdd = liveProduct && stock > 0 && quantity < stock;
+  const saved = wish.has(p.id);
+  const liveProduct = isStoreProduct(p);
+  const quantity = cart.quantities[p.id] ?? 0;
+  const stock = liveProduct ? Math.max(0, p.stock ?? 0) : 0;
+  const canAdd = liveProduct && stock > 0 && quantity < stock;
 
-const categoryLabel = liveProduct
-? categoryName || "Marketplace"
-: "${p.category} · ${p.origin}";
+  const categoryLabel = liveProduct ? categoryName || "Marketplace" : `${p.category} · ${p.origin}`;
 
-const priceLabel = liveProduct
-? formatStorePrice(p.price)
-: p.priceLabel;
+  const priceLabel = liveProduct ? formatStorePrice(p.price) : p.priceLabel;
 
-const compareAtPrice =
-liveProduct &&
-p.compare_at_price !== null &&
-p.compare_at_price > p.price
-? formatStorePrice(p.compare_at_price)
-: null;
+  const compareAtPrice =
+    liveProduct && p.compare_at_price !== null && p.compare_at_price > p.price
+      ? formatStorePrice(p.compare_at_price)
+      : null;
 
-function addToCart() {
-if (!canAdd) return;
-cart.add(p.id);
-setQuantityMenuOpen(true);
-}
+  function addToCart() {
+    if (!canAdd) return;
+    cart.add(p.id);
+    setQuantityMenuOpen(true);
+  }
 
-function buyNow() {
-if (!canAdd) return;
-cart.add(p.id);
-void navigate({ to: "/cart" });
-}
+  function buyNow() {
+    if (!canAdd) return;
+    cart.add(p.id);
+    void navigate({ to: "/cart" });
+  }
 
   function orderProductOnWhatsApp() {
-  if (!liveProduct || stock <= 0) return;
+    if (!liveProduct || stock <= 0) return;
 
-  openWhatsApp(
-    buildProductWhatsAppMessage(p, Math.max(1, quantity || 1)),
-  );
+    openWhatsApp(buildProductWhatsAppMessage(p, Math.max(1, quantity || 1)));
   }
-  
-function reduceQuantity() {
-if (quantity <= 1) {
-cart.remove(p.id);
-setQuantityMenuOpen(false);
-return;
-}
-cart.setQuantity(p.id, quantity - 1);
-}
 
-function increaseQuantity() {
-if (canAdd) cart.add(p.id);
-}
+  function reduceQuantity() {
+    if (quantity <= 1) {
+      cart.remove(p.id);
+      setQuantityMenuOpen(false);
+      return;
+    }
+    cart.setQuantity(p.id, quantity - 1);
+  }
 
-function removeFromCart() {
-cart.remove(p.id);
-setQuantityMenuOpen(false);
-}
+  function increaseQuantity() {
+    if (canAdd) cart.add(p.id);
+  }
 
-return (
-<article className="group relative flex min-w-0 flex-col overflow-hidden rounded-xl border border-border bg-card transition-shadow hover:shadow-md">
-<Link
-to="/product/$id"
-params={{ id: p.id }}
-className="block"
-aria-label={"View ${p.name}"}
->
-<ProductTile p={p} />
+  function removeFromCart() {
+    cart.remove(p.id);
+    setQuantityMenuOpen(false);
+  }
 
-    <div className="space-y-1 p-3">
-      <p className="truncate text-[11px] uppercase tracking-wide text-muted-foreground">
-        {categoryLabel}
-      </p>
+  return (
+    <article className="group relative flex min-w-0 flex-col overflow-hidden rounded-xl border border-border bg-card transition-shadow hover:shadow-md">
+      <Link to="/product/$id" params={{ id: p.id }} className="block" aria-label={`View ${p.name}`}>
+        <ProductTile p={p} />
 
-      <h3 className="line-clamp-2 min-h-10 font-sans text-sm font-semibold">
-        {p.name}
-      </h3>
-
-      <div className="flex flex-wrap items-baseline gap-2">
-        <p className="text-sm font-semibold text-foreground">
-          {priceLabel}
-        </p>
-
-        {compareAtPrice && (
-          <p className="text-xs text-muted-foreground line-through">
-            {compareAtPrice}
+        <div className="space-y-1 p-3">
+          <p className="truncate text-[11px] uppercase tracking-wide text-muted-foreground">
+            {categoryLabel}
           </p>
-        )}
-      </div>
-    </div>
-  </Link>
 
-  <button
-    type="button"
-    onClick={() => wish.toggle(p.id)}
-    aria-label={saved ? "Remove from wishlist" : "Save to wishlist"}
-    aria-pressed={saved}
-    className="absolute right-2 top-2 grid h-10 w-10 place-items-center rounded-full border border-border bg-background/90 transition-colors hover:bg-background"
-  >
-    <Heart
-      className={`h-5 w-5 ${
-        saved ? "fill-gold text-gold" : "text-foreground"
-      }`}
-    />
-  </button>
+          <h3 className="line-clamp-2 min-h-10 font-sans text-sm font-semibold">{p.name}</h3>
 
-  {liveProduct ? (
-    <div className="mt-auto space-y-2 p-3 pt-0">
-      <div className="flex min-w-0 items-stretch gap-0">
-        <button
-          type="button"
-          onClick={addToCart}
-          disabled={!canAdd}
-          className="inline-flex min-h-11 min-w-0 flex-1 items-center justify-center gap-1 rounded-l-lg border border-r-0 border-gold/70 bg-background px-1.5 py-2 text-xs font-semibold text-foreground transition-colors hover:bg-gold/10 disabled:cursor-not-allowed disabled:opacity-50"
-          aria-label={
-            !canAdd
-              ? quantity > 0
-                ? "Maximum available stock added"
-                : "Out of stock"
-              : "Add one to cart"
-          }
-        >
-          <ShoppingCart className="h-4 w-4 shrink-0" />
-          <span className="truncate">
-            {quantity > 0 ? "Add More" : "Add to Cart"}
-          </span>
-        </button>
+          <div className="flex flex-wrap items-baseline gap-2">
+            <p className="text-sm font-semibold text-foreground">{priceLabel}</p>
 
-        <button
-          type="button"
-          onClick={() => setQuantityMenuOpen((open) => !open)}
-          aria-label={`Manage cart quantity, currently ${quantity}`}
-          aria-expanded={quantityMenuOpen}
-          className="inline-flex min-h-11 w-[54px] shrink-0 items-center justify-center gap-0.5 rounded-r-lg border border-gold/70 bg-gold/10 px-1 text-sm font-bold text-foreground transition-colors hover:bg-gold/20"
-        >
-          <span>{quantity}</span>
-          {quantityMenuOpen ? (
-            <ChevronUp className="h-3.5 w-3.5" />
-          ) : (
-            <ChevronDown className="h-3.5 w-3.5" />
-          )}
-        </button>
-      </div>
-
-      {quantityMenuOpen && (
-        <div className="space-y-3 rounded-lg border border-border bg-background p-3">
-          <div className="flex items-center justify-between gap-2">
-            <span className="text-xs font-medium text-muted-foreground">
-              Quantity in cart
-            </span>
-            <span className="text-sm font-bold">{quantity}</span>
+            {compareAtPrice && (
+              <p className="text-xs text-muted-foreground line-through">{compareAtPrice}</p>
+            )}
           </div>
+        </div>
+      </Link>
 
-          <div className="flex items-center justify-center gap-4">
+      <button
+        type="button"
+        onClick={() => wish.toggle(p.id)}
+        aria-label={saved ? "Remove from wishlist" : "Save to wishlist"}
+        aria-pressed={saved}
+        className="absolute right-2 top-2 grid h-10 w-10 place-items-center rounded-full border border-border bg-background/90 transition-colors hover:bg-background"
+      >
+        <Heart className={`h-5 w-5 ${saved ? "fill-gold text-gold" : "text-foreground"}`} />
+      </button>
+
+      {liveProduct ? (
+        <div className="mt-auto space-y-2 p-3 pt-0">
+          <div className="flex min-w-0 items-stretch gap-0">
             <button
               type="button"
-              onClick={reduceQuantity}
-              disabled={quantity === 0}
-              aria-label="Reduce quantity"
-              className="grid h-9 w-9 place-items-center rounded-md border border-border hover:bg-muted disabled:opacity-40"
-            >
-              <Minus className="h-4 w-4" />
-            </button>
-
-            <span className="min-w-6 text-center text-base font-bold">
-              {quantity}
-            </span>
-
-            <button
-              type="button"
-              onClick={increaseQuantity}
+              onClick={addToCart}
               disabled={!canAdd}
-              aria-label="Increase quantity"
-              className="grid h-9 w-9 place-items-center rounded-md border border-border hover:bg-muted disabled:cursor-not-allowed disabled:opacity-40"
+              className="inline-flex min-h-11 min-w-0 flex-1 items-center justify-center gap-1 rounded-l-lg border border-r-0 border-gold/70 bg-background px-1.5 py-2 text-xs font-semibold text-foreground transition-colors hover:bg-gold/10 disabled:cursor-not-allowed disabled:opacity-50"
+              aria-label={
+                !canAdd
+                  ? quantity > 0
+                    ? "Maximum available stock added"
+                    : "Out of stock"
+                  : "Add one to cart"
+              }
             >
-              <Plus className="h-4 w-4" />
+              <ShoppingCart className="h-4 w-4 shrink-0" />
+              <span className="truncate">{quantity > 0 ? "Add More" : "Add to Cart"}</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setQuantityMenuOpen((open) => !open)}
+              aria-label={`Manage cart quantity, currently ${quantity}`}
+              aria-expanded={quantityMenuOpen}
+              className="inline-flex min-h-11 w-[54px] shrink-0 items-center justify-center gap-0.5 rounded-r-lg border border-gold/70 bg-gold/10 px-1 text-sm font-bold text-foreground transition-colors hover:bg-gold/20"
+            >
+              <span>{quantity}</span>
+              {quantityMenuOpen ? (
+                <ChevronUp className="h-3.5 w-3.5" />
+              ) : (
+                <ChevronDown className="h-3.5 w-3.5" />
+              )}
             </button>
           </div>
 
-          {quantity >= stock && stock > 0 && (
-            <p className="text-center text-xs text-muted-foreground">
-              All available stock is in your cart.
-            </p>
+          {quantityMenuOpen && (
+            <div className="space-y-3 rounded-lg border border-border bg-background p-3">
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-xs font-medium text-muted-foreground">Quantity in cart</span>
+                <span className="text-sm font-bold">{quantity}</span>
+              </div>
+
+              <div className="flex items-center justify-center gap-4">
+                <button
+                  type="button"
+                  onClick={reduceQuantity}
+                  disabled={quantity === 0}
+                  aria-label="Reduce quantity"
+                  className="grid h-9 w-9 place-items-center rounded-md border border-border hover:bg-muted disabled:opacity-40"
+                >
+                  <Minus className="h-4 w-4" />
+                </button>
+
+                <span className="min-w-6 text-center text-base font-bold">{quantity}</span>
+
+                <button
+                  type="button"
+                  onClick={increaseQuantity}
+                  disabled={!canAdd}
+                  aria-label="Increase quantity"
+                  className="grid h-9 w-9 place-items-center rounded-md border border-border hover:bg-muted disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  <Plus className="h-4 w-4" />
+                </button>
+              </div>
+
+              {quantity >= stock && stock > 0 && (
+                <p className="text-center text-xs text-muted-foreground">
+                  All available stock is in your cart.
+                </p>
+              )}
+
+              <button
+                type="button"
+                onClick={removeFromCart}
+                className="inline-flex min-h-9 w-full items-center justify-center gap-2 rounded-md border border-destructive/30 px-3 py-2 text-xs font-semibold text-destructive transition-colors hover:bg-destructive/5"
+              >
+                <Trash2 className="h-4 w-4" />
+                Remove from Cart
+              </button>
+            </div>
           )}
 
           <button
             type="button"
-            onClick={removeFromCart}
-            className="inline-flex min-h-9 w-full items-center justify-center gap-2 rounded-md border border-destructive/30 px-3 py-2 text-xs font-semibold text-destructive transition-colors hover:bg-destructive/5"
+            onClick={buyNow}
+            disabled={!canAdd}
+            className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-lg bg-gold px-2 py-2 text-xs font-bold text-black transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
           >
-            <Trash2 className="h-4 w-4" />
-            Remove from Cart
+            <Zap className="h-4 w-4 shrink-0" />
+            {stock <= 0 ? "Out of Stock" : "Buy Now"}
+          </button>
+
+          <button
+            type="button"
+            onClick={orderProductOnWhatsApp}
+            disabled={!liveProduct || stock <= 0}
+            className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-lg bg-[#25D366] px-3 py-2 text-sm font-bold text-white transition-colors hover:bg-[#1DA851] disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            <WhatsAppIcon className="h-5 w-5 shrink-0" />
+            WhatsApp
           </button>
         </div>
+      ) : (
+        <p className="px-3 pb-3 text-xs text-muted-foreground">
+          Preview item — not available to purchase.
+        </p>
       )}
-
-      <button
-        type="button"
-        onClick={buyNow}
-        disabled={!canAdd}
-        className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-lg bg-gold px-2 py-2 text-xs font-bold text-black transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
-      >
-        <Zap className="h-4 w-4 shrink-0" />
-        {stock <= 0 ? "Out of Stock" : "Buy Now"}
-      </button>
-
-      <button
-  type="button"
-  onClick={orderProductOnWhatsApp}
-  disabled={!liveProduct || stock <= 0}
-  className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-lg bg-[#25D366] px-3 py-2 text-sm font-bold text-white transition-colors hover:bg-[#1DA851] disabled:cursor-not-allowed disabled:opacity-50"
->
-  <WhatsAppIcon className="h-5 w-5 shrink-0" />
-  WhatsApp
-</button>
-    </div>
-  ) : (
-    <p className="px-3 pb-3 text-xs text-muted-foreground">
-      Preview item — not available to purchase.
-    </p>
-  )}
-</article>
-
-);
+    </article>
+  );
 }
-
