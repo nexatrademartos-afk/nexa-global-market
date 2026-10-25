@@ -14,6 +14,36 @@ export type Database = {
   }
   public: {
     Tables: {
+      wallets: {
+  Row: {
+    created_at: string
+    currency: string
+    id: string
+    status: string
+    updated_at: string
+    user_id: string
+    wallet_number: string
+  }
+  Insert: {
+    created_at?: string
+    currency?: string
+    id?: string
+    status?: string
+    updated_at?: string
+    user_id: string
+    wallet_number?: string
+  }
+  Update: {
+    created_at?: string
+    currency?: string
+    id?: string
+    status?: string
+    updated_at?: string
+    user_id?: string
+    wallet_number?: string
+  }
+  Relationships: []
+      }
       banners: {
         Row: {
           created_at: string
@@ -779,7 +809,17 @@ export type Database = {
           show_banner: boolean
         }[]
       }
-      review_role_application: {
+      register_my_wallet: {
+  Args: Record<PropertyKey, never>
+  Returns: {
+    wallet_id: string
+    wallet_number: string
+    currency: string
+    status: string
+    created_at: string
+  }[]
+  }
+  review_role_application: {
         Args: {
           p_application_id: string
           p_decision: string
