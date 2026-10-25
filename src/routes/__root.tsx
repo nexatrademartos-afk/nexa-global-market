@@ -427,7 +427,7 @@ function CustomerQuickNav() {
       />
             <QuickNavItem
         to="/account/wallet"
-        label="Identity Brand Wallet"
+        label="wallet"
         icon={Wallet}
       />
       <QuickNavItem
