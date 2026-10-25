@@ -391,7 +391,7 @@ export function FloatingSupportButtons() {
             {isThinking && (
               <div className="flex items-center gap-2 self-start rounded-2xl border border-border/80 bg-muted/60 px-3.5 py-2 text-muted-foreground">
                 <Loader2 className="h-3.5 w-3.5 animate-spin text-gold" />
-                <span className="text-[11px]">Nexa Concierge is thinking...</span>
+                <span className="text-[11px]">{BRAND.shortName} Concierge is thinking...</span>
               </div>
             )}
             <div ref={messagesEndRef} />
