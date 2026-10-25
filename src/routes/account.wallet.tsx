@@ -1,4 +1,5 @@
 
+import { useCallback, useEffect, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import {
   ArrowLeftRight,
@@ -19,7 +20,16 @@ import {
   CircleHelp,
 } from "lucide-react";
 import { AccountPage, accountHead } from "@/components/AccountPage";
-import { NotConnected, PlannedBadge } from "@/components/states";
+import { PlannedBadge } from "@/components/states";
+import { supabase } from "@/integrations/supabase/client";
+
+type CustomerWallet = {
+  id: string;
+  wallet_number: string;
+  currency: string;
+  status: string;
+  created_at: string;
+};
 
 export const Route = createFileRoute("/account/wallet")({
   head: accountHead(
@@ -34,53 +44,149 @@ const navigationItems = [
     label: "Transaction history",
     description: "Deposits, payments and adjustments",
     icon: History,
-    planned: true,
   },
   {
     label: "Purchases & payments",
     description: "Wallet payments linked to orders",
     icon: ShoppingBag,
-    planned: true,
   },
   {
     label: "Rewards & Q Points",
     description: "View rewards separately from cash",
     icon: Gift,
-    planned: true,
   },
   {
     label: "Referrals & commissions",
     description: "Pending and approved rewards",
     icon: Users,
-    planned: true,
   },
   {
-    label: "NEXA transfers",
+    label: "Wallet transfers",
     description: "Designed now; activation requires approval",
     icon: ArrowLeftRight,
-    planned: true,
   },
   {
     label: "Deposits & withdrawals",
     description: "Deposit reconciliation and future payouts",
     icon: Banknote,
-    planned: true,
   },
   {
     label: "Refunds & reversals",
     description: "Refund and correction records",
     icon: ReceiptText,
-    planned: true,
   },
   {
     label: "Wallet settings & security",
     description: "PIN setup, recovery and security controls",
     icon: Settings,
-    planned: true,
   },
 ];
 
 function WalletPage() {
+  const [wallet, setWallet] = useState<CustomerWallet | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [registering, setRegistering] = useState(false);
+  const [error, setError] = useState("");
+  const [notice, setNotice] = useState("");
+  const [signedIn, setSignedIn] = useState(false);
+
+  const loadWallet = useCallback(async () => {
+    setLoading(true);
+    setError("");
+    setNotice("");
+
+    try {
+      const { data: authData, error: authError } =
+        await supabase.auth.getUser();
+
+      if (authError) throw authError;
+
+      if (!authData.user) {
+        setSignedIn(false);
+        setWallet(null);
+        return;
+      }
+
+      setSignedIn(true);
+
+      const { data, error: walletError } = await supabase
+        .from("wallets")
+        .select("id, wallet_number, currency, status, created_at")
+        .maybeSingle();
+
+      if (walletError) throw walletError;
+
+      setWallet(data);
+    } catch (err) {
+      console.error("Wallet loading failed:", err);
+      setError(
+        "We couldn't load your wallet right now. Please try again.",
+      );
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    void loadWallet();
+  }, [loadWallet]);
+
+  async function registerWallet() {
+    if (registering) return;
+
+    setRegistering(true);
+    setError("");
+    setNotice("");
+
+    try {
+      const { data: authData, error: authError } =
+        await supabase.auth.getUser();
+
+      if (authError) throw authError;
+
+      if (!authData.user) {
+        setSignedIn(false);
+        setError("Please sign in before registering for a wallet.");
+        return;
+      }
+
+      setSignedIn(true);
+
+      const { error: registerError } = await supabase.rpc(
+        "register_my_wallet",
+      );
+
+      if (registerError) throw registerError;
+
+      const { data, error: walletError } = await supabase
+        .from("wallets")
+        .select("id, wallet_number, currency, status, created_at")
+        .maybeSingle();
+
+      if (walletError) throw walletError;
+
+      if (!data) {
+        throw new Error(
+          "Registration returned successfully, but the wallet could not be loaded.",
+        );
+      }
+
+      setWallet(data);
+      setNotice("Your wallet has been registered successfully.");
+    } catch (err) {
+      console.error("Wallet registration failed:", err);
+      setError(
+        "We couldn't register your wallet. Please try again. If the problem continues, the database function or permissions may need checking.",
+      );
+    } finally {
+      setRegistering(false);
+    }
+  }
+
+  const statusLabel = wallet
+    ? wallet.status.replaceAll("_", " ")
+    : "Not registered";
+
   return (
     <AccountPage
       title="Identity Brand Wallet"
@@ -96,24 +202,50 @@ function WalletPage() {
             Back to account
           </Link>
 
-          <span className="inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium text-muted-foreground">
+          <span className="inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium capitalize text-muted-foreground">
             <ShieldCheck className="h-4 w-4" />
-            Setup required
+            {loading ? "Checking wallet" : statusLabel}
           </span>
         </div>
 
+        {error && (
+          <div
+            role="alert"
+            className="rounded-xl border border-destructive/40 p-3 text-sm text-destructive"
+          >
+            <p>{error}</p>
+            <button
+              type="button"
+              onClick={() => void loadWallet()}
+              className="mt-2 font-semibold underline"
+            >
+              Try again
+            </button>
+          </div>
+        )}
+
+        {notice && (
+          <p
+            role="status"
+            className="rounded-xl border border-gold/40 p-3 text-sm"
+          >
+            {notice}
+          </p>
+        )}
+
         <section className="overflow-hidden rounded-3xl border border-gold/30 bg-card p-5 shadow-sm sm:p-7">
           <div className="flex items-start justify-between gap-3">
-            <div>
+            <div className="min-w-0">
               <p className="text-sm text-muted-foreground">
                 Available wallet balance
               </p>
               <p className="mt-3 text-3xl font-bold tracking-tight sm:text-4xl">
-                Not connected
+                Not available yet
               </p>
               <p className="mt-2 max-w-md text-sm leading-relaxed text-muted-foreground">
-                Your real ZAR balance will appear here after wallet
-                registration and secure backend connection.
+                Your cash balance will appear once the secure wallet ledger
+                is implemented. We will not display a guessed or placeholder
+                balance.
               </p>
             </div>
 
@@ -122,11 +254,38 @@ function WalletPage() {
             </span>
           </div>
 
+          {wallet && (
+            <div className="mt-5 grid gap-3 rounded-2xl border p-4 sm:grid-cols-2">
+              <div className="min-w-0">
+                <p className="text-xs text-muted-foreground">Wallet number</p>
+                <p className="mt-1 break-all font-mono text-sm font-semibold">
+                  {wallet.wallet_number}
+                </p>
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">Currency</p>
+                <p className="mt-1 text-sm font-semibold">{wallet.currency}</p>
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">Wallet status</p>
+                <p className="mt-1 text-sm font-semibold capitalize">
+                  {wallet.status.replaceAll("_", " ")}
+                </p>
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">Registered</p>
+                <p className="mt-1 text-sm font-semibold">
+                  {new Date(wallet.created_at).toLocaleDateString()}
+                </p>
+              </div>
+            </div>
+          )}
+
           <div className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-3">
             <WalletAction
               icon={ArrowDownToLine}
               label="Add money"
-              detail="Provider approval required"
+              detail="Not activated"
             />
             <WalletAction
               icon={ArrowLeftRight}
@@ -144,8 +303,9 @@ function WalletPage() {
             <div className="flex items-start gap-2">
               <Clock3 className="mt-0.5 h-4 w-4 shrink-0" />
               <p>
-                This is the wallet interface preview. No wallet balance,
-                deposit, transfer or payout is connected or simulated.
+                Wallet enrollment is connected separately from the cash
+                ledger. Deposits, transfers and payouts remain disabled until
+                their secure flows are approved.
               </p>
             </div>
           </div>
@@ -183,24 +343,56 @@ function WalletPage() {
             <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl border border-gold/40 bg-gold/10 text-gold">
               <ShieldCheck className="h-5 w-5" />
             </span>
+
             <div className="min-w-0 flex-1">
-              <h2 className="font-bold">Register for your wallet</h2>
+              <h2 className="font-bold">
+                {wallet ? "Your wallet is registered" : "Register for your wallet"}
+              </h2>
+
               <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
-                Wallet enrollment will be optional and linked to your signed-in
-                customer account. Your website account does not automatically
-                create a wallet.
+                {wallet
+                  ? "Your wallet is linked to your signed-in customer account."
+                  : "Wallet enrollment is optional and linked securely to your signed-in customer account. Your website account does not automatically create a wallet."}
               </p>
-              <ul className="mt-3 space-y-2 text-sm text-muted-foreground">
-                <li>• South African rand (ZAR) for the first release</li>
-                <li>• Six-digit wallet PIN with secure recovery</li>
-                <li>• Minimum necessary verification</li>
-                <li>• Unique wallet account number</li>
-              </ul>
-              <div className="mt-4 flex flex-wrap items-center gap-2">
-                <PlannedBadge label="Enrollment not connected" />
-                <span className="text-xs text-muted-foreground">
-                  Registration becomes available after the approved flow is built.
-                </span>
+
+              {!wallet && (
+                <ul className="mt-3 space-y-2 text-sm text-muted-foreground">
+                  <li>• South African rand (ZAR) for the first release</li>
+                  <li>• Unique wallet account number</li>
+                  <li>• Secure six-digit PIN setup will be a separate step</li>
+                  <li>• Verification as required before restricted features activate</li>
+                </ul>
+              )}
+
+              <div className="mt-4 flex flex-wrap items-center gap-3">
+                {loading ? (
+                  <span className="text-sm text-muted-foreground">
+                    Checking your account…
+                  </span>
+                ) : wallet ? (
+                  <span className="inline-flex items-center gap-2 rounded-full border border-gold/40 px-3 py-1.5 text-sm font-medium capitalize">
+                    <ShieldCheck className="h-4 w-4 text-gold" />
+                    {wallet.status.replaceAll("_", " ")}
+                  </span>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => void registerWallet()}
+                    disabled={registering || !signedIn}
+                    className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-gold px-5 py-2.5 text-sm font-bold text-background transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    <Wallet className="h-4 w-4" />
+                    {registering
+                      ? "Registering wallet…"
+                      : "Register for my wallet"}
+                  </button>
+                )}
+
+                {!loading && !signedIn && (
+                  <p className="text-xs text-muted-foreground">
+                    Sign in to register for a wallet.
+                  </p>
+                )}
               </div>
             </div>
           </div>
@@ -233,7 +425,7 @@ function WalletPage() {
                       {item.description}
                     </p>
                     <span className="mt-2 inline-block">
-                      <PlannedBadge label="Planned" />
+                      <PlannedBadge label="Not activated" />
                     </span>
                   </div>
                 </div>
@@ -248,8 +440,8 @@ function WalletPage() {
             <div>
               <h2 className="font-semibold">Need help?</h2>
               <p className="mt-1 text-sm text-muted-foreground">
-                Wallet support and transaction investigations will be available
-                when the wallet service is connected.
+                Contact support if wallet registration fails or you need help
+                with your account.
               </p>
               <Link
                 to="/account/returns"
@@ -277,7 +469,7 @@ function WalletAction({
   return (
     <div
       aria-disabled="true"
-      className="flex min-h-24 items-center gap-3 rounded-2xl border p-4 opacity-75"
+      className="flex min-h-24 items-center gap-3 rounded-2xl border p-4 opacity-60"
     >
       <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-gold/30 text-gold">
         <Icon className="h-5 w-5" />
@@ -311,5 +503,4 @@ function SummaryCard({
       </p>
     </section>
   );
-      }
-          
+}
