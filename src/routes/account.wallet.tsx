@@ -93,6 +93,9 @@ function WalletPage() {
   const [pin, setPin] = useState("");
   const [pinConfirmation, setPinConfirmation] = useState("");
   const [savingPin, setSavingPin] = useState(false);
+  const [walletUnlocked, setWalletUnlocked] = useState(false);
+const [unlockPin, setUnlockPin] = useState("");
+const [unlocking, setUnlocking] = useState(false);
 
   const checkPinStatus = useCallback(async () => {
     setPinStatusLoading(true);
@@ -237,8 +240,9 @@ function WalletPage() {
       }
 
       setPinIsSet(true);
-      setPin("");
-      setPinConfirmation("");
+setWalletUnlocked(true);
+setPin("");
+setPinConfirmation("");
       setNotice("Your six-digit wallet PIN has been set securely.");
     } catch (err) {
       console.error("Wallet PIN setup failed:", err);
@@ -252,11 +256,162 @@ function WalletPage() {
     }
   }
 
-  const statusLabel = wallet
-    ? wallet.status.replaceAll("_", " ")
-    : "Not registered";
+  async function unlockWallet() {
+  setError("");
 
+  if (!/^\d{6}$/.test(unlockPin)) {
+    setError("Enter your six-digit wallet PIN.");
+    return;
+  }
+
+  setUnlocking(true);
+
+  try {
+    const { data, error: verifyError } =
+      await supabase.functions.invoke("wallet-pin", {
+        body: {
+          action: "verify",
+          pin: unlockPin,
+        },
+      });
+
+    if (verifyError) throw verifyError;
+
+    if (data?.verified !== true) {
+      throw new Error(
+        data?.error || "We couldn't verify your wallet PIN.",
+      );
+    }
+
+    setUnlockPin("");
+    setWalletUnlocked(true);
+    setError("");
+  } catch (err) {
+    console.error("Wallet PIN verification failed:", err);
+
+    setError(
+      err instanceof Error
+        ? err.message
+        : "PIN verification failed. Please try again.",
+    );
+
+    setUnlockPin("");
+  } finally {
+    setUnlocking(false);
+  }
+  }
+
+  const statusLabel = wallet
+  ? wallet.status.replaceAll("_", " ")
+  : "Not registered";
+
+if (loading) {
   return (
+    <AccountPage
+      title="Identity Brand Wallet"
+      intro="Checking your wallet security."
+    >
+      <div className="rounded-2xl border p-6 text-sm text-muted-foreground">
+        Checking your wallet and security status…
+      </div>
+    </AccountPage>
+  );
+}
+
+if (wallet && pinIsSet !== false && !walletUnlocked) {
+  return (
+    <AccountPage
+      title="Unlock Your Wallet"
+      intro="Enter your six-digit wallet PIN to access your wallet."
+    >
+      <section className="mx-auto max-w-md rounded-3xl border border-gold/30 bg-card p-6 shadow-sm sm:p-8">
+        <div className="mx-auto grid h-14 w-14 place-items-center rounded-2xl border border-gold/40 bg-gold/10 text-gold">
+          <LockKeyhole className="h-7 w-7" />
+        </div>
+
+        <h2 className="mt-5 text-center text-xl font-bold">
+          Wallet locked
+        </h2>
+
+        <p className="mt-2 text-center text-sm leading-relaxed text-muted-foreground">
+          Your wallet details are protected. Verify your PIN before
+          continuing.
+        </p>
+
+        {error && (
+          <div
+            role="alert"
+            className="mt-4 rounded-xl border border-destructive/40 p-3 text-sm text-destructive"
+          >
+            {error}
+          </div>
+        )}
+
+        {pinIsSet === true ? (
+          <form
+            className="mt-5 space-y-4"
+            onSubmit={(event) => {
+              event.preventDefault();
+              void unlockWallet();
+            }}
+          >
+            <label className="block text-sm font-medium">
+              Six-digit wallet PIN
+              <input
+                type="password"
+                inputMode="numeric"
+                autoComplete="off"
+                pattern="[0-9]{6}"
+                maxLength={6}
+                value={unlockPin}
+                onChange={(event) =>
+                  setUnlockPin(
+                    event.target.value.replace(/\D/g, "").slice(0, 6),
+                  )
+                }
+                className="mt-2 min-h-12 w-full rounded-xl border bg-background px-4 text-center text-xl tracking-[0.5em]"
+                aria-label="Enter six-digit wallet PIN"
+                required
+                autoFocus
+              />
+            </label>
+
+            <button
+              type="submit"
+              disabled={unlocking || unlockPin.length !== 6}
+              className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-gold px-5 py-3 text-sm font-bold text-background transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              <LockKeyhole className="h-4 w-4" />
+              {unlocking ? "Verifying PIN…" : "Unlock wallet"}
+            </button>
+          </form>
+        ) : (
+          <div className="mt-5">
+            <p className="text-sm text-muted-foreground">
+              We couldn't confirm your PIN status. Your wallet remains
+              locked until its security status can be checked.
+            </p>
+
+            <button
+              type="button"
+              onClick={() => void checkPinStatus()}
+              disabled={pinStatusLoading}
+              className="mt-4 min-h-11 w-full rounded-xl border px-4 py-2 text-sm font-semibold disabled:opacity-50"
+            >
+              {pinStatusLoading ? "Checking…" : "Check security again"}
+            </button>
+          </div>
+        )}
+
+        <p className="mt-4 text-center text-xs text-muted-foreground">
+          Never share your wallet PIN with anyone.
+        </p>
+      </section>
+    </AccountPage>
+  );
+}
+
+return (
     <AccountPage
       title="Identity Brand Wallet"
       intro="Your wallet overview, rewards and financial activity."
