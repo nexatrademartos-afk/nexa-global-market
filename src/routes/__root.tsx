@@ -425,9 +425,9 @@ function CustomerQuickNav() {
         label="Dashboard"
         icon={LayoutGrid}
       />
-      <QuickNavItem
-        to="/account/settings"
-        label={`${BRAND.shortName} Wallet`}
+            <QuickNavItem
+        to="/account/wallet"
+        label="Identity Brand Wallet"
         icon={Wallet}
       />
       <QuickNavItem
@@ -449,12 +449,13 @@ function QuickNavItem({
   label,
   icon: Icon,
 }: {
-  to:
+    to:
     | "/shop"
     | "/account"
     | "/account/orders"
     | "/account/settings"
-    | "/account/profile";
+    | "/account/profile"
+    | "/account/wallet";
   label: string;
   icon: typeof ShoppingCart;
 }) {
