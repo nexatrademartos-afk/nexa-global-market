@@ -32,7 +32,7 @@ describe("Customer dashboard services configuration", () => {
     expect(orders?.available).toBe(false);
 
     const wallet = SERVICES.find((s) => s.title === "NEXA Wallet");
-    expect(wallet?.available).toBe(false);
+    expect(wallet?.available).toBe(true);
 
     const coupons = SERVICES.find((s) => s.title === "Coupons");
     expect(coupons?.available).toBe(false);
