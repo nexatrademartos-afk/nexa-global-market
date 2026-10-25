@@ -33,6 +33,7 @@ import { Route as AccountReturnsRouteImport } from './routes/account.returns'
 import { Route as AccountRewardsRouteImport } from './routes/account.rewards'
 import { Route as AccountSecureAccessRouteImport } from './routes/account.secure-access'
 import { Route as AccountSettingsRouteImport } from './routes/account.settings'
+import { Route as AccountWalletRouteImport } from './routes/account.wallet'
 import { Route as AccountWishlistRouteImport } from './routes/account.wishlist'
 import { Route as ProductIdRouteImport } from './routes/product.$id'
 import { Route as WorkspaceRoleRouteImport } from './routes/workspace.$role'
@@ -157,6 +158,11 @@ const AccountSettingsRoute = AccountSettingsRouteImport.update({
   path: '/settings',
   getParentRoute: () => AccountRoute,
 } as any)
+const AccountWalletRoute = AccountWalletRouteImport.update({
+  id: '/wallet',
+  path: '/wallet',
+  getParentRoute: () => AccountRoute,
+} as any)
 const AccountWishlistRoute = AccountWishlistRouteImport.update({
   id: '/wishlist',
   path: '/wishlist',
@@ -197,6 +203,7 @@ export interface FileRoutesByFullPath {
   '/account/rewards': typeof AccountRewardsRoute
   '/account/secure-access': typeof AccountSecureAccessRoute
   '/account/settings': typeof AccountSettingsRoute
+  '/account/wallet': typeof AccountWalletRoute
   '/account/wishlist': typeof AccountWishlistRoute
   '/product/$id': typeof ProductIdRoute
   '/workspace/$role': typeof WorkspaceRoleRoute
@@ -225,6 +232,7 @@ export interface FileRoutesByTo {
   '/account/rewards': typeof AccountRewardsRoute
   '/account/secure-access': typeof AccountSecureAccessRoute
   '/account/settings': typeof AccountSettingsRoute
+  '/account/wallet': typeof AccountWalletRoute
   '/account/wishlist': typeof AccountWishlistRoute
   '/product/$id': typeof ProductIdRoute
   '/workspace/$role': typeof WorkspaceRoleRoute
@@ -255,6 +263,7 @@ export interface FileRoutesById {
   '/account/rewards': typeof AccountRewardsRoute
   '/account/secure-access': typeof AccountSecureAccessRoute
   '/account/settings': typeof AccountSettingsRoute
+  '/account/wallet': typeof AccountWalletRoute
   '/account/wishlist': typeof AccountWishlistRoute
   '/product/$id': typeof ProductIdRoute
   '/workspace/$role': typeof WorkspaceRoleRoute
@@ -286,6 +295,7 @@ export interface FileRouteTypes {
     | '/account/rewards'
     | '/account/secure-access'
     | '/account/settings'
+    | '/account/wallet'
     | '/account/wishlist'
     | '/product/$id'
     | '/workspace/$role'
@@ -314,6 +324,7 @@ export interface FileRouteTypes {
     | '/account/rewards'
     | '/account/secure-access'
     | '/account/settings'
+    | '/account/wallet'
     | '/account/wishlist'
     | '/product/$id'
     | '/workspace/$role'
@@ -343,6 +354,7 @@ export interface FileRouteTypes {
     | '/account/rewards'
     | '/account/secure-access'
     | '/account/settings'
+    | '/account/wallet'
     | '/account/wishlist'
     | '/product/$id'
     | '/workspace/$role'
@@ -537,6 +549,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AccountSettingsRouteImport
       parentRoute: typeof AccountRoute
     }
+    '/account/wallet': {
+      id: '/account/wallet'
+      path: '/wallet'
+      fullPath: '/account/wallet'
+      preLoaderRoute: typeof AccountWalletRouteImport
+      parentRoute: typeof AccountRoute
+    }
     '/account/wishlist': {
       id: '/account/wishlist'
       path: '/wishlist'
@@ -572,6 +591,7 @@ interface AccountRouteChildren {
   AccountRewardsRoute: typeof AccountRewardsRoute
   AccountSecureAccessRoute: typeof AccountSecureAccessRoute
   AccountSettingsRoute: typeof AccountSettingsRoute
+  AccountWalletRoute: typeof AccountWalletRoute
   AccountWishlistRoute: typeof AccountWishlistRoute
   AccountIndexRoute: typeof AccountIndexRoute
 }
@@ -587,6 +607,7 @@ const AccountRouteChildren: AccountRouteChildren = {
   AccountRewardsRoute: AccountRewardsRoute,
   AccountSecureAccessRoute: AccountSecureAccessRoute,
   AccountSettingsRoute: AccountSettingsRoute,
+  AccountWalletRoute: AccountWalletRoute,
   AccountWishlistRoute: AccountWishlistRoute,
   AccountIndexRoute: AccountIndexRoute,
 }
