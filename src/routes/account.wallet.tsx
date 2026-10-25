@@ -1,4 +1,3 @@
-
 import { useCallback, useEffect, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import {
@@ -89,6 +88,29 @@ function WalletPage() {
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const [signedIn, setSignedIn] = useState(false);
+  const [pinIsSet, setPinIsSet] = useState<boolean | null>(null);
+  const [pinStatusLoading, setPinStatusLoading] = useState(false);
+  const [pin, setPin] = useState("");
+  const [pinConfirmation, setPinConfirmation] = useState("");
+  const [savingPin, setSavingPin] = useState(false);
+
+  const checkPinStatus = useCallback(async () => {
+    setPinStatusLoading(true);
+    try {
+      const { data, error: pinError } = await supabase.functions.invoke(
+        "wallet-pin",
+        { body: { action: "status" } },
+      );
+
+      if (pinError) throw pinError;
+      setPinIsSet(data?.pinSet === true);
+    } catch (err) {
+      console.error("Wallet PIN status check failed:", err);
+      setPinIsSet(null);
+    } finally {
+      setPinStatusLoading(false);
+    }
+  }, []);
 
   const loadWallet = useCallback(async () => {
     setLoading(true);
@@ -104,6 +126,7 @@ function WalletPage() {
       if (!authData.user) {
         setSignedIn(false);
         setWallet(null);
+        setPinIsSet(null);
         return;
       }
 
@@ -117,15 +140,18 @@ function WalletPage() {
       if (walletError) throw walletError;
 
       setWallet(data);
+      if (data) {
+        await checkPinStatus();
+      } else {
+        setPinIsSet(null);
+      }
     } catch (err) {
       console.error("Wallet loading failed:", err);
-      setError(
-        "We couldn't load your wallet right now. Please try again.",
-      );
+      setError("We couldn't load your wallet right now. Please try again.");
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [checkPinStatus]);
 
   useEffect(() => {
     void loadWallet();
@@ -172,6 +198,7 @@ function WalletPage() {
       }
 
       setWallet(data);
+      await checkPinStatus();
       setNotice("Your wallet has been registered successfully.");
     } catch (err) {
       console.error("Wallet registration failed:", err);
@@ -180,6 +207,48 @@ function WalletPage() {
       );
     } finally {
       setRegistering(false);
+    }
+  }
+
+  async function savePin() {
+    setError("");
+    setNotice("");
+
+    if (!/^\d{6}$/.test(pin)) {
+      setError("Your wallet PIN must contain exactly six digits.");
+      return;
+    }
+
+    if (pin !== pinConfirmation) {
+      setError("The PIN entries do not match. Please try again.");
+      return;
+    }
+
+    setSavingPin(true);
+    try {
+      const { data, error: pinError } = await supabase.functions.invoke(
+        "wallet-pin",
+        { body: { action: "set", pin } },
+      );
+
+      if (pinError) throw pinError;
+      if (data?.success !== true) {
+        throw new Error(data?.error || "We couldn't save your wallet PIN.");
+      }
+
+      setPinIsSet(true);
+      setPin("");
+      setPinConfirmation("");
+      setNotice("Your six-digit wallet PIN has been set securely.");
+    } catch (err) {
+      console.error("Wallet PIN setup failed:", err);
+      setError(
+        err instanceof Error
+          ? err.message
+          : "We couldn't save your wallet PIN. Please try again.",
+      );
+    } finally {
+      setSavingPin(false);
     }
   }
 
@@ -310,6 +379,99 @@ function WalletPage() {
             </div>
           </div>
         </section>
+
+        {wallet && (
+          <section className="surface rounded-2xl border p-5 sm:p-6">
+            <div className="flex items-start gap-3">
+              <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl border border-gold/40 bg-gold/10 text-gold">
+                <LockKeyhole className="h-5 w-5" />
+              </span>
+              <div className="min-w-0 flex-1">
+                <h2 className="font-bold">Wallet PIN security</h2>
+                <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
+                  Set a six-digit PIN for future wallet security. Transfers,
+                  deposits and withdrawals remain disabled while their secure
+                  flows are being completed.
+                </p>
+
+                {pinStatusLoading ? (
+                  <p className="mt-3 text-sm text-muted-foreground">
+                    Checking PIN status…
+                  </p>
+                ) : pinIsSet === true ? (
+                  <p className="mt-3 inline-flex items-center gap-2 text-sm font-semibold">
+                    <ShieldCheck className="h-4 w-4 text-gold" />
+                    Wallet PIN is set
+                  </p>
+                ) : pinIsSet === false ? (
+                  <div className="mt-4 space-y-3">
+                    <label className="block text-sm font-medium">
+                      Create six-digit PIN
+                      <input
+                        type="password"
+                        inputMode="numeric"
+                        autoComplete="new-password"
+                        pattern="[0-9]{6}"
+                        maxLength={6}
+                        value={pin}
+                        onChange={(event) =>
+                          setPin(event.target.value.replace(/\D/g, "").slice(0, 6))
+                        }
+                        className="mt-1 min-h-11 w-full rounded-xl border bg-background px-3"
+                        aria-label="Create six-digit wallet PIN"
+                      />
+                    </label>
+                    <label className="block text-sm font-medium">
+                      Confirm six-digit PIN
+                      <input
+                        type="password"
+                        inputMode="numeric"
+                        autoComplete="new-password"
+                        pattern="[0-9]{6}"
+                        maxLength={6}
+                        value={pinConfirmation}
+                        onChange={(event) =>
+                          setPinConfirmation(
+                            event.target.value.replace(/\D/g, "").slice(0, 6),
+                          )
+                        }
+                        className="mt-1 min-h-11 w-full rounded-xl border bg-background px-3"
+                        aria-label="Confirm six-digit wallet PIN"
+                      />
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => void savePin()}
+                      disabled={
+                        savingPin ||
+                        pin.length !== 6 ||
+                        pinConfirmation.length !== 6
+                      }
+                      className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-gold px-5 py-2.5 text-sm font-bold text-background transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      <LockKeyhole className="h-4 w-4" />
+                      {savingPin ? "Saving PIN…" : "Set wallet PIN"}
+                    </button>
+                  </div>
+                ) : (
+                  <div className="mt-3">
+                    <p className="text-sm text-muted-foreground">
+                      PIN status could not be checked. The PIN service may not
+                      be deployed or configured yet.
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => void checkPinStatus()}
+                      className="mt-2 text-sm font-semibold underline"
+                    >
+                      Check again
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+          </section>
+        )}
 
         <section className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <SummaryCard
