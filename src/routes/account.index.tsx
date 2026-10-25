@@ -40,7 +40,8 @@ export type Service = {
     | "/account/notifications"
     | "/account/returns"
     | "/account/settings"
-    | "/account/applications";
+    | "/account/applications"
+    | "/account/wallet";
   icon: typeof ShoppingBag;
   available: boolean;
 };
@@ -116,12 +117,12 @@ export const SERVICES: Service[] = [
     icon: Truck,
     available: false,
   },
-  {
+    {
     title: "NEXA Wallet",
-    description: "Balance and in-app credits",
-    to: "/account/settings",
+    description: "Wallet overview, deposits and financial activity",
+    to: "/account/wallet",
     icon: Wallet,
-    available: false,
+    available: true,
   },
   {
     title: "Q Points",
