@@ -77,12 +77,8 @@ try {
         .find((message) => message.role === "user")
         ?.content.toLowerCase() ?? "";
 
-    const whatsapp =
-      "https://wa.me/27684963972";
-
     let text =
-      "I'm having trouble answering that right now. Our support team can help you on WhatsApp: " +
-      whatsapp;
+      "I'm having trouble retrieving a live answer right now. Our customer support team is available on WhatsApp to assist you directly.";
 
     if (
       /whatsapp|place an order|how.*order|order.*product|buy.*product/.test(
@@ -90,26 +86,21 @@ try {
       )
     ) {
       text =
-        "To ask about ordering, message our team on WhatsApp at " +
-        whatsapp +
-        ". Send the product name or link, the quantity you want, and your delivery area. Website checkout and order placement are not live in this preview yet.";
+        "To arrange an order, message our support team on WhatsApp. Share the product name or link, the quantity you need, and your delivery area. Website checkout is currently in preview.";
     } else if (
       /track|tracking|where.*order|order status|parcel/.test(
         latestQuestion,
       )
     ) {
       text =
-        "Live order tracking is not connected to this chat yet. Please contact our team on WhatsApp at " +
-        whatsapp +
-        " and share your order reference if you have one.";
+        "Live order tracking is not connected to this chat yet. Please contact our support team on WhatsApp and share your order reference if you have one.";
     } else if (
       /price|how much|cost|in stock|available|sofa|product/.test(
         latestQuestion,
       )
     ) {
       text =
-        "I can't confirm live stock or current prices unless that information is available in the product catalogue. Please check the product page or contact our team on WhatsApp: " +
-        whatsapp;
+        "Live stock and pricing must be verified directly against our catalogue or with our support team on WhatsApp.";
     }
 
     return {
@@ -128,7 +119,7 @@ try {
     text:
       data.mode === "admin"
         ? "Admin Notice: AI generation is temporarily unavailable. Please retry shortly."
-        : "I'm having trouble reaching the AI service right now. For ordering assistance, contact our team on WhatsApp: https://wa.me/27684963972",
+        : "I'm having trouble reaching the AI service right now. Please use the support button below to chat directly with our team.",
     provider: "gemini",
     model: "gemini-3.6-flash",
     status: "service_unavailable",

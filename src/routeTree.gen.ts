@@ -13,6 +13,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as AboutRouteImport } from './routes/about'
 import { Route as AccountRouteImport } from './routes/account'
 import { Route as AdminRouteImport } from './routes/admin'
+import { Route as AiAssistantRouteImport } from './routes/ai-assistant'
 import { Route as CartRouteImport } from './routes/cart'
 import { Route as ForgotPasswordRouteImport } from './routes/forgot-password'
 import { Route as PoliciesRouteImport } from './routes/policies'
@@ -56,6 +57,11 @@ const AccountRoute = AccountRouteImport.update({
 const AdminRoute = AdminRouteImport.update({
   id: '/admin',
   path: '/admin',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AiAssistantRoute = AiAssistantRouteImport.update({
+  id: '/ai-assistant',
+  path: '/ai-assistant',
   getParentRoute: () => rootRouteImport,
 } as any)
 const CartRoute = CartRouteImport.update({
@@ -184,6 +190,7 @@ export interface FileRoutesByFullPath {
   '/about': typeof AboutRoute
   '/account': typeof AccountRouteWithChildren
   '/admin': typeof AdminRoute
+  '/ai-assistant': typeof AiAssistantRoute
   '/cart': typeof CartRoute
   '/forgot-password': typeof ForgotPasswordRoute
   '/policies': typeof PoliciesRoute
@@ -213,6 +220,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
   '/admin': typeof AdminRoute
+  '/ai-assistant': typeof AiAssistantRoute
   '/cart': typeof CartRoute
   '/forgot-password': typeof ForgotPasswordRoute
   '/policies': typeof PoliciesRoute
@@ -244,6 +252,7 @@ export interface FileRoutesById {
   '/about': typeof AboutRoute
   '/account': typeof AccountRouteWithChildren
   '/admin': typeof AdminRoute
+  '/ai-assistant': typeof AiAssistantRoute
   '/cart': typeof CartRoute
   '/forgot-password': typeof ForgotPasswordRoute
   '/policies': typeof PoliciesRoute
@@ -276,6 +285,7 @@ export interface FileRouteTypes {
     | '/about'
     | '/account'
     | '/admin'
+    | '/ai-assistant'
     | '/cart'
     | '/forgot-password'
     | '/policies'
@@ -305,6 +315,7 @@ export interface FileRouteTypes {
     | '/'
     | '/about'
     | '/admin'
+    | '/ai-assistant'
     | '/cart'
     | '/forgot-password'
     | '/policies'
@@ -335,6 +346,7 @@ export interface FileRouteTypes {
     | '/about'
     | '/account'
     | '/admin'
+    | '/ai-assistant'
     | '/cart'
     | '/forgot-password'
     | '/policies'
@@ -366,6 +378,7 @@ export interface RootRouteChildren {
   AboutRoute: typeof AboutRoute
   AccountRoute: typeof AccountRouteWithChildren
   AdminRoute: typeof AdminRoute
+  AiAssistantRoute: typeof AiAssistantRoute
   CartRoute: typeof CartRoute
   ForgotPasswordRoute: typeof ForgotPasswordRoute
   PoliciesRoute: typeof PoliciesRoute
@@ -407,6 +420,13 @@ declare module '@tanstack/react-router' {
       path: '/admin'
       fullPath: '/admin'
       preLoaderRoute: typeof AdminRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/ai-assistant': {
+      id: '/ai-assistant'
+      path: '/ai-assistant'
+      fullPath: '/ai-assistant'
+      preLoaderRoute: typeof AiAssistantRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/cart': {
@@ -620,6 +640,7 @@ const rootRouteChildren: RootRouteChildren = {
   AboutRoute: AboutRoute,
   AccountRoute: AccountRouteWithChildren,
   AdminRoute: AdminRoute,
+  AiAssistantRoute: AiAssistantRoute,
   CartRoute: CartRoute,
   ForgotPasswordRoute: ForgotPasswordRoute,
   PoliciesRoute: PoliciesRoute,

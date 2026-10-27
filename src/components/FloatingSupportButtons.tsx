@@ -1,4 +1,3 @@
-
 import { BRAND } from "@/lib/brand";
 import { useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate } from "@tanstack/react-router";
@@ -10,9 +9,10 @@ import {
   Loader2,
   Sparkles,
   ExternalLink,
+  ArrowLeft,
 } from "lucide-react";
 import { useLocalList } from "@/lib/local-list";
-import { fetchStoreCatalogue } from "@/lib/preview-data";
+import { fetchStoreCatalogue, type StoreProduct } from "@/lib/preview-data";
 import {
   buildCartWhatsAppMessage,
   NEXA_QUICK_MESSAGE,
@@ -22,10 +22,17 @@ import { WhatsAppIcon } from "@/components/WhatsAppIcon";
 import { sendAiChatMessage } from "@/lib/ai/server";
 import type { ChatMessage as AiChatMessage } from "@/lib/ai/types";
 
-interface ChatMessage {
+export interface ChatAction {
+  type: "whatsapp" | "support_escalate" | "link";
+  label: string;
+  payload?: string;
+}
+
+export interface ChatMessage {
   id: string;
   sender: "ai" | "user";
   text: string;
+  actions?: ChatAction[];
   action?: {
     type: "whatsapp" | "faq" | "retry";
     label: string;
@@ -35,27 +42,140 @@ interface ChatMessage {
 const WHATSAPP_SUPPORT_MESSAGE =
   "Hello, I need help from customer support. Please assist me.";
 
-function getProductAnswer(
+export function getDeterministicLocalResponse(
   queryText: string,
-  products: Awaited<ReturnType<typeof fetchStoreCatalogue>>["products"],
-): string | null {
-  const query = queryText.toLowerCase();
+  products: StoreProduct[] = [],
+): { text: string; actions?: ChatAction[] } | null {
+  const query = queryText.trim().toLowerCase();
+  if (!query) return null;
 
-  const matchedProduct = products.find((product) => {
-    const productName = product.name?.trim().toLowerCase();
-
-    return Boolean(productName && query.includes(productName));
-  });
-
-  if (!matchedProduct) {
-    return null;
+  // 1. Immediate greetings (safe local greeting, zero network latency)
+  if (/^\s*(hi|hello|hey|good\s+(morning|afternoon|evening|day)|greetings|howdy|how\s+are\s+you|what'?s\s+up)\b/i.test(query)) {
+    return {
+      text: `Hello! Welcome to ${BRAND.name}. I'm TJC-OS, your AI assistant. How can I help you today? You can ask about our catalogue products, store services, or connect with our support team.`,
+    };
   }
 
-  return (
-    `The catalogue lists ${matchedProduct.name} at R${matchedProduct.price}. ` +
-    "This catalogue information may not reflect current stock or final pricing. " +
-    "Please check the product listing for the latest details."
-  );
+  // 2. Fraud & Security (calm, explicit safeguards, no secrets, bank escalation)
+  if (/\b(fraud|scam|suspicious|hacked|unauthorized|stolen|compromised|bank\s+card)\b/i.test(query)) {
+    return {
+      text: `Security Alert: We take customer security seriously. Never disclose your wallet PIN, account passwords, or one-time verification codes (OTPs) to anyone. If you suspect your bank card or account has been compromised, please contact your bank immediately.
+
+You can also report urgent security concerns directly to our support team on WhatsApp.`,
+      actions: [
+        {
+          type: "whatsapp",
+          label: "Report Security Concern",
+          payload: "URGENT: I need to report a security/fraud concern.",
+        },
+      ],
+    };
+  }
+
+  // 3. Human agent & Support escalation (clickable action instead of raw URLs)
+  if (/\b(speak\s+to\s+(an?\s+)?(agent|human|person|someone)|human\s+agent|talk\s+to\s+(someone|a\s+human|an\s+agent)|customer\s+(care|support|service)|support\s+team|live\s+agent|real\s+person|contact\s+support|help\s+desk)\b/i.test(query)) {
+    return {
+      text: `I'm happy to connect you directly with our customer support team. Our team is available on WhatsApp to assist you with order enquiries, custom product quotes, and account assistance.`,
+      actions: [
+        {
+          type: "whatsapp",
+          label: "Chat on WhatsApp",
+          payload: WHATSAPP_SUPPORT_MESSAGE,
+        },
+      ],
+    };
+  }
+
+  // 4. Delivery & Shipping
+  if (/\b(delivery|shipping|courier|how\s+long.*deliver|deliver.*south\s+africa|delivery\s+times?)\b/i.test(query)) {
+    return {
+      text: `We deliver across South Africa. Standard delivery typically takes 3 to 5 business days depending on your area. Detailed delivery arrangements and courier options are confirmed when you arrange your order with our team.`,
+      actions: [
+        {
+          type: "whatsapp",
+          label: "Enquire About Delivery",
+          payload: "Hello, I would like to check delivery options for my area.",
+        },
+      ],
+    };
+  }
+
+  // 5. How to order / WhatsApp ordering
+  if (/\b(how.*(order|buy|purchase)|order.*whatsapp|place.*order|buy.*product)\b/i.test(query)) {
+    return {
+      text: `You can place orders directly via WhatsApp with our team! Browse our catalogue, choose the items you'd like, and send us a message. We will confirm stock availability, delivery fees, and final payment details. Website checkout is currently in preview mode.`,
+      actions: [
+        {
+          type: "whatsapp",
+          label: "Order via WhatsApp",
+          payload: "Hello, I would like to place an order.",
+        },
+      ],
+    };
+  }
+
+  // 6. Returns & refunds
+  if (/\b(return|refund|exchange|cancel.*order|returns?\s+policy)\b/i.test(query)) {
+    return {
+      text: `Items in original, unused condition can be returned within our standard return window. For return requests, refunds, or exchanges, please contact our support team with your order reference.`,
+      actions: [
+        {
+          type: "whatsapp",
+          label: "Returns Support",
+          payload: "Hello, I would like to enquire about returns and refunds.",
+        },
+      ],
+    };
+  }
+
+  // 7. Order tracking / status
+  if (/\b(track|tracking|where.*order|order\s+status|order\s+reference|parcel\s+status)\b/i.test(query)) {
+    return {
+      text: `Live automated order tracking is not yet connected to this chat. To check the status of your order, please message our support team on WhatsApp and share your order reference if you have one.`,
+      actions: [
+        {
+          type: "whatsapp",
+          label: "Track via WhatsApp",
+          payload: "Hello, I'd like to check the status of my order.",
+        },
+      ],
+    };
+  }
+
+  // 8. Wallet & PIN facts
+  if (/\b(wallet|pin|q\s+points|commissions|promo\s+credit|deposit|withdraw|balance)\b/i.test(query)) {
+    return {
+      text: `The ${BRAND.shortName} Wallet is currently in preview with South African Rand (ZAR) and a 6-digit PIN. Cash, Q Points, commissions, and promo credits are tracked separately. Deposits, transfers, and withdrawals are currently disabled pending provider activation. Never disclose your wallet PIN to anyone.`,
+      actions: [
+        {
+          type: "whatsapp",
+          label: "Ask Support About Wallet",
+          payload: "Hello, I have a question regarding the wallet preview.",
+        },
+      ],
+    };
+  }
+
+  // 9. Specific catalogue product match
+  const matchedProduct = products.find((product) => {
+    const productName = product.name?.trim().toLowerCase();
+    return Boolean(productName && productName.length > 2 && query.includes(productName));
+  });
+
+  if (matchedProduct) {
+    return {
+      text: `The catalogue lists ${matchedProduct.name} at R${matchedProduct.price}. Note that catalogue snapshots may not reflect current stock or final pricing. Please check the product listing or enquire with our team on WhatsApp for confirmation.`,
+      actions: [
+        {
+          type: "whatsapp",
+          label: `Enquire About ${matchedProduct.name}`,
+          payload: `Hello, I'd like to enquire about ${matchedProduct.name}.`,
+        },
+      ],
+    };
+  }
+
+  return null;
 }
 
 function getWelcomeMessage(): ChatMessage {
@@ -119,10 +239,6 @@ export function FloatingSupportButtons() {
     }
   }, [messages, aiOpen, isThinking, pageMode]);
 
-  function findFaqAnswer(queryText: string): string | null {
-    return getProductAnswer(queryText, products);
-  }
-
   async function handleSend(customText?: string) {
     const query = (customText ?? input).trim();
 
@@ -137,11 +253,25 @@ export function FloatingSupportButtons() {
     };
 
     const nextMessages = [...messages, userMessage];
-
     setMessages(nextMessages);
 
     if (customText === undefined) {
       setInput("");
+    }
+
+    // Check deterministic local intent first (instant, 100% reliable)
+    const localMatch = getDeterministicLocalResponse(query, products);
+    if (localMatch) {
+      setMessages((previous) => [
+        ...previous,
+        {
+          id: `${Date.now()}-assistant`,
+          sender: "ai",
+          text: localMatch.text,
+          actions: localMatch.actions,
+        },
+      ]);
+      return;
     }
 
     setIsThinking(true);
@@ -190,44 +320,38 @@ export function FloatingSupportButtons() {
       });
 
       if (response.status === "rate_limited") {
-        const productAnswer = findFaqAnswer(query);
-
-        const replyText = productAnswer
-          ? `${productAnswer}\n\nThe AI service is busy right now. You can also contact customer support using the button below.`
-          : "The AI service is receiving too many requests right now. Please try again shortly or contact customer support using the button below.";
-
         setMessages((previous) => [
           ...previous,
           {
             id: `${Date.now()}-assistant`,
             sender: "ai",
-            text: replyText,
-            action: {
-              type: "whatsapp",
-              label: "Request Further Support",
-            },
+            text: "The AI assistant is receiving a high volume of requests right now. Please try again shortly or chat with our team on WhatsApp.",
+            actions: [
+              {
+                type: "whatsapp",
+                label: "Request Further Support",
+                payload: WHATSAPP_SUPPORT_MESSAGE,
+              },
+            ],
           },
         ]);
       } else if (
         response.status === "unconfigured" ||
         response.status === "invalid_key"
       ) {
-        const productAnswer = findFaqAnswer(query);
-
-        const replyText = productAnswer
-          ? `${productAnswer}\n\nThe AI service is not fully available right now. For further help, use the support button below.`
-          : "I'm unable to access the AI service right now, so I don't want to guess at an answer. Please try again later or contact customer support using the button below.";
-
         setMessages((previous) => [
           ...previous,
           {
             id: `${Date.now()}-assistant`,
             sender: "ai",
-            text: replyText,
-            action: {
-              type: "whatsapp",
-              label: "Request Further Support",
-            },
+            text: "I'm temporarily unable to access live AI responses. Our customer support team is available on WhatsApp to assist you directly.",
+            actions: [
+              {
+                type: "whatsapp",
+                label: "Request Further Support",
+                payload: WHATSAPP_SUPPORT_MESSAGE,
+              },
+            ],
           },
         ]);
       } else if (response.status === "service_unavailable") {
@@ -236,17 +360,24 @@ export function FloatingSupportButtons() {
           {
             id: `${Date.now()}-assistant`,
             sender: "ai",
-            text:
-              "I'm temporarily unable to get a reliable answer from the AI service. " +
-              "Please try again, or contact customer support using the button below.",
-            action: {
-              type: "whatsapp",
-              label: "Request Further Support",
-            },
+            text: "I'm temporarily unable to get a reliable answer from the AI service. Our support team is ready to assist you on WhatsApp.",
+            actions: [
+              {
+                type: "whatsapp",
+                label: "Request Further Support",
+                payload: WHATSAPP_SUPPORT_MESSAGE,
+              },
+            ],
           },
         ]);
       } else {
-        const replyText = response.text?.trim();
+        let replyText = response.text?.trim() || "";
+        // Clean out raw WhatsApp links from text to ensure structured button presentation
+        replyText = replyText
+          .replace(/https?:\/\/wa\.me\/\S+/gi, "")
+          .replace(/Contact our team on WhatsApp:\s*$/i, "")
+          .replace(/at\s*:\s*$/i, "")
+          .trim();
 
         if (!replyText) {
           setMessages((previous) => [
@@ -254,44 +385,54 @@ export function FloatingSupportButtons() {
             {
               id: `${Date.now()}-assistant`,
               sender: "ai",
-              text:
-                "I didn't receive a usable answer. Please try again, or contact customer support using the button below.",
-              action: {
-                type: "whatsapp",
-                label: "Request Further Support",
-              },
+              text: "I didn't receive a complete answer. Please try again, or contact our customer support team directly.",
+              actions: [
+                {
+                  type: "whatsapp",
+                  label: "Request Further Support",
+                  payload: WHATSAPP_SUPPORT_MESSAGE,
+                },
+              ],
             },
           ]);
         } else {
+          const actions: ChatAction[] | undefined =
+            response.suggestedAction === "whatsapp"
+              ? [
+                  {
+                    type: "whatsapp",
+                    label: "Chat on WhatsApp",
+                    payload: WHATSAPP_SUPPORT_MESSAGE,
+                  },
+                ]
+              : undefined;
+
           setMessages((previous) => [
             ...previous,
             {
               id: `${Date.now()}-assistant`,
               sender: "ai",
               text: replyText,
+              actions,
             },
           ]);
         }
       }
     } catch (error) {
       console.warn("AI chat request failed:", error);
-
-      const productAnswer = findFaqAnswer(query);
-
-      const replyText = productAnswer
-        ? `${productAnswer}\n\nI couldn't connect to the AI service just now. For further help, use the support button below.`
-        : "I'm sorry, but I couldn't connect to the AI service just now. I don't want to guess at your answer. Please try again or contact customer support using the button below.";
-
       setMessages((previous) => [
         ...previous,
         {
           id: `${Date.now()}-assistant`,
           sender: "ai",
-          text: replyText,
-          action: {
-            type: "whatsapp",
-            label: "Request Further Support",
-          },
+          text: "I'm temporarily unable to connect to the AI service. Our customer support team is available on WhatsApp to help you right away.",
+          actions: [
+            {
+              type: "whatsapp",
+              label: "Request Further Support",
+              payload: WHATSAPP_SUPPORT_MESSAGE,
+            },
+          ],
         },
       ]);
     } finally {
@@ -307,12 +448,11 @@ export function FloatingSupportButtons() {
         text: `Hello again! I'm TJC-OS, your AI assistant for ${BRAND.name}. How can I help you today?`,
       },
     ]);
-
     setInput("");
   }
 
-  function handleWhatsAppSupport() {
-    openWhatsApp(WHATSAPP_SUPPORT_MESSAGE);
+  function handleWhatsAppSupport(payload?: string) {
+    openWhatsApp(payload || WHATSAPP_SUPPORT_MESSAGE);
   }
 
   return (
@@ -411,6 +551,18 @@ export function FloatingSupportButtons() {
         >
           <div className="flex items-center justify-between border-b border-border bg-gradient-to-r from-card via-card to-gold/10 px-4 py-3">
             <div className="flex items-center gap-2.5">
+              {pageMode && (
+                <button
+                  type="button"
+                  onClick={() => void navigate({ to: "/" })}
+                  className="mr-1 rounded-lg p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                  title="Back to store"
+                  aria-label="Back to store"
+                >
+                  <ArrowLeft className="h-4 w-4" />
+                </button>
+              )}
+
               <div className="grid h-8 w-8 place-items-center rounded-xl bg-gold/20 text-gold shadow-sm">
                 <Sparkles className="h-4 w-4" />
               </div>
@@ -449,10 +601,11 @@ export function FloatingSupportButtons() {
                     setAiOpen(false);
                   }
                 }}
-                title="Close chat"
-                aria-label="Close chat"
-                className="rounded-lg p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                title={pageMode ? "Return to store" : "Close chat"}
+                aria-label={pageMode ? "Return to store" : "Close chat"}
+                className="flex items-center gap-1 rounded-lg border border-border/40 px-2 py-1 text-xs text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
               >
+                {pageMode && <span className="hidden sm:inline font-medium text-[11px]">Exit</span>}
                 <X className="h-4 w-4" />
               </button>
             </div>
@@ -489,6 +642,15 @@ export function FloatingSupportButtons() {
             >
               🔄 Returns
             </button>
+
+            <button
+              type="button"
+              disabled={isThinking}
+              onClick={() => void handleSend("I would like to speak to an agent")}
+              className="shrink-0 rounded-full border border-border bg-background px-2.5 py-1 text-[11px] text-muted-foreground transition-colors hover:border-gold hover:text-foreground disabled:opacity-50"
+            >
+              💬 Human Support
+            </button>
           </div>
 
           <div
@@ -514,16 +676,34 @@ export function FloatingSupportButtons() {
                   {message.text}
                 </div>
 
-                {message.action?.type === "whatsapp" && (
-                  <button
-                    type="button"
-                    onClick={handleWhatsAppSupport}
-                    className="mt-2 inline-flex items-center gap-1.5 rounded-xl bg-[#25D366]/15 px-3 py-1.5 text-[11px] font-semibold text-[#128C7E] transition-colors hover:bg-[#25D366]/25"
-                  >
-                    <WhatsAppIcon className="h-3.5 w-3.5 fill-current" />
-                    {message.action.label}
-                    <ExternalLink className="h-3 w-3" />
-                  </button>
+                {/* Structured action buttons */}
+                {((message.actions && message.actions.length > 0) ||
+                  message.action?.type === "whatsapp") && (
+                  <div className="mt-2.5 flex flex-wrap gap-2">
+                    {message.actions?.map((act, index) => (
+                      <button
+                        key={index}
+                        type="button"
+                        onClick={() => handleWhatsAppSupport(act.payload)}
+                        className="inline-flex items-center gap-1.5 rounded-xl bg-[#25D366]/15 px-3 py-1.5 text-[11px] font-semibold text-[#128C7E] transition-colors hover:bg-[#25D366]/25 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#25D366]/50"
+                      >
+                        <WhatsAppIcon className="h-3.5 w-3.5 fill-current" />
+                        <span>{act.label}</span>
+                        <ExternalLink className="h-3 w-3 opacity-70" />
+                      </button>
+                    ))}
+                    {!message.actions && message.action?.type === "whatsapp" && (
+                      <button
+                        type="button"
+                        onClick={() => handleWhatsAppSupport()}
+                        className="inline-flex items-center gap-1.5 rounded-xl bg-[#25D366]/15 px-3 py-1.5 text-[11px] font-semibold text-[#128C7E] transition-colors hover:bg-[#25D366]/25"
+                      >
+                        <WhatsAppIcon className="h-3.5 w-3.5 fill-current" />
+                        <span>{message.action.label}</span>
+                        <ExternalLink className="h-3 w-3 opacity-70" />
+                      </button>
+                    )}
+                  </div>
                 )}
               </div>
             ))}
