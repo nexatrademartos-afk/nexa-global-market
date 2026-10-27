@@ -96,6 +96,22 @@ function WalletPage() {
   const [walletUnlocked, setWalletUnlocked] = useState(false);
 const [unlockPin, setUnlockPin] = useState("");
 const [unlocking, setUnlocking] = useState(false);
+    // Wallet PIN change
+  const [currentPin, setCurrentPin] = useState("");
+  const [newPin, setNewPin] = useState("");
+  const [confirmNewPin, setConfirmNewPin] = useState("");
+  const [changingPin, setChangingPin] = useState(false);
+
+  // Wallet PIN recovery
+  const [recoverySet, setRecoverySet] = useState(false);
+  const [recoveryQuestions, setRecoveryQuestions] = useState<string[]>([]);
+  const [questionOne, setQuestionOne] = useState("");
+  const [questionTwo, setQuestionTwo] = useState("");
+  const [answerOne, setAnswerOne] = useState("");
+  const [answerTwo, setAnswerTwo] = useState("");
+  const [recoveryNewPin, setRecoveryNewPin] = useState("");
+  const [recoveryMode, setRecoveryMode] = useState<"setup" | "recover" | null>(null);
+  const [recoveryBusy, setRecoveryBusy] = useState(false);
 
   const checkPinStatus = useCallback(async () => {
     setPinStatusLoading(true);
@@ -300,6 +316,238 @@ setPinConfirmation("");
     setUnlocking(false);
   }
   }
+    async function changeWalletPin() {
+    setError("");
+    setNotice("");
+
+    if (!/^\d{6}$/.test(currentPin)) {
+      setError("Enter your current six-digit PIN.");
+      return;
+    }
+
+    if (!/^\d{6}$/.test(newPin)) {
+      setError("Your new PIN must contain exactly six digits.");
+      return;
+    }
+
+    if (newPin !== confirmNewPin) {
+      setError("Your new PIN entries do not match.");
+      return;
+    }
+
+    if (currentPin === newPin) {
+      setError("Your new PIN must be different from your current PIN.");
+      return;
+    }
+
+    setChangingPin(true);
+
+    try {
+      const { data, error: pinError } = await supabase.functions.invoke(
+        "wallet-pin",
+        {
+          body: {
+            action: "change",
+            currentPin,
+            newPin,
+          },
+        },
+      );
+
+      if (pinError) throw pinError;
+
+      if (data?.success !== true) {
+        throw new Error(data?.error || "We couldn't change your wallet PIN.");
+      }
+
+      setCurrentPin("");
+      setNewPin("");
+      setConfirmNewPin("");
+      setNotice("Your wallet PIN has been changed successfully.");
+    } catch (err) {
+      console.error("Wallet PIN change failed:", err);
+      setError(
+        err instanceof Error
+          ? err.message
+          : "We couldn't change your wallet PIN. Please try again.",
+      );
+    } finally {
+      setChangingPin(false);
+    }
+  }
+
+  async function loadRecoveryStatus() {
+    const { data, error: recoveryError } =
+      await supabase.functions.invoke("wallet-pin-recovery", {
+        body: { action: "status" },
+      });
+
+    if (recoveryError) throw recoveryError;
+
+    const configured =
+      data?.recoverySet === true ||
+      data?.configured === true;
+
+    setRecoverySet(configured);
+
+    const questions = Array.isArray(data?.questions)
+      ? data.questions.filter(
+          (question: unknown): question is string =>
+            typeof question === "string",
+        )
+      : [];
+
+    setRecoveryQuestions(questions);
+
+    return configured;
+  }
+
+  async function beginPinRecovery() {
+    setError("");
+    setNotice("");
+    setRecoveryMode(null);
+    setRecoveryBusy(true);
+
+    try {
+      const configured = await loadRecoveryStatus();
+
+      if (!configured) {
+        setNotice(
+          "PIN recovery has not been configured for this wallet. Please contact customer support to verify your identity and regain access.",
+        );
+        return;
+      }
+
+      setAnswerOne("");
+      setAnswerTwo("");
+      setRecoveryNewPin("");
+      setRecoveryMode("recover");
+    } catch (err) {
+      console.error("Wallet PIN recovery status failed:", err);
+      setError(
+        "We couldn't check your recovery settings. Please try again or contact customer support.",
+      );
+    } finally {
+      setRecoveryBusy(false);
+    }
+  }
+
+  async function setupPinRecovery() {
+    setError("");
+    setNotice("");
+
+    if (!questionOne.trim() || !questionTwo.trim()) {
+      setError("Choose both recovery questions.");
+      return;
+    }
+
+    if (questionOne === questionTwo) {
+      setError("Choose two different recovery questions.");
+      return;
+    }
+
+    if (answerOne.trim().length < 2 || answerTwo.trim().length < 2) {
+      setError("Both recovery answers must contain at least two characters.");
+      return;
+    }
+
+    setRecoveryBusy(true);
+
+    try {
+      const { data, error: recoveryError } =
+        await supabase.functions.invoke("wallet-pin-recovery", {
+          body: {
+            action: "setup",
+            questionOne,
+            questionTwo,
+            answerOne: answerOne.trim(),
+            answerTwo: answerTwo.trim(),
+          },
+        });
+
+      if (recoveryError) throw recoveryError;
+
+      if (data?.success !== true) {
+        throw new Error(
+          data?.error || "We couldn't save your recovery settings.",
+        );
+      }
+
+      setRecoverySet(true);
+      setRecoveryQuestions([questionOne, questionTwo]);
+      setAnswerOne("");
+      setAnswerTwo("");
+      setQuestionOne("");
+      setQuestionTwo("");
+      setRecoveryMode(null);
+      setNotice("Your wallet PIN recovery settings have been saved.");
+    } catch (err) {
+      console.error("Wallet PIN recovery setup failed:", err);
+      setError(
+        err instanceof Error
+          ? err.message
+          : "We couldn't save your recovery settings. Please try again.",
+      );
+    } finally {
+      setRecoveryBusy(false);
+    }
+  }
+
+  async function recoverWalletPin() {
+    setError("");
+    setNotice("");
+
+    if (answerOne.trim().length < 1 || answerTwo.trim().length < 1) {
+      setError("Enter both recovery answers.");
+      return;
+    }
+
+    if (!/^\d{6}$/.test(recoveryNewPin)) {
+      setError("Your new PIN must contain exactly six digits.");
+      return;
+    }
+
+    setRecoveryBusy(true);
+
+    try {
+      const { data, error: recoveryError } =
+        await supabase.functions.invoke("wallet-pin-recovery", {
+          body: {
+            action: "recover",
+            answerOne: answerOne.trim(),
+            answerTwo: answerTwo.trim(),
+            newPin: recoveryNewPin,
+          },
+        });
+
+      if (recoveryError) throw recoveryError;
+
+      if (data?.success !== true) {
+        throw new Error(
+          data?.error || "We couldn't recover your wallet PIN.",
+        );
+      }
+
+      setPinIsSet(true);
+      setWalletUnlocked(true);
+      setRecoveryMode(null);
+      setUnlockPin("");
+      setAnswerOne("");
+      setAnswerTwo("");
+      setRecoveryNewPin("");
+      setError("");
+      setNotice("Your wallet PIN has been reset successfully.");
+    } catch (err) {
+      console.error("Wallet PIN recovery failed:", err);
+      setError(
+        err instanceof Error
+          ? err.message
+          : "PIN recovery failed. Check your answers and try again.",
+      );
+    } finally {
+      setRecoveryBusy(false);
+    }
+        }
 
   const statusLabel = wallet
   ? wallet.status.replaceAll("_", " ")
@@ -402,6 +650,98 @@ if (wallet && pinIsSet !== false && !walletUnlocked) {
             </button>
           </div>
         )}
+
+                <div className="mt-5 border-t pt-4">
+          {recoveryMode === "recover" ? (
+            <form
+              className="space-y-3"
+              onSubmit={(event) => {
+                event.preventDefault();
+                void recoverWalletPin();
+              }}
+            >
+              <h3 className="font-semibold">Recover your wallet PIN</h3>
+
+              <p className="text-sm text-muted-foreground">
+                Answer both recovery questions to reset your PIN.
+              </p>
+
+              <label className="block text-sm font-medium">
+                {recoveryQuestions[0] || "First recovery answer"}
+                <input
+                  type="password"
+                  autoComplete="off"
+                  value={answerOne}
+                  onChange={(event) => setAnswerOne(event.target.value)}
+                  className="mt-1 min-h-11 w-full rounded-xl border bg-background px-3"
+                  required
+                />
+              </label>
+
+              <label className="block text-sm font-medium">
+                {recoveryQuestions[1] || "Second recovery answer"}
+                <input
+                  type="password"
+                  autoComplete="off"
+                  value={answerTwo}
+                  onChange={(event) => setAnswerTwo(event.target.value)}
+                  className="mt-1 min-h-11 w-full rounded-xl border bg-background px-3"
+                  required
+                />
+              </label>
+
+              <label className="block text-sm font-medium">
+                New six-digit PIN
+                <input
+                  type="password"
+                  inputMode="numeric"
+                  autoComplete="new-password"
+                  pattern="[0-9]{6}"
+                  maxLength={6}
+                  value={recoveryNewPin}
+                  onChange={(event) =>
+                    setRecoveryNewPin(
+                      event.target.value.replace(/\D/g, "").slice(0, 6),
+                    )
+                  }
+                  className="mt-1 min-h-11 w-full rounded-xl border bg-background px-3 text-center tracking-[0.4em]"
+                  required
+                />
+              </label>
+
+              <button
+                type="submit"
+                disabled={recoveryBusy || recoveryNewPin.length !== 6}
+                className="inline-flex min-h-11 w-full items-center justify-center rounded-xl bg-gold px-4 py-2 text-sm font-bold text-background disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {recoveryBusy ? "Recovering PIN…" : "Reset wallet PIN"}
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setRecoveryMode(null);
+                  setAnswerOne("");
+                  setAnswerTwo("");
+                  setRecoveryNewPin("");
+                  setError("");
+                }}
+                className="w-full py-2 text-sm font-semibold underline"
+              >
+                Cancel recovery
+              </button>
+            </form>
+          ) : (
+            <button
+              type="button"
+              onClick={() => void beginPinRecovery()}
+              disabled={recoveryBusy}
+              className="min-h-11 w-full rounded-xl border px-4 py-2 text-sm font-semibold disabled:opacity-50"
+            >
+              {recoveryBusy ? "Checking recovery…" : "Forgot your wallet PIN?"}
+            </button>
+          )}
+        </div>
 
         <p className="mt-4 text-center text-xs text-muted-foreground">
           Never share your wallet PIN with anyone.
@@ -553,11 +893,259 @@ return (
                   <p className="mt-3 text-sm text-muted-foreground">
                     Checking PIN status…
                   </p>
-                ) : pinIsSet === true ? (
-                  <p className="mt-3 inline-flex items-center gap-2 text-sm font-semibold">
-                    <ShieldCheck className="h-4 w-4 text-gold" />
-                    Wallet PIN is set
-                  </p>
+                                ) : pinIsSet === true ? (
+                  <>
+                    <p className="mt-3 inline-flex items-center gap-2 text-sm font-semibold">
+                      <ShieldCheck className="h-4 w-4 text-gold" />
+                      Wallet PIN is set
+                    </p>
+
+                    <div className="mt-4 space-y-4 rounded-xl border p-4">
+                      <h3 className="font-semibold">Change wallet PIN</h3>
+
+                      <form
+                        className="space-y-3"
+                        onSubmit={(event) => {
+                          event.preventDefault();
+                          void changeWalletPin();
+                        }}
+                      >
+                        <label className="block text-sm font-medium">
+                          Current six-digit PIN
+                          <input
+                            type="password"
+                            inputMode="numeric"
+                            autoComplete="current-password"
+                            pattern="[0-9]{6}"
+                            maxLength={6}
+                            value={currentPin}
+                            onChange={(event) =>
+                              setCurrentPin(
+                                event.target.value.replace(/\D/g, "").slice(0, 6),
+                              )
+                            }
+                            className="mt-1 min-h-11 w-full rounded-xl border bg-background px-3"
+                            required
+                          />
+                        </label>
+
+                        <label className="block text-sm font-medium">
+                          New six-digit PIN
+                          <input
+                            type="password"
+                            inputMode="numeric"
+                            autoComplete="new-password"
+                            pattern="[0-9]{6}"
+                            maxLength={6}
+                            value={newPin}
+                            onChange={(event) =>
+                              setNewPin(
+                                event.target.value.replace(/\D/g, "").slice(0, 6),
+                              )
+                            }
+                            className="mt-1 min-h-11 w-full rounded-xl border bg-background px-3"
+                            required
+                          />
+                        </label>
+
+                        <label className="block text-sm font-medium">
+                          Confirm new PIN
+                          <input
+                            type="password"
+                            inputMode="numeric"
+                            autoComplete="new-password"
+                            pattern="[0-9]{6}"
+                            maxLength={6}
+                            value={confirmNewPin}
+                            onChange={(event) =>
+                              setConfirmNewPin(
+                                event.target.value.replace(/\D/g, "").slice(0, 6),
+                              )
+                            }
+                            className="mt-1 min-h-11 w-full rounded-xl border bg-background px-3"
+                            required
+                          />
+                        </label>
+
+                        <button
+                          type="submit"
+                          disabled={
+                            changingPin ||
+                            currentPin.length !== 6 ||
+                            newPin.length !== 6 ||
+                            confirmNewPin.length !== 6
+                          }
+                          className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-gold px-4 py-2 text-sm font-bold text-background disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                          <LockKeyhole className="h-4 w-4" />
+                          {changingPin ? "Changing PIN…" : "Change wallet PIN"}
+                        </button>
+                      </form>
+                    </div>
+
+                    <div className="mt-4 space-y-3 rounded-xl border p-4">
+                      <h3 className="font-semibold">PIN recovery settings</h3>
+
+                      <p className="text-sm text-muted-foreground">
+                        Set two recovery questions while your wallet is unlocked.
+                        Keep your answers private and memorable.
+                      </p>
+
+                      {recoverySet && recoveryMode !== "setup" ? (
+                        <div>
+                          <p className="text-sm font-medium">
+                            <ShieldCheck className="mr-2 inline h-4 w-4 text-gold" />
+                            Recovery settings are configured
+                          </p>
+
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setError("");
+                              setNotice("");
+                              setAnswerOne("");
+                              setAnswerTwo("");
+                              setQuestionOne("");
+                              setQuestionTwo("");
+                              setRecoveryMode("setup");
+                            }}
+                            className="mt-3 min-h-10 rounded-xl border px-4 py-2 text-sm font-semibold"
+                          >
+                            Update recovery questions
+                          </button>
+                        </div>
+                      ) : recoveryMode === "setup" ? (
+                        <form
+                          className="space-y-3"
+                          onSubmit={(event) => {
+                            event.preventDefault();
+                            void setupPinRecovery();
+                          }}
+                        >
+                          <label className="block text-sm font-medium">
+                            First recovery question
+                            <select
+                              value={questionOne}
+                              onChange={(event) => setQuestionOne(event.target.value)}
+                              className="mt-1 min-h-11 w-full rounded-xl border bg-background px-3"
+                              required
+                            >
+                              <option value="">Choose a question</option>
+                              <option value="What was the name of your first school?">
+                                What was the name of your first school?
+                              </option>
+                              <option value="What city were you born in?">
+                                What city were you born in?
+                              </option>
+                              <option value="What was your childhood nickname?">
+                                What was your childhood nickname?
+                              </option>
+                            </select>
+                          </label>
+
+                          <label className="block text-sm font-medium">
+                            First answer
+                            <input
+                              type="password"
+                              autoComplete="off"
+                              value={answerOne}
+                              onChange={(event) => setAnswerOne(event.target.value)}
+                              className="mt-1 min-h-11 w-full rounded-xl border bg-background px-3"
+                              required
+                            />
+                          </label>
+
+                          <label className="block text-sm font-medium">
+                            Second recovery question
+                            <select
+                              value={questionTwo}
+                              onChange={(event) => setQuestionTwo(event.target.value)}
+                              className="mt-1 min-h-11 w-full rounded-xl border bg-background px-3"
+                              required
+                            >
+                              <option value="">Choose a different question</option>
+                              <option value="What was the name of your first school?">
+                                What was the name of your first school?
+                              </option>
+                              <option value="What city were you born in?">
+                                What city were you born in?
+                              </option>
+                              <option value="What was your childhood nickname?">
+                                What was your childhood nickname?
+                              </option>
+                            </select>
+                          </label>
+
+                          <label className="block text-sm font-medium">
+                            Second answer
+                            <input
+                              type="password"
+                              autoComplete="off"
+                              value={answerTwo}
+                              onChange={(event) => setAnswerTwo(event.target.value)}
+                              className="mt-1 min-h-11 w-full rounded-xl border bg-background px-3"
+                              required
+                            />
+                          </label>
+
+                          <button
+                            type="submit"
+                            disabled={recoveryBusy}
+                            className="inline-flex min-h-11 w-full items-center justify-center rounded-xl bg-gold px-4 py-2 text-sm font-bold text-background disabled:cursor-not-allowed disabled:opacity-50"
+                          >
+                            {recoveryBusy ? "Saving recovery settings…" : "Save recovery settings"}
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setRecoveryMode(null);
+                              setQuestionOne("");
+                              setQuestionTwo("");
+                              setAnswerOne("");
+                              setAnswerTwo("");
+                              setError("");
+                            }}
+                            className="w-full py-2 text-sm font-semibold underline"
+                          >
+                            Cancel
+                          </button>
+                        </form>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={async () => {
+                            setError("");
+                            setNotice("");
+                            setRecoveryBusy(true);
+
+                            try {
+                              const configured = await loadRecoveryStatus();
+
+                              if (configured) {
+                                setNotice("Your wallet recovery settings are already configured.");
+                              } else {
+                                setQuestionOne("");
+                                setQuestionTwo("");
+                                setAnswerOne("");
+                                setAnswerTwo("");
+                                setRecoveryMode("setup");
+                              }
+                            } catch (err) {
+                              console.error("Recovery settings check failed:", err);
+                              setError("We couldn't check your recovery settings. Please try again.");
+                            } finally {
+                              setRecoveryBusy(false);
+                            }
+                          }}
+                          disabled={recoveryBusy}
+                          className="min-h-11 w-full rounded-xl border px-4 py-2 text-sm font-semibold disabled:opacity-50"
+                        >
+                          {recoveryBusy ? "Checking recovery…" : "Set up PIN recovery"}
+                        </button>
+                      )}
+                    </div>
+                  </>
                 ) : pinIsSet === false ? (
                   <div className="mt-4 space-y-3">
                     <label className="block text-sm font-medium">
