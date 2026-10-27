@@ -23,24 +23,23 @@ interface ChatMessage {
   };
 }
 
-const STORE_FAQS: Record<string, string> = {
-  whatsapp:
-    "You can chat with our South African team directly on WhatsApp at +27 68 496 3972 for instant order assistance, tracking, and custom inquiries.",
-  order:
-    "To place an order, simply add products to your cart and tap 'Order My Cart' via WhatsApp, or proceed through our secure online checkout.",
-  delivery:
-    "We provide nationwide door-to-door courier delivery across South Africa. Standard delivery takes 2 to 5 business days.",
-  shipping:
-    "Standard shipping takes 2-5 business days across South Africa. Tracking information is provided once your parcel is dispatched.",
-  return:
-    "We offer a 7-day hassle-free return window for items in their original condition and packaging. Reach out on WhatsApp to initiate a return.",
-  payment:
-    "We support secure online payments as well as direct EFT / WhatsApp order confirmation.",
-  contact:
-    `You can contact ${BRAND.name} directly on WhatsApp (+27 68 496 3972) or via our Contact Us page.`,
-  price:
-    `All prices shown on ${BRAND.name} are in South African Rands (ZAR / R) including all applicable taxes.`,
-};
+
+  function findFaqAnswer(queryText: string): string | null {
+    const lower = queryText.toLowerCase();
+
+    const matchedProduct = products.find((product) =>
+      lower.includes(product.name.toLowerCase())
+    );
+
+    if (!matchedProduct) return null;
+
+    return (
+      `The catalogue currently lists ${matchedProduct.name} at ` +
+      `R${matchedProduct.price}. Please check the product page for the ` +
+      `latest details before ordering. You can also ask our team on WhatsApp: ` +
+      `https://wa.me/27684963972`
+    );
+    }
 
 export function FloatingSupportButtons() {
   const cart = useLocalList("nexa-cart");
@@ -60,7 +59,7 @@ export function FloatingSupportButtons() {
     {
       id: "welcome",
       sender: "ai",
-      text: `Hello! Welcome to ${BRAND.name}. I'm ${BRAND.shortName} AI, your 24/7 shopping assistant. Ask me about products, pricing in Rands, shipping across South Africa, or ordering via WhatsApp!`,
+text: `Hello! and Welcome to ${BRAND.name}. Im TJC-OS, your 24/7 AI customer support assistant. I can help with shopping, product questions, ordering guidance, account questions, and customer concerns. I'll be honest when I can't verify something.`,
     },
   ]);
   const [input, setInput] = useState("");
@@ -129,9 +128,9 @@ export function FloatingSupportButtons() {
         .join(", ");
 
       const contextData = productSample
-        ? `Featured Store Products: ${productSample}. Total catalogue items: ${products.length}. WhatsApp: +27 68 496 3972.`
-        : `WhatsApp: +27 68 496 3972. Nationwide delivery across South Africa (2-5 business days).`;
-
+  ? `Featured Store Products (catalogue snapshot, not a stock guarantee): ${productSample}. Total catalogue items in this snapshot: ${products.length}. WhatsApp support contact: +27 68 496 3972.`
+  : `No product catalogue items were available in this request. WhatsApp support contact: +27 68 496 3972. Do not assume stock, delivery times, returns policies, or payment methods.`;
+     
       const response = await sendAiChatMessage({
         data: {
           mode: "customer",
@@ -182,10 +181,10 @@ export function FloatingSupportButtons() {
       }
     } catch (error) {
       console.warn("AI generation fallback:", error);
-      const faqAnswer = findFaqAnswer(query);
-      const replyText =
-        faqAnswer ||
-        `Thank you for contacting ${BRAND.name}. Our team is available on WhatsApp (+27 68 496 3972) to assist you immediately with pricing, orders, and delivery.`;
+     const faqAnswer = findFaqAnswer(query);
+const replyText =
+  faqAnswer ??
+  `I'm sorry, but I couldn't get a reliable answer from the service just now. I don't want to guess about your question. Please try again shortly, or contact our team on WhatsApp at +27 68 496 3972.`;
 
       setMessages((prev) => [
         ...prev,
@@ -206,7 +205,7 @@ export function FloatingSupportButtons() {
       {
         id: "welcome-reset",
         sender: "ai",
-        text: `Conversation restarted! I'm ${BRAND.shortName} AI. How can I help you today with ${BRAND.name}? Ask me about products, shipping across South Africa, or ordering via WhatsApp!`,
+        text: `Conversation restarted! I'm TJC-OS your customer support assistant. How can I help you with ${BRAND.name} today? I can guide you through shopping, ordering, account questions, or a problem you need help resolving.`,
       },
     ]);
   }
@@ -313,7 +312,7 @@ export function FloatingSupportButtons() {
                   </span>
                 </p>
                 <p className="text-[11px] text-muted-foreground">
-                  Shop assistance, tracking & FAQs
+                  Shopping, account help & customer support
                 </p>
               </div>
             </div>
