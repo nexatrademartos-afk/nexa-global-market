@@ -54,7 +54,7 @@ describe("TJC-OS Deterministic Local Assistant Logic", () => {
     const res = getDeterministicLocalResponse("What are your delivery times across South Africa?", mockProducts);
     expect(res).not.toBeNull();
     expect(res?.text).toContain("South Africa");
-    expect(res?.text).toContain("3 to 5 business days");
+    expect(res?.text).toContain("delivery arrangements");
     expect(res?.actions?.[0].type).toBe("whatsapp");
     expect(res?.text).not.toContain("https://");
   });
@@ -100,5 +100,66 @@ describe("TJC-OS Deterministic Local Assistant Logic", () => {
   it("returns null for arbitrary queries so they can be routed to the AI model", () => {
     const res = getDeterministicLocalResponse("What is the history of interior architecture?", mockProducts);
     expect(res).toBeNull();
+  });
+});
+
+
+import {
+  SUPPORT_CATEGORIES,
+  checkContainsSecrets,
+  isCaseInitiationQuery,
+  parseSupportContact,
+} from "@/components/FloatingSupportButtons";
+
+describe("TJC-OS Guided Support Case Safeguards & Validation", () => {
+  it("defines standard support categories with accurate priorities", () => {
+    expect(SUPPORT_CATEGORIES.length).toBeGreaterThanOrEqual(5);
+
+    const fraudCategory = SUPPORT_CATEGORIES.find((c) => c.id === "fraud");
+    expect(fraudCategory).toBeDefined();
+    expect(fraudCategory?.priority).toBe("HIGH");
+
+    const orderCategory = SUPPORT_CATEGORIES.find((c) => c.id === "order");
+    expect(orderCategory).toBeDefined();
+    expect(orderCategory?.priority).toBe("NORMAL");
+  });
+
+  it("detects sensitive secrets (PINs, passwords, OTPs, CVVs, card numbers) accurately", () => {
+    expect(checkContainsSecrets("My PIN is 123456")).toBe(true);
+    expect(checkContainsSecrets("Password is secret123")).toBe(true);
+    expect(checkContainsSecrets("My OTP code was 4591")).toBe(true);
+    expect(checkContainsSecrets("Card CVV is 998")).toBe(true);
+    expect(checkContainsSecrets("4532-1234-5678-9012")).toBe(true);
+
+    // Normal safe descriptions should NOT trigger secrets
+    expect(checkContainsSecrets("I received the wrong item in my delivery")).toBe(false);
+    expect(checkContainsSecrets("Looking for a gold watch model 2026")).toBe(false);
+    expect(checkContainsSecrets("How do I update my profile address?")).toBe(false);
+  });
+
+  it("recognizes case and ticket initiation phrases", () => {
+    expect(isCaseInitiationQuery("I want to open a support ticket")).toBe(true);
+    expect(isCaseInitiationQuery("open a ticket")).toBe(true);
+    expect(isCaseInitiationQuery("submit a support case")).toBe(true);
+    expect(isCaseInitiationQuery("report an issue with my order")).toBe(true);
+    expect(isCaseInitiationQuery("file a complaint")).toBe(true);
+    expect(isCaseInitiationQuery("create a ticket")).toBe(true);
+
+    // Regular queries should not trigger
+    expect(isCaseInitiationQuery("What is the price of this phone?")).toBe(false);
+    expect(isCaseInitiationQuery("Hello there")).toBe(false);
+  });
+
+  it("parses customer contact information reliably", () => {
+    const contact = parseSupportContact(
+      "Sipho Dlamini, sipho@example.co.za, 071 234 5678"
+    );
+    expect(contact.email).toBe("sipho@example.co.za");
+    expect(contact.phone).toBe("0712345678");
+    expect(contact.name).toBe("Sipho Dlamini");
+
+    const emailOnly = parseSupportContact("thabo@example.com");
+    expect(emailOnly.email).toBe("thabo@example.com");
+    expect(emailOnly.phone).toBeNull();
   });
 });

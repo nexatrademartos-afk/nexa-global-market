@@ -1,3 +1,4 @@
+import { supabase } from "@/integrations/supabase/client";
 import { BRAND } from "@/lib/brand";
 import { useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate } from "@tanstack/react-router";
@@ -23,7 +24,7 @@ import { sendAiChatMessage } from "@/lib/ai/server";
 import type { ChatMessage as AiChatMessage } from "@/lib/ai/types";
 
 export interface ChatAction {
-  type: "whatsapp" | "support_escalate" | "link";
+  type: "whatsapp" | "support_escalate" | "link" | "case_step";
   label: string;
   payload?: string;
 }
@@ -37,6 +38,62 @@ export interface ChatMessage {
     type: "whatsapp" | "faq" | "retry";
     label: string;
   };
+}
+
+
+export interface SupportCategory {
+  id: string;
+  label: string;
+  priority: "HIGH" | "NORMAL";
+  description: string;
+}
+
+export const SUPPORT_CATEGORIES: SupportCategory[] = [
+  { id: "fraud", label: "🚨 Fraud / Security", priority: "HIGH", description: "Suspicious activity or compromised accounts" },
+  { id: "payment", label: "💳 Payment Issue", priority: "NORMAL", description: "Payment confirmation or processing queries" },
+  { id: "order", label: "📦 Order & Delivery", priority: "NORMAL", description: "Order status or delivery coordination" },
+  { id: "wallet", label: "👛 Account & Wallet", priority: "NORMAL", description: "Wallet access or PIN assistance" },
+  { id: "product", label: "🛍️ Product & Shopping", priority: "NORMAL", description: "Product availability or specifications" },
+  { id: "complaint", label: "📝 General Complaint", priority: "NORMAL", description: "Customer experience or service feedback" },
+  { id: "other", label: "❓ Other Enquiry", priority: "NORMAL", description: "General marketplace questions" },
+];
+
+export function checkContainsSecrets(text: string): boolean {
+  if (/\b(password|passcode)\b/i.test(text)) return true;
+  if (/\b(pin|cvv|otp)\b.*\b\d{3,6}\b/i.test(text)) return true;
+  if (/\b\d{3,6}\b.*\b(pin|cvv|otp)\b/i.test(text)) return true;
+  if (/\b\d{4}[ -]?\d{4}[ -]?\d{4}[ -]?\d{4}\b/.test(text)) return true;
+  return false;
+}
+
+export function isCaseInitiationQuery(query: string): boolean {
+  return /\b(open\s+(?:an?\s+)?(?:[a-z]+\s+)?(?:case|ticket)|submit\s+(?:an?\s+)?(?:[a-z]+\s+)?(?:ticket|case)|report\s+(?:an?\s+)?(?:[a-z]+\s+)?(?:issue|problem|fraud|incident)|log\s+(?:an?\s+)?(?:[a-z]+\s+)?ticket|create\s+(?:an?\s+)?(?:[a-z]+\s+)?ticket|file\s+(?:an?\s+)?(?:[a-z]+\s+)?complaint)\b/i.test(query.trim());
+}
+
+export function parseSupportContact(text: string): { name: string; email: string | null; phone: string | null } {
+  const emailMatch = text.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/);
+  const email = emailMatch ? emailMatch[0] : null;
+
+  const phoneMatch = text.match(/(?:\+?27|0)\s*\d{2}\s*\d{3}\s*\d{4}/);
+  const phone = phoneMatch ? phoneMatch[0].replace(/\s+/g, "") : null;
+
+  let cleaned = text;
+  if (email) cleaned = cleaned.replace(email, "");
+  if (phoneMatch) cleaned = cleaned.replace(phoneMatch[0], "");
+  cleaned = cleaned.replace(/[,;:\n\r]+/g, " ").trim();
+  const name = cleaned.length > 1 ? cleaned : "Customer";
+
+  return { name, email, phone };
+}
+
+export interface GuidedCaseState {
+  step: "idle" | "category" | "description" | "contact" | "orderRef" | "submitting";
+  category?: string;
+  isUrgent?: boolean;
+  description?: string;
+  name?: string;
+  email?: string;
+  phone?: string;
 }
 
 const WHATSAPP_SUPPORT_MESSAGE =
@@ -89,7 +146,7 @@ You can also report urgent security concerns directly to our support team on Wha
   // 4. Delivery & Shipping
   if (/\b(delivery|shipping|courier|how\s+long.*deliver|deliver.*south\s+africa|delivery\s+times?)\b/i.test(query)) {
     return {
-      text: `We deliver across South Africa. Standard delivery typically takes 3 to 5 business days depending on your area. Detailed delivery arrangements and courier options are confirmed when you arrange your order with our team.`,
+      text: `We deliver across South Africa. Specific delivery arrangements, courier options, and transit fees are confirmed directly with our team for your area when arranging your order. Please contact our support team to verify delivery options.`,
       actions: [
         {
           type: "whatsapp",
@@ -117,7 +174,7 @@ You can also report urgent security concerns directly to our support team on Wha
   // 6. Returns & refunds
   if (/\b(return|refund|exchange|cancel.*order|returns?\s+policy)\b/i.test(query)) {
     return {
-      text: `Items in original, unused condition can be returned within our standard return window. For return requests, refunds, or exchanges, please contact our support team with your order reference.`,
+      text: `For returns, refunds, or exchanges, please contact our support team with your order details. All requests are handled directly by our team in accordance with store policy.`,
       actions: [
         {
           type: "whatsapp",
@@ -207,7 +264,9 @@ export function FloatingSupportButtons() {
     getWelcomeMessage(),
   ]);
 
-  const [input, setInput] = useState("");
+    const [caseState, setCaseState] = useState<GuidedCaseState>({ step: "idle" });
+  const caseStateRef = useRef<GuidedCaseState>({ step: "idle" });
+const [input, setInput] = useState("");
   const [isThinking, setIsThinking] = useState(false);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -257,6 +316,248 @@ export function FloatingSupportButtons() {
 
     if (customText === undefined) {
       setInput("");
+    }
+
+    // Check guided support case flow
+    const currentStep = caseStateRef.current.step;
+
+    if (query.toLowerCase() === "cancel" && currentStep !== "idle") {
+      caseStateRef.current = { step: "idle" };
+      setCaseState({ step: "idle" });
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: `${Date.now()}-assistant`,
+          sender: "ai",
+          text: "Support ticket process cancelled. How else can I help you today?",
+        },
+      ]);
+      return;
+    }
+
+    if (currentStep === "idle" && isCaseInitiationQuery(query)) {
+      caseStateRef.current = { step: "category" };
+      setCaseState({ step: "category" });
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: `${Date.now()}-assistant`,
+          sender: "ai",
+          text: `I can help you open an official support case for our customer care team. Please select the category that best describes your enquiry below:\n*(Type "cancel" at any time to exit)*`,
+          actions: SUPPORT_CATEGORIES.map((cat) => ({
+            type: "case_step",
+            label: cat.label,
+            payload: cat.id,
+          })),
+        },
+      ]);
+      return;
+    }
+
+    if (currentStep === "category") {
+      const selected = SUPPORT_CATEGORIES.find(
+        (c) =>
+          c.id.toLowerCase() === query.toLowerCase() ||
+          c.label.toLowerCase().includes(query.toLowerCase()) ||
+          query.toLowerCase().includes(c.id.toLowerCase())
+      );
+
+      if (!selected) {
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: `${Date.now()}-assistant`,
+            sender: "ai",
+            text: "Please select one of the categories below to proceed, or type \"cancel\" to exit:",
+            actions: SUPPORT_CATEGORIES.map((cat) => ({
+              type: "case_step",
+              label: cat.label,
+              payload: cat.id,
+            })),
+          },
+        ]);
+        return;
+      }
+
+      const nextState: GuidedCaseState = {
+        step: "description",
+        category: selected.label,
+        isUrgent: selected.priority === "HIGH",
+      };
+      caseStateRef.current = nextState;
+      setCaseState(nextState);
+
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: `${Date.now()}-assistant`,
+          sender: "ai",
+          text: `Selected Category: **${selected.label}** ${selected.priority === "HIGH" ? "(High Priority)" : ""}\n\nPlease describe your enquiry or what happened in detail.\n\n⚠️ **Security Notice:** Never include passwords, your 6-digit wallet PIN, OTP codes, or bank card numbers.`,
+        },
+      ]);
+      return;
+    }
+
+    if (currentStep === "description") {
+      if (checkContainsSecrets(query)) {
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: `${Date.now()}-assistant`,
+            sender: "ai",
+            text: `⚠️ **Security Alert:** Your message appears to contain sensitive information (such as a PIN, password, OTP, or card number). Please describe your issue without including any secret credentials.`,
+          },
+        ]);
+        return;
+      }
+
+      const nextState: GuidedCaseState = {
+        ...caseStateRef.current,
+        step: "contact",
+        description: query,
+      };
+      caseStateRef.current = nextState;
+      setCaseState(nextState);
+
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: `${Date.now()}-assistant`,
+          sender: "ai",
+          text: `Thank you. Please enter your contact details so our support team can follow up:\n\nFormat: **Full Name, Email address, South African Phone number**\n*(e.g. Sipho Dlamini, sipho@example.co.za, 0712345678)*`,
+        },
+      ]);
+      return;
+    }
+
+    if (currentStep === "contact") {
+      const contact = parseSupportContact(query);
+      if (!contact.email) {
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: `${Date.now()}-assistant`,
+            sender: "ai",
+            text: `Please provide at least a valid email address so our team can follow up with your ticket (e.g. yourname@example.com).`,
+          },
+        ]);
+        return;
+      }
+
+      const nextState: GuidedCaseState = {
+        ...caseStateRef.current,
+        step: "orderRef",
+        name: contact.name,
+        email: contact.email,
+        phone: contact.phone || undefined,
+      };
+      caseStateRef.current = nextState;
+      setCaseState(nextState);
+
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: `${Date.now()}-assistant`,
+          sender: "ai",
+          text: `Contact details saved: **${contact.name}** (${contact.email}).\n\nDo you have a related **Order Reference**? If not, select or type **None**.`,
+          actions: [
+            {
+              type: "case_step",
+              label: "None",
+              payload: "None",
+            },
+          ],
+        },
+      ]);
+      return;
+    }
+
+    if (currentStep === "orderRef") {
+      const orderRef = /^(none|no|n\/a|nil)$/i.test(query.trim()) ? null : query.trim();
+      const state = { ...caseStateRef.current };
+      const refCode = "CASE-" + Date.now().toString(36).toUpperCase().slice(-4) + Math.random().toString(36).substring(2, 6).toUpperCase();
+
+      setIsThinking(true);
+      try {
+        const { error } = await supabase.from("contact_messages").insert({
+          name: state.name || "Customer",
+          email: state.email!,
+          phone: state.phone || null,
+          subject: `[${refCode}] [${state.category}] Support Case`,
+          message: [
+            `Case Reference: ${refCode}`,
+            `Category: ${state.category}`,
+            `Priority: ${state.isUrgent ? "HIGH" : "NORMAL"}`,
+            `Order Reference: ${orderRef || "N/A"}`,
+            "",
+            "Customer Description:",
+            state.description || "No description provided",
+            "",
+            "---",
+            "Submitted via TJC-OS Guided Support",
+          ].join("\n"),
+        });
+
+        caseStateRef.current = { step: "idle" };
+        setCaseState({ step: "idle" });
+
+        if (error) {
+          console.warn("Support case database insert failed:", error);
+          setMessages((prev) => [
+            ...prev,
+            {
+              id: `${Date.now()}-assistant`,
+              sender: "ai",
+              text: `I couldn't record your ticket in our database right now due to a network or server error. To ensure your request is not lost, please message our support team on WhatsApp using the button below with your details.`,
+              actions: [
+                {
+                  type: "whatsapp",
+                  label: "Send Ticket on WhatsApp",
+                  payload: `Support Ticket: ${state.category}\nRef: ${refCode}\nContact: ${state.name} (${state.email})\nDescription: ${state.description}`,
+                },
+              ],
+            },
+          ]);
+        } else {
+          setMessages((prev) => [
+            ...prev,
+            {
+              id: `${Date.now()}-assistant`,
+              sender: "ai",
+              text: `✅ **Support Case Registered Successfully**\n\n• **Case Reference:** \`${refCode}\`\n• **Category:** ${state.category} ${state.isUrgent ? "(High Priority)" : ""}\n• **Contact:** ${state.name} (${state.email})\n\nOur customer support team has received your ticket in the queue. If you would like to follow up directly or share screenshots, you can continue on WhatsApp using your case reference below.`,
+              actions: [
+                {
+                  type: "whatsapp",
+                  label: `Chat on WhatsApp regarding ${refCode}`,
+                  payload: `Hello support, I have logged support case ${refCode} (${state.category}). Please assist.`,
+                },
+              ],
+            },
+          ]);
+        }
+      } catch (err) {
+        console.warn("Support case exception:", err);
+        caseStateRef.current = { step: "idle" };
+        setCaseState({ step: "idle" });
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: `${Date.now()}-assistant`,
+            sender: "ai",
+            text: `An unexpected error occurred while saving your case. Please contact our support team directly on WhatsApp so we can assist you.`,
+            actions: [
+              {
+                type: "whatsapp",
+                label: "Chat with Support",
+                payload: WHATSAPP_SUPPORT_MESSAGE,
+              },
+            ],
+          },
+        ]);
+      } finally {
+        setIsThinking(false);
+      }
+      return;
     }
 
     // Check deterministic local intent first (instant, 100% reliable)
@@ -441,6 +742,8 @@ export function FloatingSupportButtons() {
   }
 
   function handleReset() {
+    caseStateRef.current = { step: "idle" };
+    setCaseState({ step: "idle" });
     setMessages([
       {
         ...getWelcomeMessage(),
@@ -616,11 +919,22 @@ export function FloatingSupportButtons() {
               type="button"
               disabled={isThinking}
               onClick={() =>
-                void handleSend("What are your delivery times across South Africa?")
+                void handleSend("I want to open a support ticket")
+              }
+              className="shrink-0 rounded-full border border-gold/40 bg-gold/10 px-2.5 py-1 text-[11px] font-medium text-gold transition-colors hover:bg-gold/20 disabled:opacity-50"
+            >
+              📝 Open Ticket
+            </button>
+
+            <button
+              type="button"
+              disabled={isThinking}
+              onClick={() =>
+                void handleSend("What are your delivery options across South Africa?")
               }
               className="shrink-0 rounded-full border border-border bg-background px-2.5 py-1 text-[11px] text-muted-foreground transition-colors hover:border-gold hover:text-foreground disabled:opacity-50"
             >
-              📦 Delivery Times
+              📦 Delivery Options
             </button>
 
             <button
@@ -680,18 +994,31 @@ export function FloatingSupportButtons() {
                 {((message.actions && message.actions.length > 0) ||
                   message.action?.type === "whatsapp") && (
                   <div className="mt-2.5 flex flex-wrap gap-2">
-                    {message.actions?.map((act, index) => (
-                      <button
-                        key={index}
-                        type="button"
-                        onClick={() => handleWhatsAppSupport(act.payload)}
-                        className="inline-flex items-center gap-1.5 rounded-xl bg-[#25D366]/15 px-3 py-1.5 text-[11px] font-semibold text-[#128C7E] transition-colors hover:bg-[#25D366]/25 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#25D366]/50"
-                      >
-                        <WhatsAppIcon className="h-3.5 w-3.5 fill-current" />
-                        <span>{act.label}</span>
-                        <ExternalLink className="h-3 w-3 opacity-70" />
-                      </button>
-                    ))}
+                    {message.actions?.map((act, index) => {
+                      const isWhatsApp = act.type === "whatsapp";
+                      return (
+                        <button
+                          key={index}
+                          type="button"
+                          onClick={() => {
+                            if (isWhatsApp) {
+                              handleWhatsAppSupport(act.payload);
+                            } else if (act.type === "case_step") {
+                              void handleSend(act.payload ?? act.label);
+                            }
+                          }}
+                          className={
+                            isWhatsApp
+                              ? "inline-flex items-center gap-1.5 rounded-xl bg-[#25D366]/15 px-3 py-1.5 text-[11px] font-semibold text-[#128C7E] transition-colors hover:bg-[#25D366]/25 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#25D366]/50"
+                              : "inline-flex items-center gap-1.5 rounded-xl border border-gold/40 bg-gold/10 px-3 py-1.5 text-[11px] font-semibold text-gold transition-colors hover:bg-gold/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold/50"
+                          }
+                        >
+                          {isWhatsApp && <WhatsAppIcon className="h-3.5 w-3.5 fill-current" />}
+                          <span>{act.label}</span>
+                          {isWhatsApp && <ExternalLink className="h-3 w-3 opacity-70" />}
+                        </button>
+                      );
+                    })}
                     {!message.actions && message.action?.type === "whatsapp" && (
                       <button
                         type="button"

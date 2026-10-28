@@ -304,7 +304,8 @@ export function AdminPage({
   const [moduleError, setModuleError] = useState("");
   const [message, setMessage] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
-  const [searchText, setSearchText] = useState("");
+    const [supportFilter, setSupportFilter] = useState<"all" | "unread" | "cases" | "urgent">("all");
+const [searchText, setSearchText] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [showProductForm, setShowProductForm] = useState(false);
   const [showCategoryForm, setShowCategoryForm] = useState(false);
@@ -677,8 +678,16 @@ export function AdminPage({
 
   const filteredMessages = useMemo(() => messages.filter((item) => {
     const q = searchText.trim().toLowerCase();
-    return !q || `${item.name} ${item.email} ${item.subject ?? ""} ${item.message}`.toLowerCase().includes(q);
-  }), [messages, searchText]);
+    const matchesSearch = !q || `${item.name} ${item.email} ${item.phone ?? ""} ${item.subject ?? ""} ${item.message}`.toLowerCase().includes(q);
+    if (!matchesSearch) return false;
+
+    if (supportFilter === "unread") return !item.is_read;
+    if (supportFilter === "cases") return Boolean(item.subject?.includes("[CASE-"));
+    if (supportFilter === "urgent") {
+      return Boolean(item.subject?.includes("[🚨 Fraud / Security]") || item.message?.includes("Priority: HIGH") || item.subject?.includes("Security"));
+    }
+    return true;
+  }), [messages, searchText, supportFilter]);
 
   const lowStockProducts = products.filter((product) => product.stock <= lowStockThreshold);
   const totalRevenue = orders.filter((order) => !["cancelled", "refunded", "returned"].includes(order.status.toLowerCase())).reduce((sum, order) => sum + Number(order.total || 0), 0);
@@ -740,7 +749,131 @@ export function AdminPage({
   }
 
   function renderSupport() {
-    return <div className="space-y-5"><div className="flex flex-wrap items-center justify-between gap-3"><div><h2 className="text-xl font-bold">Customer support inbox</h2><p className="mt-1 text-sm text-muted-foreground">Review messages and follow up by email, phone or WhatsApp.</p></div><span className="rounded-full bg-amber-500/10 px-3 py-1 text-sm text-amber-300">{unreadMessages} unread</span></div><input value={searchText} onChange={(e) => setSearchText(e.target.value)} placeholder="Search messages" className="field w-full" /><div className="space-y-3">{filteredMessages.map((item) => <article key={item.id} className={`${panelClass} ${item.is_read ? "opacity-80" : "border-gold/40"}`}><div className="flex flex-wrap justify-between gap-3"><div><h3 className="font-semibold">{item.subject || "Customer inquiry"}</h3><p className="text-sm text-muted-foreground">{item.name} · {item.email} · {item.phone || "No phone"}</p></div><span className="text-xs text-muted-foreground">{dateLabel(item.created_at)}</span></div><p className="mt-3 whitespace-pre-wrap text-sm">{item.message}</p><div className="mt-4 flex flex-wrap gap-2"><a className={buttonClass} href={`mailto:${item.email}?subject=${encodeURIComponent(`Re: ${item.subject || "Your message"}`)}`}><Mail className="mr-2 h-4 w-4" />Email customer</a>{item.phone && <a className={buttonClass} href={`https://wa.me/${item.phone.replace(/\D/g, "")}`} target="_blank" rel="noreferrer"><Phone className="mr-2 h-4 w-4" />WhatsApp</a>}<button className={buttonClass} type="button" onClick={() => void toggleMessageRead(item)}>{item.is_read ? "Mark unread" : "Mark read"}</button></div></article>)}{!filteredMessages.length && <div className={panelClass}>No support messages found.</div>}</div></div>;
+    const caseCount = messages.filter((m) => m.subject?.includes("[CASE-")).length;
+    const urgentCount = messages.filter((m) => m.subject?.includes("[🚨 Fraud / Security]") || m.message?.includes("Priority: HIGH") || m.subject?.includes("Security")).length;
+
+    return (
+      <div className="space-y-5">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h2 className="text-xl font-bold">Customer support inbox</h2>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Review and manage verified customer support cases, inquiries, and follow-ups.
+            </p>
+          </div>
+          <span className="rounded-full bg-amber-500/10 px-3 py-1 text-sm text-amber-300 font-medium">
+            {unreadMessages} unread
+          </span>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setSupportFilter("all")}
+            className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors ${supportFilter === "all" ? "bg-gold text-stone-950" : "bg-muted text-muted-foreground hover:bg-muted/80"}`}
+          >
+            All ({messages.length})
+          </button>
+          <button
+            type="button"
+            onClick={() => setSupportFilter("unread")}
+            className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors ${supportFilter === "unread" ? "bg-amber-500 text-stone-950" : "bg-muted text-muted-foreground hover:bg-muted/80"}`}
+          >
+            Unread ({unreadMessages})
+          </button>
+          <button
+            type="button"
+            onClick={() => setSupportFilter("cases")}
+            className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors ${supportFilter === "cases" ? "bg-gold text-stone-950" : "bg-muted text-muted-foreground hover:bg-muted/80"}`}
+          >
+            Logged Cases ({caseCount})
+          </button>
+          <button
+            type="button"
+            onClick={() => setSupportFilter("urgent")}
+            className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors ${supportFilter === "urgent" ? "bg-red-500 text-white" : "bg-muted text-muted-foreground hover:bg-muted/80"}`}
+          >
+            🚨 Urgent & Security ({urgentCount})
+          </button>
+        </div>
+
+        <input
+          value={searchText}
+          onChange={(e) => setSearchText(e.target.value)}
+          placeholder="Search by name, email, phone, reference, or message..."
+          className="field w-full"
+        />
+
+        <div className="space-y-3">
+          {filteredMessages.map((item) => {
+            const caseMatch = item.subject?.match(/\[(CASE-[A-Z0-9]+)\]/);
+            const caseRef = caseMatch ? caseMatch[1] : null;
+            const isUrgent = item.subject?.includes("[🚨 Fraud / Security]") || item.message?.includes("Priority: HIGH") || item.subject?.includes("Security");
+            const waGreeting = caseRef
+              ? encodeURIComponent(`Hello ${item.name}, this is NEXA GLOBAL MART customer support following up on your case ${caseRef}.`)
+              : encodeURIComponent(`Hello ${item.name}, this is NEXA GLOBAL MART customer support following up on your enquiry.`);
+
+            return (
+              <article key={item.id} className={`${panelClass} ${item.is_read ? "opacity-80" : "border-gold/40"}`}>
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div className="space-y-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <h3 className="font-semibold text-foreground">{item.subject || "Customer inquiry"}</h3>
+                      {caseRef && (
+                        <span className="rounded-md bg-gold/15 border border-gold/30 px-2 py-0.5 font-mono text-[11px] font-bold text-gold">
+                          {caseRef}
+                        </span>
+                      )}
+                      {isUrgent && (
+                        <span className="rounded-md border border-red-500/30 bg-red-500/15 px-2 py-0.5 text-[11px] font-semibold text-red-400">
+                          🚨 Urgent Priority
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-sm text-muted-foreground">
+                      {item.name} · {item.email} · {item.phone || "No phone provided"}
+                    </p>
+                  </div>
+                  <span className="text-xs text-muted-foreground">{dateLabel(item.created_at)}</span>
+                </div>
+
+                <p className="mt-3 whitespace-pre-wrap text-sm leading-relaxed text-foreground/90">{item.message}</p>
+
+                <div className="mt-4 flex flex-wrap gap-2">
+                  <a
+                    className={buttonClass}
+                    href={`mailto:${item.email}?subject=${encodeURIComponent(`Re: ${item.subject || "Your enquiry"}`)}`}
+                  >
+                    <Mail className="mr-2 h-4 w-4" />Email customer
+                  </a>
+                  {item.phone && (
+                    <a
+                      className={buttonClass}
+                      href={`https://wa.me/${item.phone.replace(/\D/g, "")}?text=${waGreeting}`}
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      <Phone className="mr-2 h-4 w-4" />WhatsApp customer
+                    </a>
+                  )}
+                  <button className={buttonClass} type="button" onClick={() => void toggleMessageRead(item)}>
+                    {item.is_read ? "Mark unread" : "Mark read"}
+                  </button>
+                </div>
+              </article>
+            );
+          })}
+        </div>
+
+        {filteredMessages.length === 0 && (
+          <div className={panelClass}>
+            {messages.length === 0
+              ? "No customer support messages yet. When customers submit inquiries, they will appear here."
+              : "No support messages match your search or filter."}
+          </div>
+        )}
+      </div>
+    );
   }
 
   function renderFinance() {
