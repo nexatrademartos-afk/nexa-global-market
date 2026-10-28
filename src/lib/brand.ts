@@ -15,6 +15,12 @@ export const BRAND = {
 
   poweredBy: "TJC-OS",
 
+  contact: {
+    phone: "+27 68 496 3972",
+    whatsappDigits: "27684963972",
+    whatsappUrl: "https://wa.me/27684963972",
+  },
+
   logoPath: "/nexa-global-mart-logo.png",
   faviconPath: "/favicon.ico?v=2",
 

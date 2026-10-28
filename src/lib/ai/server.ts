@@ -88,12 +88,26 @@ try {
       text =
         "To arrange an order, message our support team on WhatsApp. Share the product name or link, the quantity you need, and your delivery area. Website checkout is currently in preview.";
     } else if (
-      /track|tracking|where.*order|order status|parcel/.test(
+      /didn'?t receive|missing.*order|never received|not arrived|where.*order|track|tracking|order status|parcel/.test(
         latestQuestion,
       )
     ) {
       text =
-        "Live order tracking is not connected to this chat yet. Please contact our support team on WhatsApp and share your order reference if you have one.";
+        "Live order tracking is not connected to this chat yet. If you have an enquiry or haven't received your delivery, please message our support team on WhatsApp with your order reference so we can investigate immediately.";
+    } else if (
+      /account|register|sign\s*up|sign\s*in|login|how.*(?:set|create).*account/.test(
+        latestQuestion,
+      )
+    ) {
+      text =
+        "Create a customer account at /sign-up with your name, email, and a password of at least 8 characters. Existing customers can sign in at /sign-in, and password recovery is available at /forgot-password.";
+    } else if (
+      /delivery|shipping|courier|how long.*deliver/.test(
+        latestQuestion,
+      )
+    ) {
+      text =
+        "Delivery availability and fees depend on your area. Please contact our support team on WhatsApp with your town or suburb so they can confirm the available option and fee.";
     } else if (
       /price|how much|cost|in stock|available|sofa|product/.test(
         latestQuestion,
@@ -103,17 +117,38 @@ try {
         "Live stock and pricing must be verified directly against our catalogue or with our support team on WhatsApp.";
     }
 
+    console.warn("TJC-OS provider returned a non-success result", {
+      mode: data.mode,
+      provider: result.provider,
+      model: result.model,
+      status: result.status,
+    });
+
+    const { errorDetails: _providerDetails, ...safeResult } = result;
     return {
-      ...result,
+      ...safeResult,
       text,
       suggestedAction: "whatsapp",
     };
   }
 
+  if (result.status !== "success") {
+    console.warn("TJC-OS provider returned a non-success result", {
+      mode: data.mode,
+      provider: result.provider,
+      model: result.model,
+      status: result.status,
+    });
+    const { errorDetails: _providerDetails, ...safeResult } = result;
+    return safeResult;
+  }
+
   return result;
 } catch (err: unknown) {
-  const errMsg =
-    err instanceof Error ? err.message : String(err);
+  console.warn("TJC-OS AI request failed", {
+    mode: data.mode,
+    errorName: err instanceof Error ? err.name : "UnknownError",
+  });
 
   return {
     text:
@@ -123,7 +158,6 @@ try {
     provider: "gemini",
     model: "gemini-3.6-flash",
     status: "service_unavailable",
-    errorDetails: errMsg,
     suggestedAction: "whatsapp",
   };
   }

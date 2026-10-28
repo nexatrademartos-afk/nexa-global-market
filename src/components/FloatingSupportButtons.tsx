@@ -99,6 +99,23 @@ export interface GuidedCaseState {
 const WHATSAPP_SUPPORT_MESSAGE =
   "Hello, I need help from customer support. Please assist me.";
 
+export function cleanAiResponseText(text: string): string {
+  if (!text) return "";
+  return text
+    .replace(/\[blank\]/gi, "")
+    .replace(/(?:on|via)\s+WhatsApp\s+(?:at|via|on)\s+https?:\/\/wa\.me\/\S+/gi, "on WhatsApp")
+    .replace(/WhatsApp\s+(?:at|via|on)\s+https?:\/\/wa\.me\/\S+/gi, "WhatsApp")
+    .replace(/at\s+https?:\/\/wa\.me\/\S+/gi, "on WhatsApp")
+    .replace(/https?:\/\/wa\.me\/\S+/gi, "")
+    .replace(/\s+at\s+([.,!?;]|$)/gi, "$1")
+    .replace(/\s+at\s+(for|to|with)\b/gi, " $1")
+    .replace(/WhatsApp\s*:\s*$/i, "WhatsApp")
+    .replace(/\b(?:at|via|on|contact)\s*:\s*$/i, ".")
+    .replace(/\b(?:at|via|on)\s*$/i, "")
+    .replace(/[ \t]{2,}/g, " ")
+    .trim();
+}
+
 export function getDeterministicLocalResponse(
   queryText: string,
   products: StoreProduct[] = [],
@@ -110,6 +127,37 @@ export function getDeterministicLocalResponse(
   if (/^\s*(hi|hello|hey|good\s+(morning|afternoon|evening|day)|greetings|howdy|how\s+are\s+you|what'?s\s+up)\b/i.test(query)) {
     return {
       text: `Hello! Welcome to ${BRAND.name}. I'm TJC-OS, your AI assistant. How can I help you today? You can ask about our catalogue products, store services, or connect with our support team.`,
+    };
+  }
+
+  // Missing-order reports should not depend on the AI provider.
+  if (/\b(didn.t receive|haven.t received|never received|missing (?:my )?(?:order|parcel|delivery)|order (?:hasn.t|has not) arrived|my order (?:is )?late)\b/i.test(query)) {
+    return {
+      text: `I understand how concerning a missing delivery is. Live courier tracking is not connected to this chat, so I can’t look up delivery records directly. If you have an order reference, share it with support so they can check the available order information. You can also open a support ticket.`,
+      actions: [
+        { type: "whatsapp", label: "Chat on WhatsApp", payload: "Hello, I haven’t received my order. Please help me check it." },
+        { type: "case_step", label: "Open Support Ticket", payload: "I want to open a support ticket" },
+      ],
+    };
+  }
+
+  // Registration and sign-in use the existing authentication routes.
+  if (/\b(?:how.*(?:set|create|open|register).*account|create.*account|set.*account|register.*account|sign\s*up|sign\s*in|log\s*in|login|forgot.*password|reset.*password)\b/i.test(query)) {
+    return {
+      text: `To create an account, visit /sign-up and enter your name, email, and a password of at least 8 characters. If you already registered, use /sign-in. For a forgotten password, use /forgot-password.`,
+      actions: [
+        { type: "link", label: "Create Account", payload: "/sign-up" },
+        { type: "link", label: "Sign In", payload: "/sign-in" },
+        { type: "link", label: "Reset Password", payload: "/forgot-password" },
+      ],
+    };
+  }
+
+  // No live weather provider is configured for this assistant.
+  if (/\b(weather|temperature|forecast|rain|sunny)\b/i.test(query)) {
+    return {
+      text: `I don’t have live weather data. I can help with ${BRAND.name} products, shopping, accounts, and customer support.`,
+      actions: [{ type: "link", label: "Browse Products", payload: "/shop" }],
     };
   }
 
@@ -146,7 +194,7 @@ You can also report urgent security concerns directly to our support team on Wha
   // 4. Delivery & Shipping
   if (/\b(delivery|shipping|courier|how\s+long.*deliver|deliver.*south\s+africa|delivery\s+times?)\b/i.test(query)) {
     return {
-      text: `We deliver across South Africa. Specific delivery arrangements, courier options, and transit fees are confirmed directly with our team for your area when arranging your order. Please contact our support team to verify delivery options.`,
+      text: `Delivery options and fees depend on your area and are confirmed by the team when arranging an order. Please share your town or suburb with support to check what is available.`,
       actions: [
         {
           type: "whatsapp",
@@ -202,8 +250,13 @@ You can also report urgent security concerns directly to our support team on Wha
   // 8. Wallet & PIN facts
   if (/\b(wallet|pin|q\s+points|commissions|promo\s+credit|deposit|withdraw|balance)\b/i.test(query)) {
     return {
-      text: `The ${BRAND.shortName} Wallet is currently in preview with South African Rand (ZAR) and a 6-digit PIN. Cash, Q Points, commissions, and promo credits are tracked separately. Deposits, transfers, and withdrawals are currently disabled pending provider activation. Never disclose your wallet PIN to anyone.`,
+      text: `If your account has a wallet, open Account → Wallet and follow the on-screen setup to set a private six-digit PIN. The wallet uses South African Rand (ZAR). Cash, Q Points, commissions, and promotional credits are separate. Deposits, transfers, and withdrawals are currently disabled pending provider activation. Never disclose your wallet PIN, password, or verification code.`,
       actions: [
+        {
+          type: "link",
+          label: "Open Wallet",
+          payload: "/account/wallet",
+        },
         {
           type: "whatsapp",
           label: "Ask Support About Wallet",
@@ -268,6 +321,7 @@ export function FloatingSupportButtons() {
   const caseStateRef = useRef<GuidedCaseState>({ step: "idle" });
 const [input, setInput] = useState("");
   const [isThinking, setIsThinking] = useState(false);
+  const requestInFlightRef = useRef(false);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -301,7 +355,7 @@ const [input, setInput] = useState("");
   async function handleSend(customText?: string) {
     const query = (customText ?? input).trim();
 
-    if (!query || isThinking) {
+    if (!query || isThinking || requestInFlightRef.current) {
       return;
     }
 
@@ -498,11 +552,11 @@ const [input, setInput] = useState("");
           ].join("\n"),
         });
 
-        caseStateRef.current = { step: "idle" };
-        setCaseState({ step: "idle" });
-
         if (error) {
-          console.warn("Support case database insert failed:", error);
+          // Keep the customer's collected details so they can retry without re-entering them.
+          caseStateRef.current = { ...state, step: "orderRef" };
+          setCaseState({ ...state, step: "orderRef" });
+          console.warn("Support case database insert failed");
           setMessages((prev) => [
             ...prev,
             {
@@ -519,6 +573,8 @@ const [input, setInput] = useState("");
             },
           ]);
         } else {
+          caseStateRef.current = { step: "idle" };
+          setCaseState({ step: "idle" });
           setMessages((prev) => [
             ...prev,
             {
@@ -575,6 +631,7 @@ const [input, setInput] = useState("");
       return;
     }
 
+    requestInFlightRef.current = true;
     setIsThinking(true);
 
     try {
@@ -661,7 +718,7 @@ const [input, setInput] = useState("");
           {
             id: `${Date.now()}-assistant`,
             sender: "ai",
-            text: "I'm temporarily unable to get a reliable answer from the AI service. Our support team is ready to assist you on WhatsApp.",
+            text: "I'm temporarily unable to get a reliable answer from the AI service. Please try again shortly, or contact our support team on WhatsApp.",
             actions: [
               {
                 type: "whatsapp",
@@ -672,13 +729,7 @@ const [input, setInput] = useState("");
           },
         ]);
       } else {
-        let replyText = response.text?.trim() || "";
-        // Clean out raw WhatsApp links from text to ensure structured button presentation
-        replyText = replyText
-          .replace(/https?:\/\/wa\.me\/\S+/gi, "")
-          .replace(/Contact our team on WhatsApp:\s*$/i, "")
-          .replace(/at\s*:\s*$/i, "")
-          .trim();
+        const replyText = cleanAiResponseText(response.text?.trim() || "");
 
         if (!replyText) {
           setMessages((previous) => [
@@ -737,6 +788,7 @@ const [input, setInput] = useState("");
         },
       ]);
     } finally {
+      requestInFlightRef.current = false;
       setIsThinking(false);
     }
   }
@@ -996,6 +1048,7 @@ const [input, setInput] = useState("");
                   <div className="mt-2.5 flex flex-wrap gap-2">
                     {message.actions?.map((act, index) => {
                       const isWhatsApp = act.type === "whatsapp";
+                      const isLink = act.type === "link";
                       return (
                         <button
                           key={index}
@@ -1003,6 +1056,8 @@ const [input, setInput] = useState("");
                           onClick={() => {
                             if (isWhatsApp) {
                               handleWhatsAppSupport(act.payload);
+                            } else if (isLink && act.payload?.startsWith("/")) {
+                              void navigate({ to: act.payload as any });
                             } else if (act.type === "case_step") {
                               void handleSend(act.payload ?? act.label);
                             }

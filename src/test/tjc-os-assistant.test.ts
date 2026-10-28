@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { getDeterministicLocalResponse } from "@/components/FloatingSupportButtons";
+import { cleanAiResponseText, getDeterministicLocalResponse } from "@/components/FloatingSupportButtons";
 import { BRAND } from "@/lib/brand";
 import type { StoreProduct } from "@/lib/preview-data";
 
@@ -53,8 +53,8 @@ describe("TJC-OS Deterministic Local Assistant Logic", () => {
   it("handles delivery queries with South African shipping facts and structured actions", () => {
     const res = getDeterministicLocalResponse("What are your delivery times across South Africa?", mockProducts);
     expect(res).not.toBeNull();
-    expect(res?.text).toContain("South Africa");
-    expect(res?.text).toContain("delivery arrangements");
+    expect(res?.text).toContain("depend on your area");
+    expect(res?.text).toContain("town or suburb");
     expect(res?.actions?.[0].type).toBe("whatsapp");
     expect(res?.text).not.toContain("https://");
   });
@@ -71,10 +71,10 @@ describe("TJC-OS Deterministic Local Assistant Logic", () => {
     const res = getDeterministicLocalResponse("How does the wallet PIN and balance work?", mockProducts);
     expect(res).not.toBeNull();
     expect(res?.text).toContain("ZAR");
-    expect(res?.text).toContain("6-digit PIN");
+    expect(res?.text).toContain("six-digit PIN");
     expect(res?.text).toContain("disabled");
     expect(res?.text).toContain("Never disclose your wallet PIN");
-    expect(res?.actions?.[0].type).toBe("whatsapp");
+    expect(res?.actions?.some((action) => action.type === "whatsapp")).toBe(true);
   });
 
   it("provides calm fraud and security safeguards with bank escalation and support actions", () => {
@@ -161,5 +161,48 @@ describe("TJC-OS Guided Support Case Safeguards & Validation", () => {
     const emailOnly = parseSupportContact("thabo@example.com");
     expect(emailOnly.email).toBe("thabo@example.com");
     expect(emailOnly.phone).toBeNull();
+  });
+});
+
+
+describe("TJC-OS targeted customer-support repairs", () => {
+  it("cleans missing or raw WhatsApp links without leaving blank contact wording", () => {
+    const examples = [
+      "Please reach out to support on WhatsApp at https://wa.me/27684963972 for assistance.",
+      "Please reach out to support on WhatsApp at [blank] for assistance.",
+      "Contact our team on WhatsApp: https://wa.me/27684963972",
+    ];
+    for (const example of examples) {
+      const result = cleanAiResponseText(example);
+      expect(result).not.toContain("https://wa.me");
+      expect(result).not.toMatch(/\bat\s*(?:for|$)/i);
+      expect(result).not.toContain("[blank]");
+    }
+  });
+
+  it("answers missing-order reports locally with honest limitations and working WhatsApp action", () => {
+    const result = getDeterministicLocalResponse("I didn't receive my order", mockProducts);
+    expect(result?.text).toContain("Live courier tracking is not connected");
+    expect(result?.actions?.some((action) => action.type === "whatsapp")).toBe(true);
+    expect(result?.text).not.toContain("https://");
+  });
+
+  it("offers the existing account routes for account setup questions", () => {
+    const result = getDeterministicLocalResponse("How can I set an account?", mockProducts);
+    expect(result?.actions?.map((action) => action.payload)).toContain("/sign-up");
+    expect(result?.actions?.map((action) => action.payload)).toContain("/sign-in");
+    expect(result?.actions?.map((action) => action.payload)).toContain("/forgot-password");
+  });
+
+  it("uses truthful area-specific delivery guidance and an enquiry action", () => {
+    const result = getDeterministicLocalResponse("What are delivery fees?", mockProducts);
+    expect(result?.text).toContain("depend on your area");
+    expect(result?.actions?.[0].type).toBe("whatsapp");
+  });
+
+  it("answers weather queries without claiming live forecast access", () => {
+    const result = getDeterministicLocalResponse("What is the weather today?", mockProducts);
+    expect(result?.text).toContain("don’t have live weather data");
+    expect(result?.actions?.[0].payload).toBe("/shop");
   });
 });

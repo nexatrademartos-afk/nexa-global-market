@@ -5,7 +5,7 @@ import {
   type StoreProduct,
 } from "@/lib/preview-data";
 
-export const NEXA_WHATSAPP_NUMBER = "27684963972";
+export const NEXA_WHATSAPP_NUMBER = BRAND.contact.whatsappDigits;
 
 export function openWhatsApp(message: string): void {
   const url =
