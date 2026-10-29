@@ -145,21 +145,46 @@ const [unlocking, setUnlocking] = useState(false);
   const [balanceLoading, setBalanceLoading] = useState(false);
   const [transactions, setTransactions] = useState<WalletTransactionItem[]>([]);
   const [transactionsLoading, setTransactionsLoading] = useState(false);
+  const [balanceError, setBalanceError] = useState<string | null>(null);
+  const [transactionsError, setTransactionsError] = useState<string | null>(null);
   const [recoveryPin, setRecoveryPin] = useState("");
 
 
+  const lockWallet = useCallback(() => {
+    setWalletUnlocked(false);
+    setLedgerBalance(null);
+    setTransactions([]);
+    setBalanceError(null);
+    setTransactionsError(null);
+    setUnlockPin("");
+    setError("");
+    setNotice("Wallet has been locked for security.");
+  }, []);
+
   const loadLedgerBalance = useCallback(async () => {
     setBalanceLoading(true);
+    setBalanceError(null);
     try {
       const { data, error: rpcError } = await (supabase.rpc as any)("get_my_wallet_balance");
       if (rpcError) {
-        console.warn("get_my_wallet_balance RPC call:", rpcError);
+        console.warn("get_my_wallet_balance RPC call failed:", rpcError);
+        setBalanceError(rpcError.message || "Could not retrieve ledger balance.");
         setLedgerBalance(null);
       } else if (data && typeof data === "object") {
-        setLedgerBalance(data as WalletBalanceData);
+        if ((data as any).error) {
+          setBalanceError((data as any).error);
+          setLedgerBalance(null);
+        } else {
+          setLedgerBalance(data as WalletBalanceData);
+          setBalanceError(null);
+        }
+      } else {
+        setBalanceError("Invalid response from ledger service.");
+        setLedgerBalance(null);
       }
     } catch (err) {
       console.error("Ledger balance error:", err);
+      setBalanceError(err instanceof Error ? err.message : "Error contacting ledger.");
       setLedgerBalance(null);
     } finally {
       setBalanceLoading(false);
@@ -168,19 +193,26 @@ const [unlocking, setUnlocking] = useState(false);
 
   const loadTransactions = useCallback(async () => {
     setTransactionsLoading(true);
+    setTransactionsError(null);
     try {
       const { data, error: rpcError } = await (supabase.rpc as any)("get_my_wallet_transactions", {
-        p_limit: 10,
+        p_limit: 20,
         p_offset: 0,
       });
       if (rpcError) {
-        console.warn("get_my_wallet_transactions RPC call:", rpcError);
+        console.warn("get_my_wallet_transactions RPC call failed:", rpcError);
+        setTransactionsError(rpcError.message || "Could not retrieve transaction history.");
         setTransactions([]);
       } else if (Array.isArray(data)) {
         setTransactions(data as WalletTransactionItem[]);
+        setTransactionsError(null);
+      } else {
+        setTransactionsError("Invalid response from transaction ledger.");
+        setTransactions([]);
       }
     } catch (err) {
       console.error("Transactions load error:", err);
+      setTransactionsError(err instanceof Error ? err.message : "Error contacting transaction ledger.");
       setTransactions([]);
     } finally {
       setTransactionsLoading(false);
@@ -234,11 +266,7 @@ const [unlocking, setUnlocking] = useState(false);
 
       setWallet(data);
       if (data) {
-        await Promise.all([
-          checkPinStatus(),
-          loadLedgerBalance(),
-          loadTransactions(),
-        ]);
+        await checkPinStatus();
       } else {
         setPinIsSet(null);
       }
@@ -295,12 +323,8 @@ const [unlocking, setUnlocking] = useState(false);
       }
 
       setWallet(data);
-      await Promise.all([
-        checkPinStatus(),
-        loadLedgerBalance(),
-        loadTransactions(),
-      ]);
-      setNotice("Your wallet has been registered successfully.");
+      await checkPinStatus();
+      setNotice("Your wallet has been registered successfully. Set up your six-digit PIN to secure your wallet.");
     } catch (err) {
       console.error("Wallet registration failed:", err);
       setError(
@@ -338,10 +362,12 @@ const [unlocking, setUnlocking] = useState(false);
       }
 
       setPinIsSet(true);
-setWalletUnlocked(true);
-setPin("");
-setPinConfirmation("");
+      setWalletUnlocked(true);
+      setPin("");
+      setPinConfirmation("");
       setNotice("Your six-digit wallet PIN has been set securely.");
+      void loadLedgerBalance();
+      void loadTransactions();
     } catch (err) {
       console.error("Wallet PIN setup failed:", err);
       setError(
@@ -384,6 +410,8 @@ setPinConfirmation("");
     setUnlockPin("");
     setWalletUnlocked(true);
     setError("");
+    void loadLedgerBalance();
+    void loadTransactions();
   } catch (err) {
     console.error("Wallet PIN verification failed:", err);
 
@@ -626,6 +654,8 @@ setPinConfirmation("");
       setRecoveryNewPin("");
       setError("");
       setNotice("Your wallet PIN has been reset successfully.");
+      void loadLedgerBalance();
+      void loadTransactions();
     } catch (err) {
       console.error("Wallet PIN recovery failed:", err);
       setError(
@@ -855,10 +885,24 @@ return (
             Back to account
           </Link>
 
-          <span className="inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium capitalize text-muted-foreground">
-            <ShieldCheck className="h-4 w-4" />
-            {loading ? "Checking wallet" : statusLabel}
-          </span>
+          <div className="flex items-center gap-2">
+            <span className="inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium capitalize text-muted-foreground">
+              <ShieldCheck className="h-4 w-4" />
+              {loading ? "Checking wallet" : statusLabel}
+            </span>
+
+            {wallet && pinIsSet === true && walletUnlocked && (
+              <button
+                type="button"
+                onClick={lockWallet}
+                className="inline-flex items-center gap-1.5 rounded-full border border-gold/40 px-3 py-1 text-xs font-medium text-gold hover:bg-gold/10 transition-colors"
+                title="Lock wallet session"
+              >
+                <LockKeyhole className="h-3.5 w-3.5" />
+                Lock wallet
+              </button>
+            )}
+          </div>
         </div>
 
         {error && (
@@ -896,19 +940,47 @@ return (
                 <p className="mt-3 text-2xl font-bold tracking-tight text-muted-foreground sm:text-3xl">
                   Refreshing balance…
                 </p>
+              ) : balanceError ? (
+                <div className="mt-2">
+                  <p className="text-xl font-bold tracking-tight text-destructive sm:text-2xl">
+                    Balance unavailable
+                  </p>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    {balanceError}
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => void loadLedgerBalance()}
+                    className="mt-2 inline-flex items-center gap-1.5 text-xs font-semibold text-gold underline hover:opacity-80"
+                  >
+                    <RefreshCw className="h-3.5 w-3.5" />
+                    Retry balance check
+                  </button>
+                </div>
               ) : ledgerBalance ? (
                 <div>
-                  <p className="mt-3 text-3xl font-bold tracking-tight sm:text-4xl text-gold">
-                    R {(ledgerBalance.available_zar ?? 0).toLocaleString(undefined, {
-                      minimumFractionDigits: 2,
-                      maximumFractionDigits: 2,
-                    })}
-                  </p>
-                  <p className="mt-2 max-w-md text-sm leading-relaxed text-muted-foreground">
-                    {ledgerBalance.has_ledger_records
-                      ? "Authoritative cash balance derived strictly from committed settled ledger entries."
-                      : "Verified ledger active. No transactions recorded yet."}
-                  </p>
+                  {ledgerBalance.has_ledger_records ? (
+                    <div>
+                      <p className="mt-3 text-3xl font-bold tracking-tight sm:text-4xl text-gold">
+                        R {(ledgerBalance.available_zar ?? 0).toLocaleString(undefined, {
+                          minimumFractionDigits: 2,
+                          maximumFractionDigits: 2,
+                        })}
+                      </p>
+                      <p className="mt-2 max-w-md text-sm leading-relaxed text-muted-foreground">
+                        Authoritative cash balance derived strictly from committed settled ledger entries.
+                      </p>
+                    </div>
+                  ) : (
+                    <div>
+                      <p className="mt-3 text-2xl font-bold tracking-tight sm:text-3xl text-foreground">
+                        No verified balance yet
+                      </p>
+                      <p className="mt-2 max-w-md text-sm leading-relaxed text-muted-foreground">
+                        No transactions have been recorded in your wallet ledger yet. Your verified balance will appear once initial transactions are committed and settled.
+                      </p>
+                    </div>
+                  )}
                   {ledgerBalance.refreshed_at && (
                     <p className="mt-1 text-xs text-muted-foreground">
                       Refreshed {new Date(ledgerBalance.refreshed_at).toLocaleTimeString()}
@@ -1365,13 +1437,29 @@ return (
           <SummaryCard
             icon={Clock3}
             title="Pending funds"
-            value={ledgerBalance?.pending_zar !== undefined ? `R ${ledgerBalance.pending_zar.toFixed(2)}` : "Not connected"}
+            value={
+              balanceLoading
+                ? "Checking…"
+                : balanceError
+                ? "Unavailable"
+                : ledgerBalance?.pending_zar !== undefined
+                ? `R ${ledgerBalance.pending_zar.toFixed(2)}`
+                : "Not connected"
+            }
             detail="Pending deposits and refunds are not spendable cash."
           />
           <SummaryCard
             icon={LockKeyhole}
             title="Reserved funds"
-            value={ledgerBalance?.reserved_zar !== undefined ? `R ${ledgerBalance.reserved_zar.toFixed(2)}` : "Not connected"}
+            value={
+              balanceLoading
+                ? "Checking…"
+                : balanceError
+                ? "Unavailable"
+                : ledgerBalance?.reserved_zar !== undefined
+                ? `R ${ledgerBalance.reserved_zar.toFixed(2)}`
+                : "Not connected"
+            }
             detail="Funds held for authorized operations."
           />
         </section>
@@ -1385,11 +1473,35 @@ return (
                   Committed ledger entries and transaction history.
                 </p>
               </div>
-              <History className="h-5 w-5 text-gold" />
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => void loadTransactions()}
+                  disabled={transactionsLoading}
+                  className="grid h-8 w-8 place-items-center rounded-lg border text-muted-foreground hover:text-gold transition-colors disabled:opacity-50"
+                  title="Refresh activity"
+                  aria-label="Refresh activity"
+                >
+                  <RefreshCw className={`h-3.5 w-3.5 ${transactionsLoading ? "animate-spin" : ""}`} />
+                </button>
+                <History className="h-5 w-5 text-gold" />
+              </div>
             </div>
 
             {transactionsLoading ? (
               <p className="mt-4 text-sm text-muted-foreground">Loading activity…</p>
+            ) : transactionsError ? (
+              <div className="mt-4 rounded-xl border border-destructive/30 bg-destructive/10 p-4">
+                <p className="text-sm font-semibold text-destructive">Unable to load activity</p>
+                <p className="text-xs text-muted-foreground mt-1">{transactionsError}</p>
+                <button
+                  type="button"
+                  onClick={() => void loadTransactions()}
+                  className="mt-2 text-xs font-semibold text-gold underline"
+                >
+                  Retry loading transactions
+                </button>
+              </div>
             ) : transactions.length === 0 ? (
               <div className="mt-4 rounded-xl border border-dashed p-6 text-center">
                 <Clock3 className="mx-auto h-8 w-8 text-muted-foreground/60" />
@@ -1402,17 +1514,22 @@ return (
               <div className="mt-4 divide-y">
                 {transactions.map((tx) => (
                   <div key={tx.id} className="flex items-center justify-between py-3">
-                    <div className="min-w-0">
-                      <p className="text-sm font-semibold capitalize">{tx.description || tx.category}</p>
+                    <div className="min-w-0 pr-3">
+                      <p className="text-sm font-semibold capitalize truncate">{tx.description || tx.category}</p>
                       <p className="text-xs text-muted-foreground">
                         {new Date(tx.created_at).toLocaleString()} • Ref: {tx.reference_id || tx.id.slice(0, 8)}
                       </p>
                     </div>
-                    <div className="text-right">
+                    <div className="text-right shrink-0">
                       <p className={`text-sm font-bold ${tx.entry_type === "credit" ? "text-emerald-500" : "text-foreground"}`}>
                         {tx.entry_type === "credit" ? "+" : "-"} R {tx.amount_zar.toFixed(2)}
                       </p>
-                      <span className="inline-block rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium capitalize">
+                      <span className={`inline-block rounded-full px-2 py-0.5 text-[10px] font-medium capitalize ${
+                        tx.status === "settled" ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400" :
+                        tx.status === "pending" ? "bg-amber-500/10 text-amber-600 dark:text-amber-400" :
+                        tx.status === "reversed" ? "bg-purple-500/10 text-purple-600 dark:text-purple-400" :
+                        "bg-muted text-muted-foreground"
+                      }`}>
                         {tx.status}
                       </span>
                     </div>
