@@ -42,9 +42,13 @@ describe("Wallet Security & PIN Logic", () => {
     }) {
       if (!q1.trim() || !q2.trim()) return { valid: false, error: "Choose both questions." };
       if (q1 === q2) return { valid: false, error: "Questions must be different." };
-      if (a1.trim().length < 2 || a2.trim().length < 2) return { valid: false, error: "Answers must be at least 2 chars." };
+      if (a1.trim().length < 2 || a2.trim().length < 2)
+        return { valid: false, error: "Answers must be at least 2 chars." };
       if (recoverySet && (!pin || !/^\d{6}$/.test(pin))) {
-        return { valid: false, error: "Enter your current six-digit wallet PIN to update recovery questions." };
+        return {
+          valid: false,
+          error: "Enter your current six-digit wallet PIN to update recovery questions.",
+        };
       }
       return { valid: true };
     }

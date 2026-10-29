@@ -123,9 +123,9 @@ function WalletPage() {
   const [pinConfirmation, setPinConfirmation] = useState("");
   const [savingPin, setSavingPin] = useState(false);
   const [walletUnlocked, setWalletUnlocked] = useState(false);
-const [unlockPin, setUnlockPin] = useState("");
-const [unlocking, setUnlocking] = useState(false);
-    // Wallet PIN change
+  const [unlockPin, setUnlockPin] = useState("");
+  const [unlocking, setUnlocking] = useState(false);
+  // Wallet PIN change
   const [currentPin, setCurrentPin] = useState("");
   const [newPin, setNewPin] = useState("");
   const [confirmNewPin, setConfirmNewPin] = useState("");
@@ -149,7 +149,6 @@ const [unlocking, setUnlocking] = useState(false);
   const [transactionsError, setTransactionsError] = useState<string | null>(null);
   const [recoveryPin, setRecoveryPin] = useState("");
 
-
   const lockWallet = useCallback(() => {
     setWalletUnlocked(false);
     setLedgerBalance(null);
@@ -165,14 +164,23 @@ const [unlocking, setUnlocking] = useState(false);
     setBalanceLoading(true);
     setBalanceError(null);
     try {
-      const { data, error: rpcError } = await (supabase.rpc as any)("get_my_wallet_balance");
+      type RpcClient = {
+        rpc: (
+          fn: string,
+          args?: Record<string, unknown>,
+        ) => Promise<{ data: unknown; error: { message: string } | null }>;
+      };
+      const { data, error: rpcError } = await (supabase as unknown as RpcClient).rpc(
+        "get_my_wallet_balance",
+      );
       if (rpcError) {
         console.warn("get_my_wallet_balance RPC call failed:", rpcError);
         setBalanceError(rpcError.message || "Could not retrieve ledger balance.");
         setLedgerBalance(null);
       } else if (data && typeof data === "object") {
-        if ((data as any).error) {
-          setBalanceError((data as any).error);
+        const errorMsg = (data as Record<string, unknown>).error;
+        if (typeof errorMsg === "string" && errorMsg) {
+          setBalanceError(errorMsg);
           setLedgerBalance(null);
         } else {
           setLedgerBalance(data as WalletBalanceData);
@@ -195,10 +203,19 @@ const [unlocking, setUnlocking] = useState(false);
     setTransactionsLoading(true);
     setTransactionsError(null);
     try {
-      const { data, error: rpcError } = await (supabase.rpc as any)("get_my_wallet_transactions", {
-        p_limit: 20,
-        p_offset: 0,
-      });
+      type RpcClient = {
+        rpc: (
+          fn: string,
+          args?: Record<string, unknown>,
+        ) => Promise<{ data: unknown; error: { message: string } | null }>;
+      };
+      const { data, error: rpcError } = await (supabase as unknown as RpcClient).rpc(
+        "get_my_wallet_transactions",
+        {
+          p_limit: 20,
+          p_offset: 0,
+        },
+      );
       if (rpcError) {
         console.warn("get_my_wallet_transactions RPC call failed:", rpcError);
         setTransactionsError(rpcError.message || "Could not retrieve transaction history.");
@@ -212,7 +229,9 @@ const [unlocking, setUnlocking] = useState(false);
       }
     } catch (err) {
       console.error("Transactions load error:", err);
-      setTransactionsError(err instanceof Error ? err.message : "Error contacting transaction ledger.");
+      setTransactionsError(
+        err instanceof Error ? err.message : "Error contacting transaction ledger.",
+      );
       setTransactions([]);
     } finally {
       setTransactionsLoading(false);
@@ -222,10 +241,9 @@ const [unlocking, setUnlocking] = useState(false);
   const checkPinStatus = useCallback(async () => {
     setPinStatusLoading(true);
     try {
-      const { data, error: pinError } = await supabase.functions.invoke(
-        "wallet-pin",
-        { body: { action: "status" } },
-      );
+      const { data, error: pinError } = await supabase.functions.invoke("wallet-pin", {
+        body: { action: "status" },
+      });
 
       if (pinError) throw pinError;
       setPinIsSet(data?.pinSet === true);
@@ -243,8 +261,7 @@ const [unlocking, setUnlocking] = useState(false);
     setNotice("");
 
     try {
-      const { data: authData, error: authError } =
-        await supabase.auth.getUser();
+      const { data: authData, error: authError } = await supabase.auth.getUser();
 
       if (authError) throw authError;
 
@@ -290,8 +307,7 @@ const [unlocking, setUnlocking] = useState(false);
     setNotice("");
 
     try {
-      const { data: authData, error: authError } =
-        await supabase.auth.getUser();
+      const { data: authData, error: authError } = await supabase.auth.getUser();
 
       if (authError) throw authError;
 
@@ -303,9 +319,7 @@ const [unlocking, setUnlocking] = useState(false);
 
       setSignedIn(true);
 
-      const { error: registerError } = await supabase.rpc(
-        "register_my_wallet",
-      );
+      const { error: registerError } = await supabase.rpc("register_my_wallet");
 
       if (registerError) throw registerError;
 
@@ -317,14 +331,14 @@ const [unlocking, setUnlocking] = useState(false);
       if (walletError) throw walletError;
 
       if (!data) {
-        throw new Error(
-          "Registration returned successfully, but the wallet could not be loaded.",
-        );
+        throw new Error("Registration returned successfully, but the wallet could not be loaded.");
       }
 
       setWallet(data);
       await checkPinStatus();
-      setNotice("Your wallet has been registered successfully. Set up your six-digit PIN to secure your wallet.");
+      setNotice(
+        "Your wallet has been registered successfully. Set up your six-digit PIN to secure your wallet.",
+      );
     } catch (err) {
       console.error("Wallet registration failed:", err);
       setError(
@@ -351,10 +365,9 @@ const [unlocking, setUnlocking] = useState(false);
 
     setSavingPin(true);
     try {
-      const { data, error: pinError } = await supabase.functions.invoke(
-        "wallet-pin",
-        { body: { action: "set", pin } },
-      );
+      const { data, error: pinError } = await supabase.functions.invoke("wallet-pin", {
+        body: { action: "set", pin },
+      });
 
       if (pinError) throw pinError;
       if (data?.success !== true) {
@@ -371,9 +384,7 @@ const [unlocking, setUnlocking] = useState(false);
     } catch (err) {
       console.error("Wallet PIN setup failed:", err);
       setError(
-        err instanceof Error
-          ? err.message
-          : "We couldn't save your wallet PIN. Please try again.",
+        err instanceof Error ? err.message : "We couldn't save your wallet PIN. Please try again.",
       );
     } finally {
       setSavingPin(false);
@@ -381,52 +392,45 @@ const [unlocking, setUnlocking] = useState(false);
   }
 
   async function unlockWallet() {
-  setError("");
+    setError("");
 
-  if (!/^\d{6}$/.test(unlockPin)) {
-    setError("Enter your six-digit wallet PIN.");
-    return;
-  }
+    if (!/^\d{6}$/.test(unlockPin)) {
+      setError("Enter your six-digit wallet PIN.");
+      return;
+    }
 
-  setUnlocking(true);
+    setUnlocking(true);
 
-  try {
-    const { data, error: verifyError } =
-      await supabase.functions.invoke("wallet-pin", {
+    try {
+      const { data, error: verifyError } = await supabase.functions.invoke("wallet-pin", {
         body: {
           action: "verify",
           pin: unlockPin,
         },
       });
 
-    if (verifyError) throw verifyError;
+      if (verifyError) throw verifyError;
 
-    if (data?.verified !== true) {
-      throw new Error(
-        data?.error || "We couldn't verify your wallet PIN.",
-      );
+      if (data?.verified !== true) {
+        throw new Error(data?.error || "We couldn't verify your wallet PIN.");
+      }
+
+      setUnlockPin("");
+      setWalletUnlocked(true);
+      setError("");
+      void loadLedgerBalance();
+      void loadTransactions();
+    } catch (err) {
+      console.error("Wallet PIN verification failed:", err);
+
+      setError(err instanceof Error ? err.message : "PIN verification failed. Please try again.");
+
+      setUnlockPin("");
+    } finally {
+      setUnlocking(false);
     }
-
-    setUnlockPin("");
-    setWalletUnlocked(true);
-    setError("");
-    void loadLedgerBalance();
-    void loadTransactions();
-  } catch (err) {
-    console.error("Wallet PIN verification failed:", err);
-
-    setError(
-      err instanceof Error
-        ? err.message
-        : "PIN verification failed. Please try again.",
-    );
-
-    setUnlockPin("");
-  } finally {
-    setUnlocking(false);
   }
-  }
-    async function changeWalletPin() {
+  async function changeWalletPin() {
     setError("");
     setNotice("");
 
@@ -453,16 +457,13 @@ const [unlocking, setUnlocking] = useState(false);
     setChangingPin(true);
 
     try {
-      const { data, error: pinError } = await supabase.functions.invoke(
-        "wallet-pin",
-        {
-          body: {
-            action: "change",
-            currentPin,
-            newPin,
-          },
+      const { data, error: pinError } = await supabase.functions.invoke("wallet-pin", {
+        body: {
+          action: "change",
+          currentPin,
+          newPin,
         },
-      );
+      });
 
       if (pinError) throw pinError;
 
@@ -487,23 +488,19 @@ const [unlocking, setUnlocking] = useState(false);
   }
 
   async function loadRecoveryStatus() {
-    const { data, error: recoveryError } =
-      await supabase.functions.invoke("wallet-pin-recovery", {
-        body: { action: "status" },
-      });
+    const { data, error: recoveryError } = await supabase.functions.invoke("wallet-pin-recovery", {
+      body: { action: "status" },
+    });
 
     if (recoveryError) throw recoveryError;
 
-    const configured =
-      data?.recoverySet === true ||
-      data?.configured === true;
+    const configured = data?.recoverySet === true || data?.configured === true;
 
     setRecoverySet(configured);
 
     const questions = Array.isArray(data?.questions)
       ? data.questions.filter(
-          (question: unknown): question is string =>
-            typeof question === "string",
+          (question: unknown): question is string => typeof question === "string",
         )
       : [];
 
@@ -569,8 +566,9 @@ const [unlocking, setUnlocking] = useState(false);
     setRecoveryBusy(true);
 
     try {
-      const { data, error: recoveryError } =
-        await supabase.functions.invoke("wallet-pin-recovery", {
+      const { data, error: recoveryError } = await supabase.functions.invoke(
+        "wallet-pin-recovery",
+        {
           body: {
             action: "setup",
             questionOne,
@@ -579,14 +577,13 @@ const [unlocking, setUnlocking] = useState(false);
             answerTwo: answerTwo.trim(),
             pin: recoverySet ? recoveryPin : undefined,
           },
-        });
+        },
+      );
 
       if (recoveryError) throw recoveryError;
 
       if (data?.success !== true) {
-        throw new Error(
-          data?.error || "We couldn't save your recovery settings.",
-        );
+        throw new Error(data?.error || "We couldn't save your recovery settings.");
       }
 
       setRecoverySet(true);
@@ -627,22 +624,22 @@ const [unlocking, setUnlocking] = useState(false);
     setRecoveryBusy(true);
 
     try {
-      const { data, error: recoveryError } =
-        await supabase.functions.invoke("wallet-pin-recovery", {
+      const { data, error: recoveryError } = await supabase.functions.invoke(
+        "wallet-pin-recovery",
+        {
           body: {
             action: "recover",
             answerOne: answerOne.trim(),
             answerTwo: answerTwo.trim(),
             newPin: recoveryNewPin,
           },
-        });
+        },
+      );
 
       if (recoveryError) throw recoveryError;
 
       if (data?.success !== true) {
-        throw new Error(
-          data?.error || "We couldn't recover your wallet PIN.",
-        );
+        throw new Error(data?.error || "We couldn't recover your wallet PIN.");
       }
 
       setPinIsSet(true);
@@ -666,211 +663,199 @@ const [unlocking, setUnlocking] = useState(false);
     } finally {
       setRecoveryBusy(false);
     }
-        }
+  }
 
-  const statusLabel = wallet
-  ? wallet.status.replaceAll("_", " ")
-  : "Not registered";
+  const statusLabel = wallet ? wallet.status.replaceAll("_", " ") : "Not registered";
 
-if (loading) {
-  return (
-    <AccountPage
-      title="Identity Brand Wallet"
-      intro="Checking your wallet security."
-    >
-      <div className="rounded-2xl border p-6 text-sm text-muted-foreground">
-        Checking your wallet and security status…
-      </div>
-    </AccountPage>
-  );
-}
-
-if (wallet && pinIsSet !== false && !walletUnlocked) {
-  return (
-    <AccountPage
-      title="Unlock Your Wallet"
-      intro="Enter your six-digit wallet PIN to access your wallet."
-    >
-      <section className="mx-auto max-w-md rounded-3xl border border-gold/30 bg-card p-6 shadow-sm sm:p-8">
-        <div className="mx-auto grid h-14 w-14 place-items-center rounded-2xl border border-gold/40 bg-gold/10 text-gold">
-          <LockKeyhole className="h-7 w-7" />
+  if (loading) {
+    return (
+      <AccountPage title="Identity Brand Wallet" intro="Checking your wallet security.">
+        <div className="rounded-2xl border p-6 text-sm text-muted-foreground">
+          Checking your wallet and security status…
         </div>
+      </AccountPage>
+    );
+  }
 
-        <h2 className="mt-5 text-center text-xl font-bold">
-          Wallet locked
-        </h2>
-
-        <p className="mt-2 text-center text-sm leading-relaxed text-muted-foreground">
-          Your wallet details are protected. Verify your PIN before
-          continuing.
-        </p>
-
-        {error && (
-          <div
-            role="alert"
-            className="mt-4 rounded-xl border border-destructive/40 p-3 text-sm text-destructive"
-          >
-            {error}
+  if (wallet && pinIsSet !== false && !walletUnlocked) {
+    return (
+      <AccountPage
+        title="Unlock Your Wallet"
+        intro="Enter your six-digit wallet PIN to access your wallet."
+      >
+        <section className="mx-auto max-w-md rounded-3xl border border-gold/30 bg-card p-6 shadow-sm sm:p-8">
+          <div className="mx-auto grid h-14 w-14 place-items-center rounded-2xl border border-gold/40 bg-gold/10 text-gold">
+            <LockKeyhole className="h-7 w-7" />
           </div>
-        )}
 
-        {pinIsSet === true ? (
-          <form
-            className="mt-5 space-y-4"
-            onSubmit={(event) => {
-              event.preventDefault();
-              void unlockWallet();
-            }}
-          >
-            <label className="block text-sm font-medium">
-              Six-digit wallet PIN
-              <input
-                type="password"
-                inputMode="numeric"
-                autoComplete="off"
-                pattern="[0-9]{6}"
-                maxLength={6}
-                value={unlockPin}
-                onChange={(event) =>
-                  setUnlockPin(
-                    event.target.value.replace(/\D/g, "").slice(0, 6),
-                  )
-                }
-                className="mt-2 min-h-12 w-full rounded-xl border bg-background px-4 text-center text-xl tracking-[0.5em]"
-                aria-label="Enter six-digit wallet PIN"
-                required
-                autoFocus
-              />
-            </label>
+          <h2 className="mt-5 text-center text-xl font-bold">Wallet locked</h2>
 
-            <button
-              type="submit"
-              disabled={unlocking || unlockPin.length !== 6}
-              className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-gold px-5 py-3 text-sm font-bold text-background transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+          <p className="mt-2 text-center text-sm leading-relaxed text-muted-foreground">
+            Your wallet details are protected. Verify your PIN before continuing.
+          </p>
+
+          {error && (
+            <div
+              role="alert"
+              className="mt-4 rounded-xl border border-destructive/40 p-3 text-sm text-destructive"
             >
-              <LockKeyhole className="h-4 w-4" />
-              {unlocking ? "Verifying PIN…" : "Unlock wallet"}
-            </button>
-          </form>
-        ) : (
-          <div className="mt-5">
-            <p className="text-sm text-muted-foreground">
-              We couldn't confirm your PIN status. Your wallet remains
-              locked until its security status can be checked.
-            </p>
+              {error}
+            </div>
+          )}
 
-            <button
-              type="button"
-              onClick={() => void checkPinStatus()}
-              disabled={pinStatusLoading}
-              className="mt-4 min-h-11 w-full rounded-xl border px-4 py-2 text-sm font-semibold disabled:opacity-50"
-            >
-              {pinStatusLoading ? "Checking…" : "Check security again"}
-            </button>
-          </div>
-        )}
-
-                <div className="mt-5 border-t pt-4">
-          {recoveryMode === "recover" ? (
+          {pinIsSet === true ? (
             <form
-              className="space-y-3"
+              className="mt-5 space-y-4"
               onSubmit={(event) => {
                 event.preventDefault();
-                void recoverWalletPin();
+                void unlockWallet();
               }}
             >
-              <h3 className="font-semibold">Recover your wallet PIN</h3>
-
-              <p className="text-sm text-muted-foreground">
-                Answer both recovery questions to reset your PIN.
-              </p>
-
               <label className="block text-sm font-medium">
-                {recoveryQuestions[0] || "First recovery answer"}
-                <input
-                  type="password"
-                  autoComplete="off"
-                  value={answerOne}
-                  onChange={(event) => setAnswerOne(event.target.value)}
-                  className="mt-1 min-h-11 w-full rounded-xl border bg-background px-3"
-                  required
-                />
-              </label>
-
-              <label className="block text-sm font-medium">
-                {recoveryQuestions[1] || "Second recovery answer"}
-                <input
-                  type="password"
-                  autoComplete="off"
-                  value={answerTwo}
-                  onChange={(event) => setAnswerTwo(event.target.value)}
-                  className="mt-1 min-h-11 w-full rounded-xl border bg-background px-3"
-                  required
-                />
-              </label>
-
-              <label className="block text-sm font-medium">
-                New six-digit PIN
+                Six-digit wallet PIN
                 <input
                   type="password"
                   inputMode="numeric"
-                  autoComplete="new-password"
+                  autoComplete="off"
                   pattern="[0-9]{6}"
                   maxLength={6}
-                  value={recoveryNewPin}
+                  value={unlockPin}
                   onChange={(event) =>
-                    setRecoveryNewPin(
-                      event.target.value.replace(/\D/g, "").slice(0, 6),
-                    )
+                    setUnlockPin(event.target.value.replace(/\D/g, "").slice(0, 6))
                   }
-                  className="mt-1 min-h-11 w-full rounded-xl border bg-background px-3 text-center tracking-[0.4em]"
+                  className="mt-2 min-h-12 w-full rounded-xl border bg-background px-4 text-center text-xl tracking-[0.5em]"
+                  aria-label="Enter six-digit wallet PIN"
                   required
+                  autoFocus
                 />
               </label>
 
               <button
                 type="submit"
-                disabled={recoveryBusy || recoveryNewPin.length !== 6}
-                className="inline-flex min-h-11 w-full items-center justify-center rounded-xl bg-gold px-4 py-2 text-sm font-bold text-background disabled:cursor-not-allowed disabled:opacity-50"
+                disabled={unlocking || unlockPin.length !== 6}
+                className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-gold px-5 py-3 text-sm font-bold text-background transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
               >
-                {recoveryBusy ? "Recovering PIN…" : "Reset wallet PIN"}
-              </button>
-
-              <button
-                type="button"
-                onClick={() => {
-                  setRecoveryMode(null);
-                  setAnswerOne("");
-                  setAnswerTwo("");
-                  setRecoveryNewPin("");
-                  setError("");
-                }}
-                className="w-full py-2 text-sm font-semibold underline"
-              >
-                Cancel recovery
+                <LockKeyhole className="h-4 w-4" />
+                {unlocking ? "Verifying PIN…" : "Unlock wallet"}
               </button>
             </form>
           ) : (
-            <button
-              type="button"
-              onClick={() => void beginPinRecovery()}
-              disabled={recoveryBusy}
-              className="min-h-11 w-full rounded-xl border px-4 py-2 text-sm font-semibold disabled:opacity-50"
-            >
-              {recoveryBusy ? "Checking recovery…" : "Forgot your wallet PIN?"}
-            </button>
+            <div className="mt-5">
+              <p className="text-sm text-muted-foreground">
+                We couldn't confirm your PIN status. Your wallet remains locked until its security
+                status can be checked.
+              </p>
+
+              <button
+                type="button"
+                onClick={() => void checkPinStatus()}
+                disabled={pinStatusLoading}
+                className="mt-4 min-h-11 w-full rounded-xl border px-4 py-2 text-sm font-semibold disabled:opacity-50"
+              >
+                {pinStatusLoading ? "Checking…" : "Check security again"}
+              </button>
+            </div>
           )}
-        </div>
 
-        <p className="mt-4 text-center text-xs text-muted-foreground">
-          Never share your wallet PIN with anyone.
-        </p>
-      </section>
-    </AccountPage>
-  );
-}
+          <div className="mt-5 border-t pt-4">
+            {recoveryMode === "recover" ? (
+              <form
+                className="space-y-3"
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  void recoverWalletPin();
+                }}
+              >
+                <h3 className="font-semibold">Recover your wallet PIN</h3>
 
-return (
+                <p className="text-sm text-muted-foreground">
+                  Answer both recovery questions to reset your PIN.
+                </p>
+
+                <label className="block text-sm font-medium">
+                  {recoveryQuestions[0] || "First recovery answer"}
+                  <input
+                    type="password"
+                    autoComplete="off"
+                    value={answerOne}
+                    onChange={(event) => setAnswerOne(event.target.value)}
+                    className="mt-1 min-h-11 w-full rounded-xl border bg-background px-3"
+                    required
+                  />
+                </label>
+
+                <label className="block text-sm font-medium">
+                  {recoveryQuestions[1] || "Second recovery answer"}
+                  <input
+                    type="password"
+                    autoComplete="off"
+                    value={answerTwo}
+                    onChange={(event) => setAnswerTwo(event.target.value)}
+                    className="mt-1 min-h-11 w-full rounded-xl border bg-background px-3"
+                    required
+                  />
+                </label>
+
+                <label className="block text-sm font-medium">
+                  New six-digit PIN
+                  <input
+                    type="password"
+                    inputMode="numeric"
+                    autoComplete="new-password"
+                    pattern="[0-9]{6}"
+                    maxLength={6}
+                    value={recoveryNewPin}
+                    onChange={(event) =>
+                      setRecoveryNewPin(event.target.value.replace(/\D/g, "").slice(0, 6))
+                    }
+                    className="mt-1 min-h-11 w-full rounded-xl border bg-background px-3 text-center tracking-[0.4em]"
+                    required
+                  />
+                </label>
+
+                <button
+                  type="submit"
+                  disabled={recoveryBusy || recoveryNewPin.length !== 6}
+                  className="inline-flex min-h-11 w-full items-center justify-center rounded-xl bg-gold px-4 py-2 text-sm font-bold text-background disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {recoveryBusy ? "Recovering PIN…" : "Reset wallet PIN"}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setRecoveryMode(null);
+                    setAnswerOne("");
+                    setAnswerTwo("");
+                    setRecoveryNewPin("");
+                    setError("");
+                  }}
+                  className="w-full py-2 text-sm font-semibold underline"
+                >
+                  Cancel recovery
+                </button>
+              </form>
+            ) : (
+              <button
+                type="button"
+                onClick={() => void beginPinRecovery()}
+                disabled={recoveryBusy}
+                className="min-h-11 w-full rounded-xl border px-4 py-2 text-sm font-semibold disabled:opacity-50"
+              >
+                {recoveryBusy ? "Checking recovery…" : "Forgot your wallet PIN?"}
+              </button>
+            )}
+          </div>
+
+          <p className="mt-4 text-center text-xs text-muted-foreground">
+            Never share your wallet PIN with anyone.
+          </p>
+        </section>
+      </AccountPage>
+    );
+  }
+
+  return (
     <AccountPage
       title="Identity Brand Wallet"
       intro="Your wallet overview, rewards and financial activity."
@@ -922,10 +907,7 @@ return (
         )}
 
         {notice && (
-          <p
-            role="status"
-            className="rounded-xl border border-gold/40 p-3 text-sm"
-          >
+          <p role="status" className="rounded-xl border border-gold/40 p-3 text-sm">
             {notice}
           </p>
         )}
@@ -933,9 +915,7 @@ return (
         <section className="overflow-hidden rounded-3xl border border-gold/30 bg-card p-5 shadow-sm sm:p-7">
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
-              <p className="text-sm text-muted-foreground">
-                Available wallet balance
-              </p>
+              <p className="text-sm text-muted-foreground">Available wallet balance</p>
               {balanceLoading ? (
                 <p className="mt-3 text-2xl font-bold tracking-tight text-muted-foreground sm:text-3xl">
                   Refreshing balance…
@@ -945,9 +925,7 @@ return (
                   <p className="text-xl font-bold tracking-tight text-destructive sm:text-2xl">
                     Balance unavailable
                   </p>
-                  <p className="mt-1 text-sm text-muted-foreground">
-                    {balanceError}
-                  </p>
+                  <p className="mt-1 text-sm text-muted-foreground">{balanceError}</p>
                   <button
                     type="button"
                     onClick={() => void loadLedgerBalance()}
@@ -962,13 +940,15 @@ return (
                   {ledgerBalance.has_ledger_records ? (
                     <div>
                       <p className="mt-3 text-3xl font-bold tracking-tight sm:text-4xl text-gold">
-                        R {(ledgerBalance.available_zar ?? 0).toLocaleString(undefined, {
+                        R{" "}
+                        {(ledgerBalance.available_zar ?? 0).toLocaleString(undefined, {
                           minimumFractionDigits: 2,
                           maximumFractionDigits: 2,
                         })}
                       </p>
                       <p className="mt-2 max-w-md text-sm leading-relaxed text-muted-foreground">
-                        Authoritative cash balance derived strictly from committed settled ledger entries.
+                        Authoritative cash balance derived strictly from committed settled ledger
+                        entries.
                       </p>
                     </div>
                   ) : (
@@ -977,7 +957,8 @@ return (
                         No verified balance yet
                       </p>
                       <p className="mt-2 max-w-md text-sm leading-relaxed text-muted-foreground">
-                        No transactions have been recorded in your wallet ledger yet. Your verified balance will appear once initial transactions are committed and settled.
+                        No transactions have been recorded in your wallet ledger yet. Your verified
+                        balance will appear once initial transactions are committed and settled.
                       </p>
                     </div>
                   )}
@@ -993,9 +974,8 @@ return (
                     Not available yet
                   </p>
                   <p className="mt-2 max-w-md text-sm leading-relaxed text-muted-foreground">
-                    Your cash balance will appear once the secure wallet ledger
-                    is verified. We will not display a guessed or placeholder
-                    balance.
+                    Your cash balance will appear once the secure wallet ledger is verified. We will
+                    not display a guessed or placeholder balance.
                   </p>
                 </div>
               )}
@@ -1051,30 +1031,17 @@ return (
           )}
 
           <div className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-3">
-            <WalletAction
-              icon={ArrowDownToLine}
-              label="Add money"
-              detail="Not activated"
-            />
-            <WalletAction
-              icon={ArrowLeftRight}
-              label="Transfer"
-              detail="Not activated"
-            />
-            <WalletAction
-              icon={ArrowUpFromLine}
-              label="Withdraw"
-              detail="Payouts disabled"
-            />
+            <WalletAction icon={ArrowDownToLine} label="Add money" detail="Not activated" />
+            <WalletAction icon={ArrowLeftRight} label="Transfer" detail="Not activated" />
+            <WalletAction icon={ArrowUpFromLine} label="Withdraw" detail="Payouts disabled" />
           </div>
 
           <div className="mt-5 rounded-xl border border-dashed p-3 text-sm text-muted-foreground">
             <div className="flex items-start gap-2">
               <Clock3 className="mt-0.5 h-4 w-4 shrink-0" />
               <p>
-                Wallet enrollment is connected separately from the cash
-                ledger. Deposits, transfers and payouts remain disabled until
-                their secure flows are approved.
+                Wallet enrollment is connected separately from the cash ledger. Deposits, transfers
+                and payouts remain disabled until their secure flows are approved.
               </p>
             </div>
           </div>
@@ -1089,16 +1056,13 @@ return (
               <div className="min-w-0 flex-1">
                 <h2 className="font-bold">Wallet PIN security</h2>
                 <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
-                  Set a six-digit PIN for future wallet security. Transfers,
-                  deposits and withdrawals remain disabled while their secure
-                  flows are being completed.
+                  Set a six-digit PIN for future wallet security. Transfers, deposits and
+                  withdrawals remain disabled while their secure flows are being completed.
                 </p>
 
                 {pinStatusLoading ? (
-                  <p className="mt-3 text-sm text-muted-foreground">
-                    Checking PIN status…
-                  </p>
-                                ) : pinIsSet === true ? (
+                  <p className="mt-3 text-sm text-muted-foreground">Checking PIN status…</p>
+                ) : pinIsSet === true ? (
                   <>
                     <p className="mt-3 inline-flex items-center gap-2 text-sm font-semibold">
                       <ShieldCheck className="h-4 w-4 text-gold" />
@@ -1125,9 +1089,7 @@ return (
                             maxLength={6}
                             value={currentPin}
                             onChange={(event) =>
-                              setCurrentPin(
-                                event.target.value.replace(/\D/g, "").slice(0, 6),
-                              )
+                              setCurrentPin(event.target.value.replace(/\D/g, "").slice(0, 6))
                             }
                             className="mt-1 min-h-11 w-full rounded-xl border bg-background px-3"
                             required
@@ -1144,9 +1106,7 @@ return (
                             maxLength={6}
                             value={newPin}
                             onChange={(event) =>
-                              setNewPin(
-                                event.target.value.replace(/\D/g, "").slice(0, 6),
-                              )
+                              setNewPin(event.target.value.replace(/\D/g, "").slice(0, 6))
                             }
                             className="mt-1 min-h-11 w-full rounded-xl border bg-background px-3"
                             required
@@ -1163,9 +1123,7 @@ return (
                             maxLength={6}
                             value={confirmNewPin}
                             onChange={(event) =>
-                              setConfirmNewPin(
-                                event.target.value.replace(/\D/g, "").slice(0, 6),
-                              )
+                              setConfirmNewPin(event.target.value.replace(/\D/g, "").slice(0, 6))
                             }
                             className="mt-1 min-h-11 w-full rounded-xl border bg-background px-3"
                             required
@@ -1192,8 +1150,8 @@ return (
                       <h3 className="font-semibold">PIN recovery settings</h3>
 
                       <p className="text-sm text-muted-foreground">
-                        Set two recovery questions while your wallet is unlocked.
-                        Keep your answers private and memorable.
+                        Set two recovery questions while your wallet is unlocked. Keep your answers
+                        private and memorable.
                       </p>
 
                       {recoverySet && recoveryMode !== "setup" ? (
@@ -1338,7 +1296,9 @@ return (
                               }
                             } catch (err) {
                               console.error("Recovery settings check failed:", err);
-                              setError("We couldn't check your recovery settings. Please try again.");
+                              setError(
+                                "We couldn't check your recovery settings. Please try again.",
+                              );
                             } finally {
                               setRecoveryBusy(false);
                             }
@@ -1379,9 +1339,7 @@ return (
                         maxLength={6}
                         value={pinConfirmation}
                         onChange={(event) =>
-                          setPinConfirmation(
-                            event.target.value.replace(/\D/g, "").slice(0, 6),
-                          )
+                          setPinConfirmation(event.target.value.replace(/\D/g, "").slice(0, 6))
                         }
                         className="mt-1 min-h-11 w-full rounded-xl border bg-background px-3"
                         aria-label="Confirm six-digit wallet PIN"
@@ -1390,11 +1348,7 @@ return (
                     <button
                       type="button"
                       onClick={() => void savePin()}
-                      disabled={
-                        savingPin ||
-                        pin.length !== 6 ||
-                        pinConfirmation.length !== 6
-                      }
+                      disabled={savingPin || pin.length !== 6 || pinConfirmation.length !== 6}
                       className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-gold px-5 py-2.5 text-sm font-bold text-background transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
                     >
                       <LockKeyhole className="h-4 w-4" />
@@ -1404,8 +1358,8 @@ return (
                 ) : (
                   <div className="mt-3">
                     <p className="text-sm text-muted-foreground">
-                      PIN status could not be checked. The PIN service may not
-                      be deployed or configured yet.
+                      PIN status could not be checked. The PIN service may not be deployed or
+                      configured yet.
                     </p>
                     <button
                       type="button"
@@ -1441,10 +1395,10 @@ return (
               balanceLoading
                 ? "Checking…"
                 : balanceError
-                ? "Unavailable"
-                : ledgerBalance?.pending_zar !== undefined
-                ? `R ${ledgerBalance.pending_zar.toFixed(2)}`
-                : "Not connected"
+                  ? "Unavailable"
+                  : ledgerBalance?.pending_zar !== undefined
+                    ? `R ${ledgerBalance.pending_zar.toFixed(2)}`
+                    : "Not connected"
             }
             detail="Pending deposits and refunds are not spendable cash."
           />
@@ -1455,10 +1409,10 @@ return (
               balanceLoading
                 ? "Checking…"
                 : balanceError
-                ? "Unavailable"
-                : ledgerBalance?.reserved_zar !== undefined
-                ? `R ${ledgerBalance.reserved_zar.toFixed(2)}`
-                : "Not connected"
+                  ? "Unavailable"
+                  : ledgerBalance?.reserved_zar !== undefined
+                    ? `R ${ledgerBalance.reserved_zar.toFixed(2)}`
+                    : "Not connected"
             }
             detail="Funds held for authorized operations."
           />
@@ -1482,7 +1436,9 @@ return (
                   title="Refresh activity"
                   aria-label="Refresh activity"
                 >
-                  <RefreshCw className={`h-3.5 w-3.5 ${transactionsLoading ? "animate-spin" : ""}`} />
+                  <RefreshCw
+                    className={`h-3.5 w-3.5 ${transactionsLoading ? "animate-spin" : ""}`}
+                  />
                 </button>
                 <History className="h-5 w-5 text-gold" />
               </div>
@@ -1507,7 +1463,8 @@ return (
                 <Clock3 className="mx-auto h-8 w-8 text-muted-foreground/60" />
                 <p className="mt-2 text-sm font-semibold">No transactions recorded yet</p>
                 <p className="mt-1 text-xs text-muted-foreground max-w-sm mx-auto">
-                  When deposits, purchases, or refunds are committed, they will appear here with an immutable reference and audit trail.
+                  When deposits, purchases, or refunds are committed, they will appear here with an
+                  immutable reference and audit trail.
                 </p>
               </div>
             ) : (
@@ -1515,21 +1472,31 @@ return (
                 {transactions.map((tx) => (
                   <div key={tx.id} className="flex items-center justify-between py-3">
                     <div className="min-w-0 pr-3">
-                      <p className="text-sm font-semibold capitalize truncate">{tx.description || tx.category}</p>
+                      <p className="text-sm font-semibold capitalize truncate">
+                        {tx.description || tx.category}
+                      </p>
                       <p className="text-xs text-muted-foreground">
-                        {new Date(tx.created_at).toLocaleString()} • Ref: {tx.reference_id || tx.id.slice(0, 8)}
+                        {new Date(tx.created_at).toLocaleString()} • Ref:{" "}
+                        {tx.reference_id || tx.id.slice(0, 8)}
                       </p>
                     </div>
                     <div className="text-right shrink-0">
-                      <p className={`text-sm font-bold ${tx.entry_type === "credit" ? "text-emerald-500" : "text-foreground"}`}>
+                      <p
+                        className={`text-sm font-bold ${tx.entry_type === "credit" ? "text-emerald-500" : "text-foreground"}`}
+                      >
                         {tx.entry_type === "credit" ? "+" : "-"} R {tx.amount_zar.toFixed(2)}
                       </p>
-                      <span className={`inline-block rounded-full px-2 py-0.5 text-[10px] font-medium capitalize ${
-                        tx.status === "settled" ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400" :
-                        tx.status === "pending" ? "bg-amber-500/10 text-amber-600 dark:text-amber-400" :
-                        tx.status === "reversed" ? "bg-purple-500/10 text-purple-600 dark:text-purple-400" :
-                        "bg-muted text-muted-foreground"
-                      }`}>
+                      <span
+                        className={`inline-block rounded-full px-2 py-0.5 text-[10px] font-medium capitalize ${
+                          tx.status === "settled"
+                            ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
+                            : tx.status === "pending"
+                              ? "bg-amber-500/10 text-amber-600 dark:text-amber-400"
+                              : tx.status === "reversed"
+                                ? "bg-purple-500/10 text-purple-600 dark:text-purple-400"
+                                : "bg-muted text-muted-foreground"
+                        }`}
+                      >
                         {tx.status}
                       </span>
                     </div>
@@ -1568,9 +1535,7 @@ return (
 
               <div className="mt-4 flex flex-wrap items-center gap-3">
                 {loading ? (
-                  <span className="text-sm text-muted-foreground">
-                    Checking your account…
-                  </span>
+                  <span className="text-sm text-muted-foreground">Checking your account…</span>
                 ) : wallet ? (
                   <span className="inline-flex items-center gap-2 rounded-full border border-gold/40 px-3 py-1.5 text-sm font-medium capitalize">
                     <ShieldCheck className="h-4 w-4 text-gold" />
@@ -1584,16 +1549,12 @@ return (
                     className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-gold px-5 py-2.5 text-sm font-bold text-background transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     <Wallet className="h-4 w-4" />
-                    {registering
-                      ? "Registering wallet…"
-                      : "Register for my wallet"}
+                    {registering ? "Registering wallet…" : "Register for my wallet"}
                   </button>
                 )}
 
                 {!loading && !signedIn && (
-                  <p className="text-xs text-muted-foreground">
-                    Sign in to register for a wallet.
-                  </p>
+                  <p className="text-xs text-muted-foreground">Sign in to register for a wallet.</p>
                 )}
               </div>
             </div>
@@ -1642,8 +1603,7 @@ return (
             <div>
               <h2 className="font-semibold">Need help?</h2>
               <p className="mt-1 text-sm text-muted-foreground">
-                Contact support if wallet registration fails or you need help
-                with your account.
+                Contact support if wallet registration fails or you need help with your account.
               </p>
               <Link
                 to="/account/returns"
@@ -1700,9 +1660,7 @@ function SummaryCard({
       <Icon className="h-5 w-5 text-gold" />
       <h2 className="mt-4 text-sm text-muted-foreground">{title}</h2>
       <p className="mt-2 text-xl font-bold">{value}</p>
-      <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
-        {detail}
-      </p>
+      <p className="mt-2 text-xs leading-relaxed text-muted-foreground">{detail}</p>
     </section>
   );
 }
