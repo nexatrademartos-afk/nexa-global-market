@@ -123,9 +123,28 @@ export function getDeterministicLocalResponse(
   const query = queryText.trim().toLowerCase();
   if (!query) return null;
 
+  
+  // Professional business greeting for the storefront assistant.
+  if (
+    /^\s*(hi|hello|hey|good\s+(morning|afternoon|evening|day)|greetings|howdy|how\s+are\s+you|what'?s\s+up)\b/i.test(query)
+  ) {
+    return {
+      text: `Welcome to ${BRAND.name}. I’m TJC-OS, your virtual shopping assistant. I can help you explore our products, choose what suits your needs, and get assistance with your order. What would you like to shop for today?`,
+      actions: [
+        { type: "link", label: "Browse Products", payload: "/shop" },
+        {
+          type: "whatsapp",
+          label: "Contact Support",
+          payload: "Hello, I need assistance with shopping at ${BRAND.name}.",
+        },
+      ],
+    };
+  }
+
+  
   // Missing-order reports should not depend on the AI provider.
   if (/\b(didn.t receive|haven.t received|never received|missing (?:my )?(?:order|parcel|delivery)|order (?:hasn.t|has not) arrived|my order (?:is )?late)\b/i.test(query)) {
-    return {
+    return  
       text: `I understand how concerning a missing delivery is. Live courier tracking is not connected to this chat, so I can’t look up delivery records directly. If you have an order reference, share it with support so they can check the available order information. You can also open a support ticket.`,
       actions: [
         { type: "whatsapp", label: "Chat on WhatsApp", payload: "Hello, I haven’t received my order. Please help me check it." },
