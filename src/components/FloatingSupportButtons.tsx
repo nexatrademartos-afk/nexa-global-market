@@ -123,13 +123,6 @@ export function getDeterministicLocalResponse(
   const query = queryText.trim().toLowerCase();
   if (!query) return null;
 
-  // 1. Immediate greetings (safe local greeting, zero network latency)
-  if (/^\s*(hi|hello|hey|good\s+(morning|afternoon|evening|day)|greetings|howdy|how\s+are\s+you|what'?s\s+up)\b/i.test(query)) {
-    return {
-      text: `Hello! Welcome to ${BRAND.name}. I'm TJC-OS, your AI assistant. How can I help you today? You can ask about our catalogue products, store services, or connect with our support team.`,
-    };
-  }
-
   // Missing-order reports should not depend on the AI provider.
   if (/\b(didn.t receive|haven.t received|never received|missing (?:my )?(?:order|parcel|delivery)|order (?:hasn.t|has not) arrived|my order (?:is )?late)\b/i.test(query)) {
     return {
