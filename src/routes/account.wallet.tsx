@@ -17,6 +17,7 @@ import {
   Wallet,
   TrendingUp,
   CircleHelp,
+  RefreshCw,
 } from "lucide-react";
 import { AccountPage, accountHead } from "@/components/AccountPage";
 import { PlannedBadge } from "@/components/states";
@@ -28,6 +29,34 @@ type CustomerWallet = {
   currency: string;
   status: string;
   created_at: string;
+};
+
+type WalletBalanceData = {
+  registered: boolean;
+  wallet_id?: string;
+  currency?: string;
+  wallet_status?: string;
+  has_ledger_records?: boolean;
+  available_cents?: number;
+  available_zar?: number;
+  pending_cents?: number;
+  pending_zar?: number;
+  reserved_cents?: number;
+  reserved_zar?: number;
+  refreshed_at?: string;
+};
+
+type WalletTransactionItem = {
+  id: string;
+  amount_cents: number;
+  amount_zar: number;
+  entry_type: "credit" | "debit";
+  category: "deposit" | "purchase" | "transfer" | "withdrawal" | "refund" | "adjustment";
+  status: "pending" | "settled" | "reversed" | "failed";
+  reference_id: string | null;
+  description: string;
+  created_at: string;
+  metadata: Record<string, unknown>;
 };
 
 export const Route = createFileRoute("/account/wallet")({
@@ -112,6 +141,51 @@ const [unlocking, setUnlocking] = useState(false);
   const [recoveryNewPin, setRecoveryNewPin] = useState("");
   const [recoveryMode, setRecoveryMode] = useState<"setup" | "recover" | null>(null);
   const [recoveryBusy, setRecoveryBusy] = useState(false);
+  const [ledgerBalance, setLedgerBalance] = useState<WalletBalanceData | null>(null);
+  const [balanceLoading, setBalanceLoading] = useState(false);
+  const [transactions, setTransactions] = useState<WalletTransactionItem[]>([]);
+  const [transactionsLoading, setTransactionsLoading] = useState(false);
+  const [recoveryPin, setRecoveryPin] = useState("");
+
+
+  const loadLedgerBalance = useCallback(async () => {
+    setBalanceLoading(true);
+    try {
+      const { data, error: rpcError } = await (supabase.rpc as any)("get_my_wallet_balance");
+      if (rpcError) {
+        console.warn("get_my_wallet_balance RPC call:", rpcError);
+        setLedgerBalance(null);
+      } else if (data && typeof data === "object") {
+        setLedgerBalance(data as WalletBalanceData);
+      }
+    } catch (err) {
+      console.error("Ledger balance error:", err);
+      setLedgerBalance(null);
+    } finally {
+      setBalanceLoading(false);
+    }
+  }, []);
+
+  const loadTransactions = useCallback(async () => {
+    setTransactionsLoading(true);
+    try {
+      const { data, error: rpcError } = await (supabase.rpc as any)("get_my_wallet_transactions", {
+        p_limit: 10,
+        p_offset: 0,
+      });
+      if (rpcError) {
+        console.warn("get_my_wallet_transactions RPC call:", rpcError);
+        setTransactions([]);
+      } else if (Array.isArray(data)) {
+        setTransactions(data as WalletTransactionItem[]);
+      }
+    } catch (err) {
+      console.error("Transactions load error:", err);
+      setTransactions([]);
+    } finally {
+      setTransactionsLoading(false);
+    }
+  }, []);
 
   const checkPinStatus = useCallback(async () => {
     setPinStatusLoading(true);
@@ -160,7 +234,11 @@ const [unlocking, setUnlocking] = useState(false);
 
       setWallet(data);
       if (data) {
-        await checkPinStatus();
+        await Promise.all([
+          checkPinStatus(),
+          loadLedgerBalance(),
+          loadTransactions(),
+        ]);
       } else {
         setPinIsSet(null);
       }
@@ -217,7 +295,11 @@ const [unlocking, setUnlocking] = useState(false);
       }
 
       setWallet(data);
-      await checkPinStatus();
+      await Promise.all([
+        checkPinStatus(),
+        loadLedgerBalance(),
+        loadTransactions(),
+      ]);
       setNotice("Your wallet has been registered successfully.");
     } catch (err) {
       console.error("Wallet registration failed:", err);
@@ -451,6 +533,11 @@ setPinConfirmation("");
       return;
     }
 
+    if (recoverySet && !/^\d{6}$/.test(recoveryPin)) {
+      setError("Enter your current six-digit wallet PIN to update recovery questions.");
+      return;
+    }
+
     setRecoveryBusy(true);
 
     try {
@@ -462,6 +549,7 @@ setPinConfirmation("");
             questionTwo,
             answerOne: answerOne.trim(),
             answerTwo: answerTwo.trim(),
+            pin: recoverySet ? recoveryPin : undefined,
           },
         });
 
@@ -479,6 +567,7 @@ setPinConfirmation("");
       setAnswerTwo("");
       setQuestionOne("");
       setQuestionTwo("");
+      setRecoveryPin("");
       setRecoveryMode(null);
       setNotice("Your wallet PIN recovery settings have been saved.");
     } catch (err) {
@@ -803,19 +892,63 @@ return (
               <p className="text-sm text-muted-foreground">
                 Available wallet balance
               </p>
-              <p className="mt-3 text-3xl font-bold tracking-tight sm:text-4xl">
-                Not available yet
-              </p>
-              <p className="mt-2 max-w-md text-sm leading-relaxed text-muted-foreground">
-                Your cash balance will appear once the secure wallet ledger
-                is implemented. We will not display a guessed or placeholder
-                balance.
-              </p>
+              {balanceLoading ? (
+                <p className="mt-3 text-2xl font-bold tracking-tight text-muted-foreground sm:text-3xl">
+                  Refreshing balance…
+                </p>
+              ) : ledgerBalance ? (
+                <div>
+                  <p className="mt-3 text-3xl font-bold tracking-tight sm:text-4xl text-gold">
+                    R {(ledgerBalance.available_zar ?? 0).toLocaleString(undefined, {
+                      minimumFractionDigits: 2,
+                      maximumFractionDigits: 2,
+                    })}
+                  </p>
+                  <p className="mt-2 max-w-md text-sm leading-relaxed text-muted-foreground">
+                    {ledgerBalance.has_ledger_records
+                      ? "Authoritative cash balance derived strictly from committed settled ledger entries."
+                      : "Verified ledger active. No transactions recorded yet."}
+                  </p>
+                  {ledgerBalance.refreshed_at && (
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      Refreshed {new Date(ledgerBalance.refreshed_at).toLocaleTimeString()}
+                    </p>
+                  )}
+                </div>
+              ) : (
+                <div>
+                  <p className="mt-3 text-3xl font-bold tracking-tight sm:text-4xl">
+                    Not available yet
+                  </p>
+                  <p className="mt-2 max-w-md text-sm leading-relaxed text-muted-foreground">
+                    Your cash balance will appear once the secure wallet ledger
+                    is verified. We will not display a guessed or placeholder
+                    balance.
+                  </p>
+                </div>
+              )}
             </div>
 
-            <span className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl border border-gold/40 bg-gold/10 text-gold">
-              <Wallet className="h-6 w-6" />
-            </span>
+            <div className="flex items-center gap-2">
+              {wallet && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    void loadLedgerBalance();
+                    void loadTransactions();
+                  }}
+                  disabled={balanceLoading}
+                  className="grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-gold/40 text-gold transition-opacity hover:opacity-80 disabled:opacity-50"
+                  title="Refresh wallet balance and activity"
+                  aria-label="Refresh wallet balance and activity"
+                >
+                  <RefreshCw className={`h-4 w-4 ${balanceLoading ? "animate-spin" : ""}`} />
+                </button>
+              )}
+              <span className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl border border-gold/40 bg-gold/10 text-gold">
+                <Wallet className="h-6 w-6" />
+              </span>
+            </div>
           </div>
 
           {wallet && (
@@ -1232,16 +1365,63 @@ return (
           <SummaryCard
             icon={Clock3}
             title="Pending funds"
-            value="Not connected"
+            value={ledgerBalance?.pending_zar !== undefined ? `R ${ledgerBalance.pending_zar.toFixed(2)}` : "Not connected"}
             detail="Pending deposits and refunds are not spendable cash."
           />
           <SummaryCard
             icon={LockKeyhole}
             title="Reserved funds"
-            value="Not connected"
+            value={ledgerBalance?.reserved_zar !== undefined ? `R ${ledgerBalance.reserved_zar.toFixed(2)}` : "Not connected"}
             detail="Funds held for authorized operations."
           />
         </section>
+
+        {wallet && (
+          <section className="surface rounded-2xl border p-5 sm:p-6">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <h2 className="font-bold">Recent activity</h2>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Committed ledger entries and transaction history.
+                </p>
+              </div>
+              <History className="h-5 w-5 text-gold" />
+            </div>
+
+            {transactionsLoading ? (
+              <p className="mt-4 text-sm text-muted-foreground">Loading activity…</p>
+            ) : transactions.length === 0 ? (
+              <div className="mt-4 rounded-xl border border-dashed p-6 text-center">
+                <Clock3 className="mx-auto h-8 w-8 text-muted-foreground/60" />
+                <p className="mt-2 text-sm font-semibold">No transactions recorded yet</p>
+                <p className="mt-1 text-xs text-muted-foreground max-w-sm mx-auto">
+                  When deposits, purchases, or refunds are committed, they will appear here with an immutable reference and audit trail.
+                </p>
+              </div>
+            ) : (
+              <div className="mt-4 divide-y">
+                {transactions.map((tx) => (
+                  <div key={tx.id} className="flex items-center justify-between py-3">
+                    <div className="min-w-0">
+                      <p className="text-sm font-semibold capitalize">{tx.description || tx.category}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {new Date(tx.created_at).toLocaleString()} • Ref: {tx.reference_id || tx.id.slice(0, 8)}
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <p className={`text-sm font-bold ${tx.entry_type === "credit" ? "text-emerald-500" : "text-foreground"}`}>
+                        {tx.entry_type === "credit" ? "+" : "-"} R {tx.amount_zar.toFixed(2)}
+                      </p>
+                      <span className="inline-block rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium capitalize">
+                        {tx.status}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </section>
+        )}
 
         <section className="surface rounded-2xl border p-5 sm:p-6">
           <div className="flex items-start gap-3">
