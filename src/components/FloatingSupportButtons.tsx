@@ -141,18 +141,25 @@ export function getDeterministicLocalResponse(
     };
   }
 
-  
-  // Missing-order reports should not depend on the AI provider.
-  if (/\b(didn.t receive|haven.t received|never received|missing (?:my )?(?:order|parcel|delivery)|order (?:hasn.t|has not) arrived|my order (?:is )?late)\b/i.test(query)) {
-    return  
+    // Missing-order reports should not depend on the AI provider.
+  if (/\\b(didn.t receive|haven.t received|never received|missing (?:my )?(?:order|parcel|delivery)|order (?:hasn.t|has not) arrived|my order (?:is )?late)\\b/i.test(query)) {
+    return {
       text: `I understand how concerning a missing delivery is. Live courier tracking is not connected to this chat, so I can’t look up delivery records directly. If you have an order reference, share it with support so they can check the available order information. You can also open a support ticket.`,
       actions: [
-        { type: "whatsapp", label: "Chat on WhatsApp", payload: "Hello, I haven’t received my order. Please help me check it." },
-        { type: "case_step", label: "Open Support Ticket", payload: "I want to open a support ticket" },
+        {
+          type: "whatsapp",
+          label: "Chat on WhatsApp",
+          payload: "Hello, I haven’t received my order. Please help me check it.",
+        },
+        {
+          type: "case_step",
+          label: "Open Support Ticket",
+          payload: "I want to open a support ticket",
+        },
       ],
     };
   }
-
+  
   // Registration and sign-in use the existing authentication routes.
   if (/\b(?:how.*(?:set|create|open|register).*account|create.*account|set.*account|register.*account|sign\s*up|sign\s*in|log\s*in|login|forgot.*password|reset.*password)\b/i.test(query)) {
     return {
